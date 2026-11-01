@@ -442,6 +442,10 @@
       document.getElementById('q-counter').style.display = 'none';
 
       let storedCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+
+      // 加上這行來紀錄本關卡已通關
+localStorage.setItem('map11_cleared', 'true');
+
       let newTotal = storedCoins + currentStars; 
       localStorage.setItem('playerCoins', newTotal);
 

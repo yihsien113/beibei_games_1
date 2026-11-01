@@ -1233,6 +1233,9 @@ body {
       document.getElementById('peek-btn').style.display = 'none';
 
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+
+      // 加上這行來紀錄本關卡已通關
+localStorage.setItem('map13_cleared', 'true');
       let newTotalCoins = currentCoins + coins;
       localStorage.setItem('playerCoins', newTotalCoins);
 

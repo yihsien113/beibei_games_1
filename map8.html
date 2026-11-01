@@ -794,6 +794,9 @@
       document.getElementById('back-btn').style.display = 'none'; document.getElementById('skip-btn').style.display = 'none'; document.getElementById('hud').style.display = 'none';
 
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+
+            // 加上這行來紀錄本關卡已通關
+      localStorage.setItem('map8_cleared', 'true');
       let newTotalCoins = currentCoins + stars; localStorage.setItem('playerCoins', newTotalCoins);
       if (localStorage.getItem('sticker_smap8') !== 'true') localStorage.setItem('sticker_smap8', 'new');
 

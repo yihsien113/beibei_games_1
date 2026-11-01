@@ -449,10 +449,23 @@
 
       if (badge) badge.classList.add('hidden');
       if (img) {
+        // 👇 核心修復：關閉過渡動畫，避免 iOS Safari 濾鏡殘留
+        img.style.transition = 'none'; 
         img.classList.remove('silhouette', 'claimable-glow');
+        
+        // 👇 強制瀏覽器立刻重新計算樣式 (Reflow)，這是破解殘留 Bug 的關鍵
+        void img.offsetWidth; 
+        
+        // 加入已獲得狀態與彈出動畫
         img.classList.add('obtained', 'anim-pop-in');
+        
+        // 👇 延遲一小段時間再恢復原本的過渡動畫設定
+        setTimeout(() => {
+          img.style.transition = '';
+        }, 50);
       }
 
+      // 下方維持原有的特效判定邏輯
       if (item && item.onGetEffect && getFx) {
         getFx.classList.add(item.onGetEffect);
 

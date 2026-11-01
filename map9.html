@@ -341,6 +341,9 @@
       document.getElementById('hud').style.display = 'block';
       
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+
+            // 加上這行來紀錄本關卡已通關
+      localStorage.setItem('map9_cleared', 'true');
       document.getElementById('coinDisplay').innerText = currentCoins;
       
       PLAY_AREA.x = 190; PLAY_AREA.w = 520; PLAY_AREA.y = 260; PLAY_AREA.h = 670;
