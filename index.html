@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head> 
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 大廳</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="尋寶大廳">
+  
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+    html, body { 
+      width: 100%; 
+      height: 100%;
+      margin: 0; 
+      padding: 0;
+      overflow: hidden; 
+      background-color: #000; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(30, 30, 30, 0.95);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: max(env(safe-area-inset-top), 12px) 20px 12px 20px;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      transition: z-index 0.1s; /* 教學模式升降層級用 */
+    }
+
+    #hud {
+      color: #fff; 
+      font-size: 26px; 
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      padding: 5px 15px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.3);
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+
+    #quick-menu {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+
+    .btn-floating {
+      width: 55px;
+      height: 55px;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+      border: 3px solid #fff;
+      border-radius: 50%;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 105, 180, 0.6);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.3s ease, filter 0.3s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-floating:active {
+      transform: scale(0.85);
+      box-shadow: 0 2px 6px rgba(255, 105, 180, 0.5);
+    }
+
+    /* 🌟 教學模式用的樣式與動畫 🌟 */
+    .tutorial-highlight { 
+      pointer-events: none !important; 
+    }
+    .dimmed { 
+      opacity: 0.25 !important; 
+      filter: grayscale(80%) brightness(0.5); 
+      pointer-events: none; 
+    }
+    @keyframes finger-bounce-y {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    #reward-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px); 
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    #reward-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 10000;
+    }
+
+    #reward-modal-content {
+      background-color: #1e293b;
+      border-radius: 3rem;       
+      padding: 2.5rem 1.8rem 2rem 1.8rem;
+      max-width: 560px;
+      width: 90%;
+      margin: 0 16px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border: 10px solid #475569; 
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #reward-modal.active #reward-modal-content {
+      transform: scale(1);
+    }
+
+    #reward-badge {
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #f59e0b; 
+      color: #ffffff;
+      padding: 8px 28px;
+      border-radius: 9999px;
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 800;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+      border: 4px solid #ffffff;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 260px;
+    }
+
+    #reward-img-box {
+      position: relative;
+      width: clamp(180px, 45vw, 240px);
+      height: clamp(180px, 45vw, 240px);
+      margin: 20px auto 20px auto;
+      background-color: #334155; 
+      border-radius: 2.5rem;
+      box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 8px solid #475569; 
+    }
+
+    #reward-bg-ray {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(253, 230, 138, 0.55) 0%, rgba(253, 230, 138, 0) 70%);
+      animation: pulse-ray 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-ray {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+
+    #reward-img {
+      width: 75%;
+      height: 75%;
+      object-fit: contain;
+      position: relative;
+      z-index: 10;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+    }
+
+    #reward-coin-icon {
+      font-size: clamp(90px, 22vw, 130px);
+      position: relative;
+      z-index: 10;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+      display: none;
+    }
+
+    #reward-info-box {
+      background-color: #334155; 
+      border-radius: 1.5rem;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      border: 2px solid #64748b; 
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    #reward-title {
+      color: #fde68a; 
+      font-weight: 900;
+      font-size: clamp(26px, 6vw, 36px);
+      line-height: 1.4;
+    }
+
+    #btn-claim-reward {
+      width: 100%;
+      background-color: #10b981; 
+      color: #ffffff;
+      font-weight: 900;
+      font-size: clamp(24px, 5.5vw, 32px);
+      padding: 16px 24px;
+      border-radius: 1.25rem;
+      border: 4px solid #a7f3d0;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    #btn-claim-reward:hover {
+      background-color: #059669;
+    }
+
+    #btn-claim-reward:active {
+      transform: scale(0.95);
+    }
+
+    #reward-modal .char-block { margin-right: 0.6em; margin-bottom: 6px; }
+    #reward-modal .bopo { font-size: 0.4em; font-weight: 800; margin-left: 4px; letter-spacing: 0px; line-height: 1.15; color: #fcd34d; }
+  </style>
+</head>
+<body>
+  <div id="preloader" style="position:fixed;inset:0;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;color:#fff;">
+    <div style="font-size:22px;margin-bottom:20px;font-weight:bold;">遊戲素材載入中...</div>
+    <div style="width:300px;height:18px;background:#333;border-radius:9px;overflow:hidden;border:2px solid #555;">
+      <div id="progress-bar" style="width:0%;height:100%;background:#4caf50;transition:width 0.1s ease;"></div>
+    </div>
+    <div id="progress-text" style="margin-top:12px;font-size:16px;color:#bbb;">0% (0 / 0)</div>
+    <div id="loading-file" style="margin-top:8px;font-size:13px;color:#888;max-width:85vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">準備檢查檔案...</div>
+    <div id="loading-speed" style="margin-top:4px;font-size:13px;color:#4caf50;height:18px;"></div>
+  </div>
+
+  <!-- 🌟 第一次遊玩的教學開始畫面 -->
+  <div id="tutorial-start-screen" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 10000; display: none; flex-direction: column; align-items: center; justify-content: center; color: white;">
+    <h1 class="zh-text" style="font-size: 40px; margin-bottom: 30px; text-shadow: 0 4px 10px rgba(0,0,0,0.8);">
+      <ruby>請<rt>ㄑㄧㄥˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>啟<rt>ㄑㄧˇ</rt></ruby><ruby>音<rt>ㄧㄣ</rt></ruby><ruby>量<rt>ㄌㄧㄤˋ</rt></ruby> 🔊
+    </h1>
+    <button id="btn-start-tutorial" onclick="startLobbyTutorial()" style="padding: 15px 40px; font-size: 32px; font-weight: bold; background: #ff4081; color: white; border: 4px solid #fff; border-radius: 35px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 64, 129, 0.6); display: flex; align-items: center; gap: 10px;">
+      <span class="zh-text"><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>始<rt>ㄕˇ</rt></ruby><ruby>遊<rt>ㄧㄡˊ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby></span>
+    </button>
+  </div>
+
+  <!-- 🌟 DOM 教學的高光遮罩 -->
+  <div id="dom-tutorial-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9000; display:none; pointer-events:none; transition: opacity 0.3s ease;"></div>
+  
+  <!-- 🌟 DOM 教學的手指 (改為由下往上指) -->
+  <div id="dom-tutorial-finger" style="position:fixed; font-size:60px; z-index:9002; display:none; pointer-events:none; animation: finger-bounce-y 1s infinite; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">👆</div>
+
+  <div id="top-bar">
+    <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
+    
+    <div id="quick-menu">
+      <div id="btn-wardrobe" class="btn-floating" onclick="goToWardrobe()">👗</div>
+      <div id="btn-sticker" class="btn-floating" onclick="goToStickerBook()">📖</div>
+    </div>
+  </div>
+
+  <div id="reward-modal">
+    <div id="reward-modal-content">
+      <div id="reward-badge"></div>
+      <div id="reward-img-box">
+        <div id="reward-bg-ray"></div>
+        <img id="reward-img" src="" alt="reward">
+        <div id="reward-coin-icon">⭐</div>
+      </div>
+      <div id="reward-info-box">
+        <div id="reward-title" class="zh-text"></div>
+      </div>
+      <button id="btn-claim-reward" onclick="claimCurrentReward()">
+        <span>🎁</span>
+        <span class="zh-text"><ruby>收<rt>ㄕㄡ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby></span>
+      </button>
+    </div>
+  </div>
+
+  <canvas id="lobbyCanvas"></canvas>
+
+  <script src="assets-manifest.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload(); 
+        }
+      });
+      navigator.serviceWorker.register('sw.js')
+        .then((reg) => {
+          console.log('Service Worker 註冊成功');
+          reg.update(); 
+        })
+        .catch((err) => console.warn('Service Worker 註冊失敗:', err));
+    }
+
+    async function runPreloader() {
+      const bar = document.getElementById('progress-bar');
+      const text = document.getElementById('progress-text');
+      const preloader = document.getElementById('preloader');
+
+      const cacheName = typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : (typeof GAME_CACHE_NAME !== 'undefined' ? GAME_CACHE_NAME : 'game-cache');
+      const assetsList = typeof GAME_ASSETS !== 'undefined' ? GAME_ASSETS : [];
+      
+      if (assetsList.length > 0 && 'caches' in window) {
+        const cache = await caches.open(cacheName);
+        let loadedCount = 0;
+        const total = assetsList.length;
+
+        await Promise.all(assetsList.map(async (url) => {
+          try {
+            const match = await cache.match(url);
+            if (!match) {
+              const res = await fetch(url, { cache: 'reload' });
+              if (res.ok) await cache.put(url, res);
+            }
+          } catch (err) {
+            console.warn('預載失敗:', url);
+          } finally {
+            loadedCount++;
+            const percent = Math.round((loadedCount / total) * 100);
+            if (bar) bar.style.width = percent + '%';
+            if (text) text.innerText = percent + '%';
+          }
+        }));
+      }
+
+      setTimeout(() => {
+        if (preloader) {
+          preloader.style.transition = 'opacity 0.5s ease';
+          preloader.style.opacity = '0';
+          setTimeout(() => {
+            preloader.remove();
+            checkLobbyTutorial(); 
+          }, 500);
+        } else {
+          checkLobbyTutorial();
+        }
+      }, 200);
+    }
+
+    window.addEventListener('DOMContentLoaded', runPreloader);
+  </script>
+
+  <script>
+    (function () {
+      if (window.Bopomofo) return;
+      const style = document.createElement('style');
+      style.id = 'bopo-module-style';
+      style.textContent = `
+        .char-block {
+          display: inline-flex; flex-direction: row; align-items: center;
+          margin-right: 0.55em; margin-bottom: 4px; vertical-align: middle; line-height: 1;
+        }
+        .bopo {
+          writing-mode: vertical-rl; text-orientation: upright; font-size: 0.35em;
+          color: #ffeb3b; margin-left: 2px; position: relative; padding: 0;
+          line-height: 1.1; letter-spacing: -1px;
+        }
+        .bopo .tone {
+          position: absolute; right: -0.9em; top: 50%;
+          font-family: "標楷體", "BiauKai", "DFKai-SB", serif;
+          font-size: 1.07em; font-weight: bold;
+          transform: translateY(-50%) scaleY(1.3); pointer-events: none;
+        }
+        .bopo .tone.sp {
+          position: absolute; left: 50%; right: auto; top: -0.55em;
+          transform: translateX(-50%);
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 1.6em; line-height: 1; font-weight: 900; pointer-events: none;
+        }
+        .zh-text {
+          display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        }
+      `;
+      document.head.appendChild(style);
+
+      function convertRuby(rubyElement) {
+        const charText = Array.from(rubyElement.childNodes)
+          .filter(node => node.nodeType === Node.TEXT_NODE)
+          .map(node => node.textContent).join('').trim();
+        const rt = rubyElement.querySelector('rt');
+        if (!rt) return;
+        let bopoText = rt.textContent.trim();
+        let tone = '';
+        let bopoBase = bopoText;
+        const normalTones = ['ˊ', 'ˇ', 'ˋ'];
+        if (bopoText.includes('˙')) {
+          tone = '˙';
+          bopoBase = bopoText.replace(/˙/g, '');
+        } else if (normalTones.includes(bopoText.slice(-1))) {
+          tone = bopoText.slice(-1);
+          bopoBase = bopoText.slice(0, -1);
+        }
+        const charBlock = document.createElement('span');
+        charBlock.className = 'char-block';
+        const charSpan = document.createElement('span');
+        charSpan.textContent = charText;
+        charBlock.appendChild(charSpan);
+        const bopoSpan = document.createElement('span');
+        bopoSpan.className = 'bopo';
+        bopoSpan.textContent = bopoBase;
+        if (tone) {
+          const toneSpan = document.createElement('span');
+          toneSpan.className = tone === '˙' ? 'tone sp' : 'tone';
+          toneSpan.textContent = tone;
+          bopoSpan.appendChild(toneSpan);
+        }
+        charBlock.appendChild(bopoSpan);
+        rubyElement.replaceWith(charBlock);
+      }
+
+      function renderAll() {
+        document.querySelectorAll('ruby').forEach(convertRuby);
+      }
+      window.Bopomofo = { render: renderAll, convert: convertRuby };
+    })();
+
+    const canvas = document.getElementById('lobbyCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 🌟 === 大廳教學模式變數與邏輯 === 🌟
+    let isTutorialMode = false;
+    let lobbyTutorialStep = -1;
+
+    function checkLobbyTutorial() {
+      if (localStorage.getItem('lobby_tutorial_done') !== 'true') {
+        document.getElementById('tutorial-start-screen').style.display = 'flex';
+      }
+    }
+
+    function startLobbyTutorial() {
+      document.getElementById('tutorial-start-screen').style.display = 'none';
+      isTutorialMode = true;
+      lobbyTutorialStep = -1; 
+      
+      localStorage.removeItem('blindbox_star6');
+      
+      player.x = 943;
+      player.y = 1051;
+      player.targetX = player.x;
+      player.targetY = player.y;
+
+      scale = minScale * 1.3; 
+      cameraX = player.x - (canvas.width / scale) / 2;
+      cameraY = player.y - (canvas.height / scale) / 2;
+      clampCamera();
+
+      nextTutorialStep();
+    }
+
+    function nextTutorialStep() {
+      lobbyTutorialStep++;
+      if (lobbyTutorialStep === 0) {
+        window.RPGDialog.show(`<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>朋<rt>ㄆㄥˊ</rt></ruby><ruby>友<rt>ㄧㄡˇ</rt></ruby>，<ruby>歡<rt>ㄏㄨㄢ</rt></ruby><ruby>迎<rt>ㄧㄥˊ</rt></ruby><ruby>來<rt>ㄌㄞˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>世<rt>ㄕˋ</rt></ruby><ruby>界<rt>ㄐㄧㄝˋ</rt></ruby>`, 'assets/mp3/lobby-1.mp3');
+      } else if (lobbyTutorialStep === 1) {
+        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>個<rt>ㄍㄜ˙</rt></ruby><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>世<rt>ㄕˋ</rt></ruby><ruby>界<rt>ㄐㄧㄝˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>很<rt>ㄏㄣˇ</rt></ruby><ruby>多<rt>ㄉㄨㄛ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>等<rt>ㄉㄥˇ</rt></ruby><ruby>著<rt>ㄓㄜ˙</rt></ruby><ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>去<rt>ㄑㄩˋ</rt></ruby><ruby>探<rt>ㄊㄢˋ</rt></ruby><ruby>索<rt>ㄙㄨㄛˇ</rt></ruby>`, 'assets/mp3/lobby-2.mp3');
+      } else if (lobbyTutorialStep === 2) {
+        window.RPGDialog.show(`<ruby>只<rt>ㄓˇ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>任<rt>ㄖㄣˋ</rt></ruby><ruby>何<rt>ㄏㄜˊ</rt></ruby><ruby>一<rt>ㄧˊ</rt></ruby><ruby>處<rt>ㄔㄨˋ</rt></ruby>，<ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>偶<rt>ㄡˇ</rt></ruby><ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>會<rt>ㄏㄨㄟˋ</rt></ruby><ruby>走<rt>ㄗㄡˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>去<rt>ㄑㄩˋ</rt></ruby>`, 'assets/mp3/lobby-3.mp3');
+      } else if (lobbyTutorialStep === 3) {
+        // 第一段走路
+      } else if (lobbyTutorialStep === 4) {
+        // 第二段走路
+      } else if (lobbyTutorialStep === 5) {
+        window.RPGDialog.show(`<ruby>踩<rt>ㄘㄞˇ</rt></ruby><ruby>在<rt>ㄗㄞˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby><ruby>面<rt>ㄇㄧㄢˋ</rt></ruby><ruby>才<rt>ㄘㄞˊ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>知<rt>ㄓ</rt></ruby><ruby>道<rt>ㄉㄠˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>還<rt>ㄏㄞˊ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>，<ruby>也<rt>ㄧㄝˇ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>能<rt>ㄋㄥˊ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>`, 'assets/mp3/lobby-4.mp3');
+      } else if (lobbyTutorialStep === 6) {
+        // 踩星星
+      } else if (lobbyTutorialStep === 7) {
+        highlightDOM('hud');
+        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>，<ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>拿<rt>ㄋㄚˊ</rt></ruby><ruby>來<rt>ㄌㄞˊ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>偶<rt>ㄡˇ</rt></ruby><ruby>或<rt>ㄏㄨㄛˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>`, 'assets/mp3/lobby-5.mp3');
+      } else if (lobbyTutorialStep === 8) {
+        highlightDOM('btn-wardrobe');
+        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>衣<rt>ㄧ</rt></ruby><ruby>櫥<rt>ㄔㄨˊ</rt></ruby>，<ruby>裡<rt>ㄌㄧˇ</rt></ruby><ruby>面<rt>ㄇㄧㄢˋ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>更<rt>ㄍㄥ</rt></ruby><ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>偶<rt>ㄡˇ</rt></ruby>`, 'assets/mp3/lobby-6.mp3');
+      } else if (lobbyTutorialStep === 9) {
+        highlightDOM('btn-sticker');
+        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby>，<ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>解<rt>ㄐㄧㄝˇ</rt></ruby><ruby>挑<rt>ㄊㄧㄠ</rt></ruby><ruby>戰<rt>ㄓㄢˋ</rt></ruby><ruby>或<rt>ㄏㄨㄛˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>利<rt>ㄌㄧˋ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>，<ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>`, 'assets/mp3/lobby-7.mp3');
+      } else if (lobbyTutorialStep === 10) {
+        endLobbyTutorial();
+        window.RPGDialog.show(`<ruby>開<rt>ㄎㄞ</rt></ruby><ruby>始<rt>ㄕˇ</rt></ruby><ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>探<rt>ㄊㄢˋ</rt></ruby><ruby>險<rt>ㄒㄧㄢˇ</rt></ruby><ruby>吧<rt>˙ㄅㄚ</rt></ruby><span>!</span>`, 'assets/mp3/lobby-8.mp3');
+      } 
+    }
+
+    // 🌟 控制 UI 高光與變暗效果
+    function highlightDOM(elementId) {
+      document.getElementById('dom-tutorial-overlay').style.display = 'block';
+      
+      // 將頂部列提上來到遮罩上方
+      document.getElementById('top-bar').style.zIndex = '9001'; 
+      
+      // 清除先前的特效
+      document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+      document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
+      
+      let target = document.getElementById(elementId);
+      if (target) {
+        target.classList.add('tutorial-highlight');
+        
+        // 將「沒被指到」的元素變暗
+        if (elementId === 'hud') {
+          document.getElementById('quick-menu').classList.add('dimmed');
+        } else if (elementId === 'btn-wardrobe') {
+          document.getElementById('hud').classList.add('dimmed');
+          document.getElementById('btn-sticker').classList.add('dimmed');
+        } else if (elementId === 'btn-sticker') {
+          document.getElementById('hud').classList.add('dimmed');
+          document.getElementById('btn-wardrobe').classList.add('dimmed');
+        }
+
+        let rect = target.getBoundingClientRect();
+        let finger = document.getElementById('dom-tutorial-finger');
+        finger.style.display = 'block';
+        
+        // 手指定位：置中於元素，並位於元素下方往上指
+        finger.innerHTML = '👆';
+        finger.style.left = (rect.left + rect.width / 2 - 30) + 'px'; // 30 是字體大小 60 的一半
+        finger.style.top = (rect.bottom + 15) + 'px'; 
+      }
+    }
+
+    function endLobbyTutorial() {
+      isTutorialMode = false;
+      lobbyTutorialStep = -1;
+      document.getElementById('dom-tutorial-overlay').style.display = 'none';
+      document.getElementById('dom-tutorial-finger').style.display = 'none';
+      
+      // 復原原本的樣式
+      document.getElementById('top-bar').style.zIndex = ''; 
+      document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+      document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
+      
+      localStorage.setItem('lobby_tutorial_done', 'true');
+    }
+
+    function handleLobbyDialogClick() {
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (!window.RPGDialog.isLocked()) {
+          window.RPGDialog.hide();
+          
+          if ([0, 1, 2, 5, 7, 8, 9].includes(lobbyTutorialStep)) {
+            nextTutorialStep();
+          }
+        }
+        return true; 
+      }
+      return false;
+    }
+
+    const starCache = document.createElement('canvas');
+    const starSize = 200; 
+    starCache.width = starSize;
+    starCache.height = starSize;
+    const sCtx = starCache.getContext('2d');
+    sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+    sCtx.textAlign = 'center';
+    sCtx.textBaseline = 'middle';
+    sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
+    sCtx.shadowBlur = 25; 
+    sCtx.fillText('🌟', starSize / 2, starSize / 2);
+
+    const MAP_WIDTH = 3000;
+    const MAP_HEIGHT = 4000;
+
+    let scale = 1.0;
+    let minScale = 1.0; 
+    let cameraX = 0;
+    let cameraY = 0;
+
+    function clampCamera() {
+      let viewW = canvas.width / scale;
+      let viewH = canvas.height / scale;
+
+      if (viewW > MAP_WIDTH) {
+        cameraX = -(viewW - MAP_WIDTH) / 2;
+      } else {
+        cameraX = Math.max(0, Math.min(cameraX, MAP_WIDTH - viewW));
+      }
+
+      if (viewH > MAP_HEIGHT) {
+        cameraY = -(viewH - MAP_HEIGHT) / 2;
+      } else {
+        cameraY = Math.max(0, Math.min(cameraY, MAP_HEIGHT - viewH));
+      }
+    }
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      minScale = canvas.width / (MAP_WIDTH / 2);
+      
+      if (!isTutorialMode && scale < minScale) {
+        scale = minScale;
+      }
+      clampCamera();
+    }
+    window.addEventListener('resize', resize);
+
+    let playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+    document.getElementById('coinDisplay').innerText = playerCoins;
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    
+    const bgImg = new Image();
+    bgImg.src = 'assets/lobby/lobby.webp';
+
+    const playerImg = new Image();
+    playerImg.src = `assets/han/${equippedCharKey}-1.webp`;
+
+    const DEFAULT_PLAYER_X = 943;
+    const DEFAULT_PLAYER_Y = 1051;
+
+    const savedX = localStorage.getItem('lobbyPlayerX');
+    const savedY = localStorage.getItem('lobbyPlayerY');
+
+    const initialX = (savedX !== null && !isNaN(parseFloat(savedX))) ? parseFloat(savedX) : DEFAULT_PLAYER_X;
+    const initialY = (savedY !== null && !isNaN(parseFloat(savedY))) ? parseFloat(savedY) : DEFAULT_PLAYER_Y;
+
+    function savePlayerPosition() {
+      if(isTutorialMode) return; 
+      localStorage.setItem('lobbyPlayerX', Math.round(player.x));
+      localStorage.setItem('lobbyPlayerY', Math.round(player.y));
+    }
+
+    function goToWardrobe() {
+      if (isTutorialMode) return; 
+      savePlayerPosition();
+      window.location.href = 'wardrobe.html';
+    }
+
+    function goToStickerBook() {
+      if (isTutorialMode) return; 
+      savePlayerPosition();
+      window.location.href = 'sticker.html';
+    }
+
+    const player = {
+      x: initialX, 
+      y: initialY, 
+      size: 160, 
+      speed: 600,
+      targetX: initialX, 
+      targetY: initialY,
+      isMoving: false, 
+      isFacingLeft: false, 
+      walkCycle: 0
+    };
+
+    window.addEventListener('pagehide', savePlayerPosition);
+    window.addEventListener('beforeunload', savePlayerPosition);
+
+    resize();
+    scale = minScale;
+    cameraX = player.x - (canvas.width / scale) / 2;
+    cameraY = player.y - (canvas.height / scale) / 2;
+    clampCamera();
+
+    const zones = [
+      { id: 'map1', type: '關卡', x: 1474, y: 1185, w: 225, h: 300, starX: 1586, starY: 1335, targetUrl: 'map1.html', clearKey: 'map1_cleared', color: '#2196f3', imgSrc: 'assets/map/map1.webp' },
+      { id: 'map2', type: '關卡', x: 1237, y: 1743, w: 225, h: 300, starX: 1349, starY: 1893, targetUrl: 'map2.html', clearKey: 'map2_cleared', color: '#2196f3', imgSrc: 'assets/map/map2.webp' },
+      { id: 'map3', type: '關卡', x: 1637, y: 1918, w: 225, h: 300, starX: 1749, starY: 2068, targetUrl: 'map3.html', clearKey: 'map3_cleared', color: '#2196f3', imgSrc: 'assets/map/map3.webp' },
+      { id: 'map4', type: '關卡', x: 780, y: 2030, w: 225, h: 300, starX: 892, starY: 2180, targetUrl: 'map4.html', clearKey: 'map4_cleared', color: '#2196f3', imgSrc: 'assets/map/map4.webp' },
+      { id: 'map5', type: '關卡', x: 1800, y: 1500, w: 225, h: 300, starX: 2089, starY: 1758, targetUrl: 'map5.html', clearKey: 'map5_cleared', color: '#2196f3', imgSrc: 'assets/map/map5.webp' },
+      { id: 'map6', type: '關卡', x: 640, y: 1050, w: 225, h: 300, starX: 789, starY: 1263, targetUrl: 'map6.html', clearKey: 'map6_cleared', color: '#2196f3', imgSrc: 'assets/map/map6.webp' },
+      { id: 'map7', type: '關卡', x: 1830, y: 2450, w: 225, h: 300, starX: 1944, starY: 2645, targetUrl: 'map7.html', clearKey: 'map7_cleared', color: '#2196f3', imgSrc: 'assets/map/map7.webp' },
+      { id: 'map8', type: '關卡', x: 1652.5, y: 3432.5, w: 225, h: 300, starX: 1765, starY: 3582, targetUrl: 'map8.html', clearKey: 'map8_cleared', color: '#2196f3', imgSrc: 'assets/map/map8.webp' },
+      { id: 'map9', type: '關卡', x: 2237.5, y: 3212.5, w: 225, h: 300, starX: 2369, starY: 3448, targetUrl: 'map9.html', clearKey: 'map9_cleared', color: '#2196f3', imgSrc: 'assets/map/map9.webp' },
+      { id: 'map10', type: '關卡', x: 1110, y: 2850, w: 225, h: 300, starX: 1226, starY: 3045, targetUrl: 'map10.html', clearKey: 'map10_cleared', color: '#2196f3', imgSrc: 'assets/map/map10.webp' },
+      { id: 'map11', type: '關卡', x: 2458, y: 2523, w: 225, h: 300, starX: 2570, starY: 2673, targetUrl: 'map11.html', clearKey: 'map11_cleared', color: '#2196f3', imgSrc: 'assets/map/map11.webp' },
+      { id: 'map12', type: '關卡', x: 300, y: 2710, w: 225, h: 300, starX: 599, starY: 2948, targetUrl: 'map12.html', clearKey: 'map12_cleared', color: '#2196f3', imgSrc: 'assets/map/map12.webp' },
+      { id: 'map13', type: '關卡', x: 2263, y: 815, w: 225, h: 300, starX: 2391, starY: 985, targetUrl: 'map13.html', clearKey: 'map13_cleared', color: '#2196f3', imgSrc: 'assets/map/map13.webp' },
+      
+      { id: 'slobby1', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 1671, starY: 3318, stickerId: 'slobby1', stickerName: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', stickerSrc: 'assets/sticker/lobby1.webp' },
+      { id: 'slobby2', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 2344, starY: 2223, stickerId: 's14', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', stickerSrc: 'assets/bad/bad1-3.webp' },
+      { id: 'slobby3', type: '貼紙', x: 1652, y: 3432, w: 225, h: 300, starX: 526, starY: 723, stickerId: 'slobby3', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>', stickerSrc: 'assets/sticker/lobby3.webp' },
+
+      { id: 'star1', type: '金幣', x: 1110, y: 2850, w: 225, h: 300, starX: 1274, starY: 2480, rewardAmount: 5 },
+      { id: 'star2', type: '金幣', x: 2458, y: 2523, w: 225, h: 300, starX: 511, starY: 2318, rewardAmount: 8 },
+      { id: 'star3', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 2269, starY: 403, rewardAmount: 5 },
+      { id: 'star4', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 2519, starY: 510, rewardAmount: 5 },
+      { id: 'star5', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 656, starY: 480, rewardAmount: 5 },
+      { id: 'star6', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 1499, starY: 610, rewardAmount: 5 },
+      { id: 'star7', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 516, starY: 3513, rewardAmount: 5 },
+      { id: 'star8', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 1789, starY: 2990, rewardAmount: 5 },
+      { id: 'star9', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 1576, starY: 3650, rewardAmount: 5 },
+      { id: 'star10', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 2766, starY: 3745, rewardAmount: 15 },
+      { id: 'star11', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 1894, starY: 3903, rewardAmount: 10 },
+      { id: 'star12', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 2519, starY: 3908, rewardAmount: 5 }
+    ];
+
+    for (let z of zones) {
+      if (z.imgSrc) {
+        z.img = new Image();
+        z.img.src = z.imgSrc;
+      }
+    }
+
+    function isZoneClaimed(z) {
+      return localStorage.getItem('blindbox_' + z.id) === 'claimed';
+    }
+
+    function isLevelCleared(z) {
+      const key = z.clearKey || (z.id + '_cleared');
+      return localStorage.getItem(key) === 'true';
+    }
+
+    let isModalOpen = false;
+    let activeRewardZone = null;
+
+    const rewardModal = document.getElementById('reward-modal');
+    const rewardBadge = document.getElementById('reward-badge');
+    const rewardImg = document.getElementById('reward-img');
+    const rewardCoinIcon = document.getElementById('reward-coin-icon');
+    const rewardTitle = document.getElementById('reward-title');
+
+    function openRewardModal(zone) {
+      isModalOpen = true;
+      activeRewardZone = zone;
+      player.isMoving = false; 
+
+      if (zone.type === '貼紙') {
+        rewardBadge.innerHTML = `<span class="zh-text"><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby></span>`;
+        rewardImg.src = zone.stickerSrc || '';
+        rewardImg.style.display = 'block';
+        rewardCoinIcon.style.display = 'none';
+        rewardTitle.innerHTML = zone.stickerName || '';
+      } else if (zone.type === '金幣') {
+        rewardBadge.innerHTML = `<span class="zh-text"><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby></span>`;
+        rewardImg.style.display = 'none';
+        rewardCoinIcon.style.display = 'block';
+        rewardTitle.innerHTML = `⭐ + ${zone.rewardAmount || 0}`;
+      }
+
+      if (window.Bopomofo) window.Bopomofo.render();
+      rewardModal.classList.add('active');
+    }
+
+    function closeRewardModal() {
+      rewardModal.classList.remove('active');
+      isModalOpen = false;
+      activeRewardZone = null;
+
+      if (isTutorialMode && lobbyTutorialStep === 6) {
+        setTimeout(() => {
+          nextTutorialStep(); 
+        }, 300);
+      }
+    }
+
+    function claimCurrentReward() {
+      if (!activeRewardZone) return;
+      const z = activeRewardZone;
+
+      if (z.type === '貼紙') {
+        if (z.stickerId) {
+          const currentStatus = localStorage.getItem('sticker_' + z.stickerId);
+          if (currentStatus !== 'true') {
+            localStorage.setItem('sticker_' + z.stickerId, 'new');
+          }
+        }
+        localStorage.setItem('blindbox_' + z.id, 'claimed');
+      } else if (z.type === '金幣') {
+        const addAmount = parseInt(z.rewardAmount || 0, 10);
+        playerCoins += addAmount;
+        localStorage.setItem('playerCoins', playerCoins);
+        document.getElementById('coinDisplay').innerText = playerCoins;
+        localStorage.setItem('blindbox_' + z.id, 'claimed');
+      }
+
+      closeRewardModal();
+    }
+
+    let lastTime = performance.now();
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      update(Math.min(dt, 0.1));
+      draw(currentTime); 
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (isTutorialMode) {
+        let targetCamX = player.x - (canvas.width / scale) / 2;
+        let targetCamY = player.y - (canvas.height / scale) / 2;
+        cameraX += (targetCamX - cameraX) * 0.1;
+        cameraY += (targetCamY - cameraY) * 0.1;
+        clampCamera();
+      }
+
+      if (isModalOpen) return; 
+
+      if (player.isMoving) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speed * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.walkCycle += 20 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          savePlayerPosition();
+          checkZones();
+
+          if (isTutorialMode) {
+            if (lobbyTutorialStep === 3) {
+              nextTutorialStep(); 
+            } else if (lobbyTutorialStep === 4) {
+              nextTutorialStep(); 
+            }
+          }
+        }
+      }
+    }
+
+   function checkZones() {
+      if (isModalOpen) return;
+
+      for (let z of zones) {
+        let isPortal = (z.type === '關卡' && isLevelCleared(z));
+        let isHit = false;
+
+        if (isPortal) {
+          isHit = (player.x > z.x && player.x < z.x + z.w && 
+                   player.y > z.y && player.y < z.y + z.h);
+        } else {
+          let sx = (z.starX !== undefined) ? z.starX : (z.x + z.w / 2);
+          let sy = (z.starY !== undefined) ? z.starY : (z.y + z.h / 2);
+          let starHitSize = 150; 
+          let half = starHitSize / 2;
+          isHit = (player.x > sx - half && player.x < sx + half && 
+                   player.y > sy - half && player.y < sy + half);
+        }
+
+        if (isHit) {
+          if (z.type === '關卡') {
+            savePlayerPosition();
+            window.location.href = z.targetUrl || (z.id + '.html');
+            return;
+          } 
+          else if (z.type === '貼紙' || z.type === '金幣') {
+            if (isZoneClaimed(z)) continue; 
+            savePlayerPosition();
+            openRewardModal(z);
+            return;
+          }
+        }
+      }
+    }
+
+    function draw(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.scale(scale, scale);
+      ctx.translate(-cameraX, -cameraY);
+
+      if (bgImg.complete) {
+        ctx.drawImage(bgImg, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+      } else {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+      }
+
+      let viewW = canvas.width / scale;
+      let viewH = canvas.height / scale;
+
+      for (let z of zones) {
+        if ((z.type === '貼紙' || z.type === '金幣') && isZoneClaimed(z)) {
+          continue;
+        }
+
+        if (z.type === '關卡' && isLevelCleared(z)) {
+          if (z.x + z.w < cameraX || z.x > cameraX + viewW ||
+              z.y + z.h < cameraY || z.y > cameraY + viewH) {
+            continue;
+          }
+
+          ctx.save();
+          let cx = z.x + z.w / 2; 
+          let cy = z.y + z.h / 2; 
+          let portalAngle = (time / 800) * Math.PI * 2; 
+
+          if (ctx.createConicGradient) {
+            let grad = ctx.createConicGradient(portalAngle, cx, cy);
+            grad.addColorStop(0, "#ff0000"); 
+            grad.addColorStop(0.15, "#ff7f00"); 
+            grad.addColorStop(0.33, "#ffff00"); 
+            grad.addColorStop(0.5, "#00ff00"); 
+            grad.addColorStop(0.66, "#0000ff"); 
+            grad.addColorStop(0.83, "#ff00ff"); 
+            grad.addColorStop(1, "#ff0000"); 
+            ctx.strokeStyle = grad;
+          } else {
+            ctx.strokeStyle = '#00ffff'; 
+          }
+
+          ctx.lineWidth = 12; 
+          ctx.lineJoin = 'round'; 
+          
+          ctx.strokeRect(z.x - 6, z.y - 6, z.w + 12, z.h + 12); 
+          ctx.restore();
+
+          if (z.img && z.img.complete) {
+            ctx.drawImage(z.img, z.x, z.y, z.w, z.h);
+          } else {
+            ctx.fillStyle = z.color || '#2196f3'; 
+            ctx.fillRect(z.x, z.y, z.w, z.h);
+          }
+        } 
+        else {
+          let sx = (z.starX !== undefined) ? z.starX : (z.x + z.w / 2);
+          let sy = (z.starY !== undefined) ? z.starY : (z.y + z.h / 2);
+          
+          if (sx < cameraX - 150 || sx > cameraX + viewW + 150 ||
+              sy < cameraY - 150 || sy > cameraY + viewH + 150) {
+            continue;
+          }
+
+          ctx.save();
+          let floatOffsetY = Math.sin(time / 300 + sx) * 16;
+          let pulseScale = 1 + Math.sin(time / 400 + sy) * 0.08;
+
+          ctx.translate(sx, sy + floatOffsetY);
+          ctx.scale(pulseScale, pulseScale);
+
+          ctx.drawImage(starCache, -starSize / 2, -starSize / 2);
+          ctx.restore();
+        }
+      }
+
+      ctx.save();
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 5 : 0;
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      if (player.isFacingLeft) ctx.scale(-1, 1);
+      
+      if (playerImg.complete) {
+        ctx.drawImage(playerImg, -player.size/2, -player.size/2, player.size, player.size);
+      } else {
+        ctx.fillStyle = 'pink';
+        ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+      }
+      ctx.restore();
+
+      if (isTutorialMode) {
+        let fingerX = 0, fingerY = 0;
+        if (lobbyTutorialStep === 3) { fingerX = 1159; fingerY = 800; }
+        else if (lobbyTutorialStep === 4) { fingerX = 1661; fingerY = 905; }
+        else if (lobbyTutorialStep === 6) { fingerX = 1499; fingerY = 610; }
+        
+        if (fingerX > 0) {
+          ctx.save();
+          let bounce = Math.sin(time / 150) * 15;
+          ctx.font = '80px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('👇', fingerX, fingerY - 80 + bounce);
+          
+          ctx.strokeStyle = '#40ff80';
+          ctx.lineWidth = 6;
+          ctx.shadowColor = '#40ff80';
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(fingerX, fingerY, 60, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      ctx.restore(); 
+      drawOffscreenPointer();
+    }
+
+    function drawOffscreenPointer() {
+      let pxScreen = (player.x - cameraX) * scale;
+      let pyScreen = (player.y - cameraY) * scale;
+      let margin = 40;
+      let isOffscreen = (
+        pxScreen < margin || pxScreen > canvas.width - margin ||
+        pyScreen < margin || pyScreen > canvas.height - margin
+      );
+
+      if (isOffscreen) {
+        let cx = canvas.width / 2;
+        let cy = canvas.height / 2;
+        let angle = Math.atan2(pyScreen - cy, pxScreen - cx);
+        let arrowX = Math.max(margin, Math.min(canvas.width - margin, pxScreen));
+        let arrowY = Math.max(margin, Math.min(canvas.height - margin, pyScreen));
+
+        ctx.save();
+        ctx.translate(arrowX, arrowY);
+        ctx.rotate(angle);
+        
+        ctx.fillStyle = '#ffeb3b'; 
+        ctx.strokeStyle = '#ff5722'; 
+        ctx.lineWidth = 3;
+        
+        ctx.beginPath();
+        ctx.moveTo(25, 0);       
+        ctx.lineTo(-20, 20);     
+        ctx.lineTo(-10, 0);      
+        ctx.lineTo(-20, -20);    
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+    }
+
+    const activePointers = new Map();
+    let isPointerDown = false; 
+    let isDragActive = false;  
+    let hasMoved = false;
+    let dragStart = { x: 0, y: 0 };
+    let camStart = { x: 0, y: 0 };
+    let initialPinchDist = null;
+    let initialScale = 1;
+    let pinchCenter = { x: 0, y: 0 };
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (handleLobbyDialogClick()) return; 
+
+      if (e.target !== canvas || isModalOpen) return;
+      if (isTutorialMode && activePointers.size > 0) return; 
+      
+      canvas.setPointerCapture(e.pointerId);
+      activePointers.set(e.pointerId, e);
+
+      if (activePointers.size === 1) {
+        isPointerDown = true;
+        isDragActive = false; 
+        hasMoved = false;
+        dragStart = { x: e.clientX, y: e.clientY };
+        camStart = { x: cameraX, y: cameraY };
+      } else if (activePointers.size === 2) {
+        isPointerDown = false;
+        isDragActive = false;
+        hasMoved = true; 
+        let pts = Array.from(activePointers.values());
+        initialPinchDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+        initialScale = scale;
+        
+        const rect = canvas.getBoundingClientRect();
+        pinchCenter = {
+          x: (pts[0].clientX + pts[1].clientX) / 2 - rect.left,
+          y: (pts[0].clientY + pts[1].clientY) / 2 - rect.top
+        };
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activePointers.has(e.pointerId) || isModalOpen) return;
+      activePointers.set(e.pointerId, e);
+
+      if (isTutorialMode) return; 
+
+      if (activePointers.size === 1 && isPointerDown) {
+        let dx = e.clientX - dragStart.x;
+        let dy = e.clientY - dragStart.y;
+        
+        if (!isDragActive) {
+          if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            isDragActive = true;
+            hasMoved = true;
+            dragStart = { x: e.clientX, y: e.clientY };
+            camStart = { x: cameraX, y: cameraY };
+          }
+        }
+        
+        if (isDragActive) {
+          cameraX = camStart.x - (e.clientX - dragStart.x) / scale;
+          cameraY = camStart.y - (e.clientY - dragStart.y) / scale;
+          clampCamera();
+        }
+        
+      } else if (activePointers.size === 2) {
+        let pts = Array.from(activePointers.values());
+        let currentDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+        
+        let newScale = initialScale * (currentDist / initialPinchDist);
+        newScale = Math.max(minScale, Math.min(newScale, 2.5)); 
+        
+        const rect = canvas.getBoundingClientRect();
+        let currentPinchCenter = {
+          x: (pts[0].clientX + pts[1].clientX) / 2 - rect.left,
+          y: (pts[0].clientY + pts[1].clientY) / 2 - rect.top
+        };
+
+        let oldWorldX = pinchCenter.x / scale + cameraX;
+        let oldWorldY = pinchCenter.y / scale + cameraY;
+        
+        scale = newScale;
+        cameraX = oldWorldX - currentPinchCenter.x / scale;
+        cameraY = oldWorldY - currentPinchCenter.y / scale;
+        
+        pinchCenter = currentPinchCenter;
+        
+        clampCamera();
+      }
+    });
+
+    const onPointerUp = (e) => {
+      activePointers.delete(e.pointerId);
+      if (isModalOpen) return;
+      
+      if (activePointers.size === 0) {
+        if (isPointerDown && !hasMoved) {
+          const rect = canvas.getBoundingClientRect();
+          let clientX = e.clientX - rect.left;
+          let clientY = e.clientY - rect.top;
+
+          let clickWorldX = (clientX / scale) + cameraX;
+          let clickWorldY = (clientY / scale) + cameraY;
+          
+          clickWorldX = Math.max(0, Math.min(clickWorldX, MAP_WIDTH));
+          clickWorldY = Math.max(0, Math.min(clickWorldY, MAP_HEIGHT));
+
+          if (isTutorialMode) {
+            if (lobbyTutorialStep === 3) {
+              if (Math.hypot(clickWorldX - 1159, clickWorldY - 800) > 150) return;
+              clickWorldX = 1159; clickWorldY = 800; 
+            } else if (lobbyTutorialStep === 4) {
+              if (Math.hypot(clickWorldX - 1661, clickWorldY - 905) > 150) return;
+              clickWorldX = 1661; clickWorldY = 905;
+            } else if (lobbyTutorialStep === 6) {
+              if (Math.hypot(clickWorldX - 1499, clickWorldY - 610) > 150) return;
+              clickWorldX = 1499; clickWorldY = 610;
+            } else {
+              return; 
+            }
+          }
+
+          player.isFacingLeft = clickWorldX < player.x;
+          player.targetX = clickWorldX;
+          player.targetY = clickWorldY;
+          player.isMoving = true;
+        }
+        isPointerDown = false;
+        isDragActive = false;
+      } else if (activePointers.size === 1) {
+        let ptr = Array.from(activePointers.values())[0];
+        isPointerDown = true;
+        isDragActive = true; 
+        hasMoved = true; 
+        dragStart = { x: ptr.clientX, y: ptr.clientY };
+        camStart = { x: cameraX, y: cameraY };
+      }
+    };
+
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('pointerout', onPointerUp);
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (isModalOpen || isTutorialMode) return; 
+      
+      let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; 
+      let newScale = Math.max(minScale, Math.min(scale * zoomFactor, 2.5));
+      
+      const rect = canvas.getBoundingClientRect();
+      let mouseX = e.clientX - rect.left;
+      let mouseY = e.clientY - rect.top;
+      
+      let oldWorldX = mouseX / scale + cameraX;
+      let oldWorldY = mouseY / scale + cameraY;
+      
+      scale = newScale;
+      cameraX = oldWorldX - mouseX / scale;
+      cameraY = oldWorldY - mouseY / scale;
+      
+      clampCamera();
+    }, { passive: false });
+
+    if (window.Bopomofo) window.Bopomofo.render();
+    requestAnimationFrame(gameLoop);
+  </script>
+  
+  <script src="rpg-dialog-ui.js"></script>
+</body>
+</html>

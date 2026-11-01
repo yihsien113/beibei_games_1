@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡4 (動物棲息地)</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #4cd137;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #000;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* 頂部題目顯示區（加大寬度容納四字） */
+    #question-board {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.88);
+      border: 4px solid #FFD700;
+      border-radius: 20px;
+      padding: 12px 35px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      min-width: 520px;
+      max-width: 90%;
+    }
+
+    #question-board h2 {
+      margin: 0;
+      font-size: 60px;
+      color: #FFF;
+      text-shadow: 0 0 10px #FFD700;
+      letter-spacing: 3px;
+      white-space: nowrap;
+      flex-wrap: nowrap !important;
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">地圖載入中 (0/2)...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 頂部題目板 -->
+    <div id="question-board">
+      <h2 id="animal-name" class="zh-text"></h2>
+    </div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>動<rt>ㄉㄨㄥˋ</rt></ruby>
+          <ruby>物<rt>ㄨˋ</rt></ruby>
+          <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby>
+          <ruby>貓<rt>ㄇㄠ</rt></ruby>
+          <ruby>貓<rt>ㄇㄠ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>找<rt>ㄓㄠˇ</rt></ruby>
+          <ruby>出<rt>ㄔㄨ</rt></ruby>
+          <ruby>動<rt>ㄉㄨㄥˋ</rt></ruby>
+          <ruby>物<rt>ㄨˋ</rt></ruby>
+          <span>，</span><br>
+          <ruby>住<rt>ㄓㄨˋ</rt></ruby>
+          <ruby>在<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>哪<rt>ㄋㄚˇ</rt></ruby>
+          <ruby>裡<rt>ㄌㄧˇ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <!-- 左上角 EXIT 已刪除 -->
+      
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <ruby>分<rt>ㄈㄣ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <!-- 按鈕區：橫向排列「再玩一次」與「回大廳」，外觀大小完全一致 -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // --- 題庫清單 ---
+    const DB_FOREST = [
+      "<ruby>松<rt>ㄙㄨㄥ</rt></ruby><ruby>鼠<rt>ㄕㄨˇ</rt></ruby>",
+      "<ruby>猴<rt>ㄏㄡˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>",
+      "<ruby>啄<rt>ㄓㄨㄛˊ</rt></ruby><ruby>木<rt>ㄇㄨˋ</rt></ruby><ruby>鳥<rt>ㄋㄧㄠˇ</rt></ruby>",
+      "<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>鹿<rt>ㄌㄨˋ</rt></ruby>",
+      "<ruby>貓<rt>ㄇㄠ</rt></ruby><ruby>頭<rt>ㄊㄡˊ</rt></ruby><ruby>鷹<rt>ㄧㄥ</rt></ruby>",
+      "<ruby>黑<rt>ㄏㄟ</rt></ruby><ruby>熊<rt>ㄒㄩㄥˊ</rt></ruby>",
+      "<ruby>狐<rt>ㄏㄨˊ</rt></ruby><ruby>狸<rt>ㄌㄧˊ</rt></ruby>",
+      "<ruby>刺<rt>ㄘˋ</rt></ruby><ruby>蝟<rt>ㄨㄟˋ</rt></ruby>",
+      "<ruby>野<rt>ㄧㄝˇ</rt></ruby><ruby>豬<rt>ㄓㄨ</rt></ruby>",
+      "<ruby>樹<rt>ㄕㄨˋ</rt></ruby><ruby>懶<rt>ㄌㄢˇ</rt></ruby>",
+      "<ruby>桃<rt>ㄊㄠˊ</rt></ruby><ruby>樂<rt>ㄌㄜˋ</rt></ruby><ruby>比<rt>ㄅㄧˇ</rt></ruby>",
+      
+    ];
+    
+    const DB_RIVER = [
+      "<ruby>魚<rt>ㄩˊ</rt></ruby>",
+      "<ruby>河<rt>ㄏㄜˊ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>",
+      "<ruby>青<rt>ㄑㄧㄥ</rt></ruby><ruby>蛙<rt>ㄨㄚ</rt></ruby>",
+      "<ruby>鴨<rt>ㄧㄚ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>",
+      "<ruby>鱷<rt>ㄜˋ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>",
+      "<ruby>烏<rt>ㄨ</rt></ruby><ruby>龜<rt>ㄍㄨㄟ</rt></ruby>",
+      "<ruby>螃<rt>ㄆㄤˊ</rt></ruby><ruby>蟹<rt>ㄒㄧㄝˋ</rt></ruby>",
+      "<ruby>水<rt>ㄕㄨㄟˇ</rt></ruby><ruby>獺<rt>ㄊㄚˋ</rt></ruby>",
+      "<ruby>鵝<rt>ㄜˊ</rt></ruby>",
+      "<ruby>蝦<rt>ㄒㄧㄚ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>"
+    ];
+
+    const DB_MOUNTAIN = [
+      "<ruby>老<rt>ㄌㄠˇ</rt></ruby><ruby>鷹<rt>ㄧㄥ</rt></ruby>",
+      "<ruby>羚<rt>ㄌㄧㄥˊ</rt></ruby><ruby>羊<rt>ㄧㄤˊ</rt></ruby>",
+      "<ruby>山<rt>ㄕㄢ</rt></ruby><ruby>羊<rt>ㄧㄤˊ</rt></ruby>",
+      "<ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby><ruby>豹<rt>ㄅㄠˋ</rt></ruby>",
+      "<ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby><ruby>兔<rt>ㄊㄨˋ</rt></ruby>",
+      "<ruby>禿<rt>ㄊㄨ</rt></ruby><ruby>鷹<rt>ㄧㄥ</rt></ruby>",
+      "<ruby>穿<rt>ㄔㄨㄢ</rt></ruby><ruby>山<rt>ㄕㄢ</rt></ruby><ruby>甲<rt>ㄐㄧㄚˇ</rt></ruby>",
+      "<ruby>岩<rt>ㄧㄢˊ</rt></ruby><ruby>羊<rt>ㄧㄤˊ</rt></ruby>"
+    ];
+
+    // --- 三大多邊形區域座標 ---
+    const regionForest = [
+      { x: 5, y: 310 }, { x: 33, y: 305 }, { x: 278, y: 402 }, { x: 298, y: 430 },
+      { x: 364, y: 455 }, { x: 460, y: 477 }, { x: 412, y: 518 }, { x: 429, y: 536 },
+      { x: 461, y: 569 }, { x: 448, y: 589 }, { x: 379, y: 623 }, { x: 361, y: 723 },
+      { x: 343, y: 784 }, { x: 348, y: 799 }, { x: 339, y: 824 }, { x: 353, y: 857 },
+      { x: 352, y: 871 }, { x: 324, y: 904 }, { x: 222, y: 939 }, { x: 197, y: 957 },
+      { x: 200, y: 971 }, { x: 199, y: 982 }, { x: 215, y: 993 }, { x: 219, y: 1012 },
+      { x: 196, y: 1023 }, { x: 168, y: 1023 }, { x: 153, y: 1034 }, { x: 161, y: 1044 },
+      { x: 164, y: 1055 }, { x: 174, y: 1068 }, { x: 188, y: 1078 }, { x: 206, y: 1073 },
+      { x: 203, y: 1090 }, { x: 212, y: 1099 }, { x: 222, y: 1114 }, { x: 240, y: 1115 },
+      { x: 267, y: 1112 }, { x: 285, y: 1115 }, { x: 293, y: 1127 }, { x: 291, y: 1139 },
+      { x: 270, y: 1142 }, { x: 275, y: 1157 }, { x: 266, y: 1174 }, { x: 242, y: 1191 },
+      { x: 228, y: 1199 }, { x: 3, y: 1199 }
+    ];
+
+    const regionMountain = [
+      { x: 469, y: 448 }, { x: 513, y: 471 }, { x: 474, y: 514 }, { x: 479, y: 533 },
+      { x: 525, y: 563 }, { x: 534, y: 588 }, { x: 516, y: 607 }, { x: 486, y: 633 },
+      { x: 466, y: 666 }, { x: 472, y: 729 }, { x: 480, y: 754 }, { x: 490, y: 860 },
+      { x: 472, y: 887 }, { x: 471, y: 913 }, { x: 490, y: 939 }, { x: 525, y: 959 },
+      { x: 565, y: 966 }, { x: 598, y: 983 }, { x: 582, y: 1009 }, { x: 602, y: 1024 },
+      { x: 657, y: 1038 }, { x: 675, y: 1056 }, { x: 661, y: 1073 }, { x: 633, y: 1094 },
+      { x: 571, y: 1111 }, { x: 538, y: 1144 }, { x: 459, y: 1161 }, { x: 416, y: 1199 },
+      { x: 899, y: 1197 }, { x: 899, y: 223 }, { x: 864, y: 255 }, { x: 847, y: 258 },
+      { x: 829, y: 293 }, { x: 799, y: 278 }, { x: 730, y: 313 }, { x: 658, y: 393 },
+      { x: 574, y: 427 }, { x: 551, y: 449 }
+    ];
+
+    const regionRiver = [
+      { x: 364, y: 455 }, { x: 469, y: 448 },
+      { x: 513, y: 471 }, { x: 474, y: 514 }, { x: 479, y: 533 }, { x: 525, y: 563 },
+      { x: 534, y: 588 }, { x: 516, y: 607 }, { x: 486, y: 633 }, { x: 466, y: 666 },
+      { x: 472, y: 729 }, { x: 480, y: 754 }, { x: 490, y: 860 }, { x: 472, y: 887 },
+      { x: 471, y: 913 }, { x: 490, y: 939 }, { x: 525, y: 959 }, { x: 565, y: 966 },
+      { x: 598, y: 983 }, { x: 582, y: 1009 }, { x: 602, y: 1024 }, { x: 657, y: 1038 },
+      { x: 675, y: 1056 }, { x: 661, y: 1073 }, { x: 633, y: 1094 }, { x: 571, y: 1111 },
+      { x: 538, y: 1144 }, { x: 459, y: 1161 }, { x: 416, y: 1199 },
+      { x: 228, y: 1199 },
+      { x: 242, y: 1191 }, { x: 266, y: 1174 }, { x: 275, y: 1157 }, { x: 270, y: 1142 },
+      { x: 291, y: 1139 }, { x: 293, y: 1127 }, { x: 285, y: 1115 }, { x: 267, y: 1112 },
+      { x: 240, y: 1115 }, { x: 222, y: 1114 }, { x: 212, y: 1099 }, { x: 203, y: 1090 },
+      { x: 206, y: 1073 }, { x: 188, y: 1078 }, { x: 174, y: 1068 }, { x: 164, y: 1055 },
+      { x: 161, y: 1044 }, { x: 153, y: 1034 }, { x: 168, y: 1023 }, { x: 196, y: 1023 },
+      { x: 219, y: 1012 }, { x: 215, y: 993 }, { x: 199, y: 982 }, { x: 200, y: 971 },
+      { x: 197, y: 957 }, { x: 222, y: 939 }, { x: 324, y: 904 }, { x: 352, y: 871 },
+      { x: 353, y: 857 }, { x: 339, y: 824 }, { x: 348, y: 799 }, { x: 343, y: 784 },
+      { x: 361, y: 723 }, { x: 379, y: 623 }, { x: 448, y: 589 }, { x: 461, y: 569 },
+      { x: 429, y: 536 }, { x: 412, y: 518 }, { x: 460, y: 477 }
+    ];
+
+    function isPointInPolygon(pt, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const xi = poly[i].x, yi = poly[i].y;
+        const xj = poly[j].x, yj = poly[j].y;
+        const intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // ----------------------------------------------
+    const CHARACTERS = {
+      'han1': { prefix: 'han1', size: 160 },
+      'han2': { prefix: 'han2', size: 170 },
+      'han3': { prefix: 'han3', size: 160 },
+      'han4': { prefix: 'han4', size: 165 },
+      'han5': { prefix: 'han5', size: 160 },
+    };
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 遊戲流程參數
+    const MAX_QUESTIONS = 5;
+    let questionsPool = [];
+    let currentQIndex = 0;
+    
+    let stars = 0;
+    let gamePhase = 'start'; 
+    let whiteFade = 0;
+    let lastTime = 0; 
+    let popupTexts = []; 
+    let returningToStart = false; // 是否正在走回初始點
+
+    // --- 高山飄雪特效粒子系統 ---
+    const SNOW_COUNT = 45; // 雪花數量
+    const snowflakes = [];
+    for (let i = 0; i < SNOW_COUNT; i++) {
+      snowflakes.push({
+        x: 420 + Math.random() * 480,   // 山區 X 軸範圍 (約 420 ~ 900)
+        y: 200 + Math.random() * 1000,  // 山區 Y 軸範圍
+        radius: 1.5 + Math.random() * 3.5, // 雪花大小 (1.5 ~ 5px)
+        speedY: 40 + Math.random() * 60,   // 下落速度 (px/s)
+        speedX: -10 - Math.random() * 20,  // 略微往左飄
+        swingPhase: Math.random() * Math.PI * 2, // 搖擺相位
+        alpha: 0.4 + Math.random() * 0.5   // 半透明度
+      });
+    }
+    // 初始位置設定 (441, 351)
+    const START_POS = { x: 441, y: 351 };
+
+    const player = {
+      x: START_POS.x, y: START_POS.y, 
+      size: charConfig.size, speedPxPerSec: 750, 
+      targetX: START_POS.x, targetY: START_POS.y, 
+      frame: 0, isFacingLeft: false, isMoving: false, walkCycle: 0        
+    };
+
+    // 精簡資源載入 (1張地圖 + 1張人物立繪)
+    let totalAssets = 2; 
+    let loadedAssets = 0;
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `地圖載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        draw(); 
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map4.webp'; 
+    bgImg.onload = () => {
+      canvas.width = bgImg.width;
+      canvas.height = bgImg.height;
+      document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
+      checkLoadProgress();
+    };
+
+    const playerImages = [];
+    const charImg = new Image();
+    charImg.src = `assets/han/${charConfig.prefix}-1.webp`; 
+    charImg.onload = () => checkLoadProgress();
+    playerImages[0] = charImg;
+
+    // 動態文字特效
+    function addPopup(text, x, y, color = '#fff', size = 50) {
+        popupTexts.push({
+            text: text, x: x, y: y, color: color, size: size,
+            startTime: performance.now(), duration: 1200 
+        });
+    }
+
+    // 產生 5 題題目池
+    function generateQuestionPool() {
+        let pool = [];
+        DB_FOREST.forEach(q => pool.push({ html: q, answerArea: 'forest' }));
+        DB_RIVER.forEach(q => pool.push({ html: q, answerArea: 'river' }));
+        DB_MOUNTAIN.forEach(q => pool.push({ html: q, answerArea: 'mountain' }));
+        
+        pool.sort(() => Math.random() - 0.5);
+        questionsPool = pool.slice(0, MAX_QUESTIONS);
+    }
+
+    // 顯示題目
+    function showCurrentQuestion() {
+        if (currentQIndex < MAX_QUESTIONS) {
+            let q = questionsPool[currentQIndex];
+            const nameEl = document.getElementById('animal-name');
+            nameEl.innerHTML = q.html;
+            document.getElementById('question-board').style.display = 'block';
+            
+            if (window.Bopomofo && window.Bopomofo.render) {
+                window.Bopomofo.render();
+            }
+        }
+    }
+
+    function startGame() {
+      generateQuestionPool();
+      currentQIndex = 0;
+      stars = 0;
+      whiteFade = 0;
+      popupTexts = [];
+      returningToStart = false;
+      
+      document.getElementById('back-btn').style.display = 'block';
+      updateHUD();
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      player.x = START_POS.x;
+      player.y = START_POS.y;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      player.isMoving = false;
+      player.frame = 0;
+      
+      gamePhase = 'playing';
+      showCurrentQuestion();
+    }
+
+    function updateHUD() {
+        document.getElementById('coinDisplay').innerText = stars;
+    }
+
+    function endGame() {
+      gamePhase = 'result';
+      document.getElementById('question-board').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins); 
+      if (localStorage.getItem('sticker_smap4') !== 'true') {
+  localStorage.setItem('sticker_smap4', 'new');
+}
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let killsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        killsHtml += '⭐';
+        if (i % 5 === 0) killsHtml += '<br>'; 
+      }
+      document.getElementById('star-container').innerHTML = killsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start') {
+         update(Math.min(dt, 0.1));
+         draw();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      // 更新雪花飄落位置
+    snowflakes.forEach(snow => {
+      snow.y += snow.speedY * dt;
+      snow.x += (snow.speedX + Math.sin(snow.swingPhase) * 15) * dt;
+      snow.swingPhase += 2 * dt;
+
+      // 如果雪花飄出高山多邊形或掉到底部，重置回山頂
+      if (snow.y > 1200 || snow.x < 410 || !isPointInPolygon({ x: snow.x, y: snow.y }, regionMountain)) {
+        snow.x = 550 + Math.random() * 350; // 山頭高處
+        snow.y = 220 + Math.random() * 150;
+      }
+    });
+      if (gamePhase === 'ending') {
+          whiteFade += dt * 1.5; 
+          if (whiteFade >= 1) {
+            whiteFade = 1;
+            endGame();
+          }
+      }
+
+      // 處理人物移動
+      if (player.isMoving) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.walkCycle += 25 * dt; 
+        } else {
+          // 人物到達目標並停止
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          
+          if (returningToStart) {
+            // 已經安全走回起點！
+            returningToStart = false;
+            
+            if (currentQIndex >= MAX_QUESTIONS) {
+              setTimeout(() => {
+                gamePhase = 'ending';
+              }, 400);
+            } else {
+              showCurrentQuestion();
+            }
+          } else if (gamePhase === 'playing') {
+            checkAnswer();
+          }
+        }
+      }
+    }
+
+    function checkAnswer() {
+        const pt = { x: player.x, y: player.y };
+        let hitArea = null;
+
+        if (isPointInPolygon(pt, regionForest)) hitArea = 'forest';
+        else if (isPointInPolygon(pt, regionRiver)) hitArea = 'river';
+        else if (isPointInPolygon(pt, regionMountain)) hitArea = 'mountain';
+
+        if (hitArea) {
+            let correctArea = questionsPool[currentQIndex].answerArea;
+            
+            if (hitArea === correctArea) {
+                stars += 2;
+                addPopup('+2 ⭐', player.x, player.y - 60, '#FFD700');
+                updateHUD();
+            } else {
+                addPopup('❌', player.x, player.y - 60, '#FF3B30');
+            }
+            
+            currentQIndex++;
+
+            // 停頓 0.5 秒後，自動安全走回初始待機點
+            setTimeout(() => {
+                returningToStart = true;
+                player.targetX = START_POS.x;
+                player.targetY = START_POS.y;
+                player.isMoving = true;
+                player.isFacingLeft = player.targetX < player.x;
+            }, 500);
+        }
+    }
+
+    function draw() {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      const now = performance.now();
+      ctx.save();
+      for (let snow of snowflakes) {
+        ctx.beginPath();
+        ctx.arc(snow.x, snow.y, snow.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${snow.alpha})`;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 4; // 柔和發光感
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // 繪製人物
+      ctx.save(); 
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.20 : 0;   
+
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      
+      const currentImg = playerImages[player.frame];
+      if(currentImg) {
+          if (player.isFacingLeft) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          } else {
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          }
+      }
+      ctx.restore(); 
+
+      // 繪製動態特效字
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+          const popup = popupTexts[i];
+          const progress = (now - popup.startTime) / popup.duration;
+          
+          if (progress >= 1) {
+              popupTexts.splice(i, 1);
+          } else {
+              ctx.save();
+              ctx.globalAlpha = 1 - Math.pow(progress, 3); 
+              const floatY = popup.y - (progress * 50); 
+              ctx.font = `bold ${popup.size}px sans-serif`;
+              ctx.fillStyle = popup.color;
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 5;
+              ctx.textAlign = 'center';
+              ctx.strokeText(popup.text, popup.x, floatY);
+              ctx.fillText(popup.text, popup.x, floatY);
+              ctx.restore();
+          }
+      }
+
+      
+    }
+
+    // 點擊移動（返回起點途中防誤觸）
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (gamePhase !== 'playing' || returningToStart) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      player.isFacingLeft = clickX < player.x;
+      player.targetX = clickX;
+      player.targetY = clickY;
+      player.isMoving = true;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <!-- 加入 viewport-fit=cover 允許 iPhone 填滿安全邊界 (消除白邊) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡1</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ff4081;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #000;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      /* 將原本的 0.85 調低成 0.5，讓背後的畫面透出來 */
+      background-color: rgba(0, 0, 0, 0.5); 
+      /* 加入下面這兩行來產生霧化模糊效果（數值越大越模糊） */
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(10px); 
+      
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #ff4081;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 64, 129, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        /* 避開 iPhone 動態島與底部橫線，填補白邊 */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+
+      #game-container {
+        max-height: 100dvh !important; /* 解除 85vh 限制，手機滿版 */
+        width: 100vw !important;
+        border-radius: 0 !important; /* 取消圓角，讓畫面貼齊螢幕 */
+      }
+      
+      /* 1. 強制縮小開始畫面的字體與按鈕 */
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      /* 2. 強制縮小結算畫面的字體與間距 */
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      /* 3. 強制縮小結算畫面的下方兩個按鈕 */
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 進度條保持純文字，不加注音 -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">娃娃屋載入中 (0/5)...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+
+    <div id="hud">⏳ <span id="timerDisplay">20.0</span> | ⚔️ <span id="killDisplay">0</span> | ⭐ <span id="coinDisplay">0</span></div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <!-- 標題：保護娃娃屋（提高 1.5 倍至 60px） -->
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>保<rt>ㄅㄠˇ</rt></ruby>
+          <ruby>護<rt>ㄏㄨˋ</rt></ruby>
+          <ruby>娃<rt>ㄨㄚˊ</rt></ruby>
+          <ruby>娃<rt>ㄨㄚ</rt></ruby>
+          <ruby>屋<rt>ㄨ</rt></ruby>
+        </h1>
+
+        <!-- 副標題說明文字（提高 1.5 倍至 33px） -->
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>娃<rt>ㄨㄚˊ</rt></ruby>
+          <ruby>娃<rt>ㄨㄚ</rt></ruby>
+          <ruby>屋<rt>ㄨ</rt></ruby>
+          <ruby>被<rt>ㄅㄟˋ</rt></ruby>
+          <ruby>攻<rt>ㄍㄨㄥ</rt></ruby>
+          <ruby>擊<rt>ㄐㄧˊ</rt></ruby>
+          <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+          <br>
+          <ruby>打<rt>ㄉㄚˇ</rt></ruby>
+          <ruby>敗<rt>ㄅㄞˋ</rt></ruby>
+          <ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby>
+          <ruby>物<rt>ㄨˋ</rt></ruby>
+          <ruby>吧<rt>˙ㄅㄚ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+
+      <!-- 開始按鈕 -->
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <!-- 標題：時間到！ -->
+      <h1 class="zh-text" style="font-size: 38px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>時<rt>ㄕˊ</rt></ruby>
+        <ruby>間<rt>ㄐㄧㄢ</rt></ruby>
+        <ruby>到<rt>ㄉㄠˋ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        ⚔️: <span id="finalKills">0</span> <br>
+        ⭐: <span id="newCoins" style="color:#60ff40;">+0</span> <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <!-- 按鈕區：上下排列，規格與 map3 完全一致 -->
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 26px; padding: 12px 0; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 30px; padding: 15px 0; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    const CHARACTERS = {
+       'han1': {
+        name: '揮劍女孩', prefix: 'han1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); 
+          ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; 
+          ctx.shadowColor = '#00bfff'; 
+          ctx.shadowBlur = 15; 
+          ctx.lineWidth = 12 * (1 - p);
+          ctx.beginPath(); 
+          
+          // 【修復】判斷攻擊方向：如果目標在左邊，就畫左半圓；在右邊則畫右半圓
+          if (targetX < startX) {
+            ctx.arc(targetX, targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5); // 左半圓
+          } else {
+            ctx.arc(targetX, targetY, 30 + p * 40, -Math.PI / 2, Math.PI / 2);  // 右半圓
+          }
+          
+          ctx.stroke(); 
+          ctx.restore();
+        }
+      },
+      'han2': {
+        name: '弓箭公主', prefix: 'han2', size: 170, hitboxOffsetX: 130, hitboxOffsetY: 0, hitboxRadius: 50,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.strokeStyle = `rgba(255, 105, 180, ${1 - p})`; ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 20; ctx.lineWidth = 8 * (1 - p);
+          ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(targetX, targetY); ctx.stroke();
+          ctx.font = `${30 + p * 30}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 1 - p; ctx.fillText('💖', targetX, targetY - p * 20); ctx.restore();
+        }
+      },
+      'han3': {
+        name: '魔法仙子', 
+        prefix: 'han3', 
+        size: 160, 
+        hitboxOffsetX: 110, 
+        hitboxOffsetY: 0, // 【修正】將打擊點提高到水龍胸口/頭部，不再砸在海面上
+        hitboxRadius: 65,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); 
+          
+          // 前半段 (p: 0 ~ 0.6) 月亮從高空墜落衝擊；後半段 (p: 0.6 ~ 1.0) 產生強烈爆炸與星芒
+          if (p < 0.65) {
+            const dropProgress = p / 0.65;
+            // 從上方 260px 高空砸向目標
+            const dropY = targetY - 260 * (1 - dropProgress); 
+            
+            ctx.translate(targetX, dropY); 
+            ctx.rotate(dropProgress * Math.PI * 2); // 旋轉一圈，動態更平穩清晰
+            
+            // 強烈金色神聖光暈
+            ctx.shadowColor = '#FFE066'; 
+            ctx.shadowBlur = 25; 
+            
+            // 快速淡入，保持實體清晰度
+            ctx.globalAlpha = Math.min(1, dropProgress * 3); 
+            
+            // 尺寸放大至 110px，巨大且顯眼
+            ctx.font = '110px sans-serif'; 
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline = 'middle'; 
+            ctx.fillText('🌙', 0, 0);
+          } else {
+            // 砸中瞬間：月亮炸裂成金色衝擊光環與四散星芒
+            const burstP = (p - 0.65) / 0.35;
+            ctx.translate(targetX, targetY);
+            
+            // 1. 金色擴散衝擊波光圈
+            ctx.strokeStyle = `rgba(255, 223, 70, ${1 - burstP})`;
+            ctx.lineWidth = 8 * (1 - burstP);
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(0, 0, burstP * 90, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 2. 8 顆發光大星星噴發飛散
+            ctx.shadowBlur = 10;
+            for (let i = 0; i < 8; i++) {
+              const angle = (i * Math.PI * 2) / 8 + burstP * 1.5;
+              const dist = burstP * 110;
+              ctx.globalAlpha = 1 - burstP;
+              ctx.font = `${36 * (1 - burstP * 0.4)}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('✨', Math.cos(angle) * dist, Math.sin(angle) * dist);
+            }
+          }
+          
+          ctx.restore();
+        }
+      },
+      'han4': {
+        name: '漩渦公主',
+        prefix: 'han4',
+        size: 165,
+        hitboxOffsetX: 120,
+        hitboxOffsetY: 0,
+        hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); // 【第 1 次 save：保存畫布全域狀態】
+          ctx.translate(targetX, targetY);
+
+          // 1. 紫色吸力旋渦
+          ctx.rotate(-p * Math.PI * 8);
+          ctx.lineWidth = 6 * (1 - p);
+          for (let r = 25; r <= 95; r += 22) {
+            ctx.strokeStyle = `rgba(186, 104, 200, ${1 - p})`;
+            ctx.shadowColor = '#e1bee7';
+            ctx.shadowBlur = 12 * (1 - p);
+            ctx.beginPath();
+            ctx.arc(0, 0, r * (1 - p * 0.4), 0, Math.PI * 1.4);
+            ctx.stroke();
+          }
+
+          // 2. 吸入雜物 (襪子、積木、小熊、亮粉、氣流)
+          const items = ['🧦', '🧱', '🧸', '✨', '💨'];
+          items.forEach((item, idx) => {
+            const angle = (idx * Math.PI * 2) / items.length + p * Math.PI * 4;
+            const dist = (1 - p) * 115;
+            const itemScale = Math.max(0.2, 1 - p * 0.8);
+            ctx.save();
+            ctx.font = `${26 * itemScale}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.globalAlpha = Math.max(0, 1 - p * 0.5);
+            ctx.fillText(item, Math.cos(angle) * dist, Math.sin(angle) * dist);
+            ctx.restore();
+          });
+
+          // 3. 收尾特效：冒出煙霧 💨 與四散星星 ✨（不另外 save/restore）
+          if (p > 0.65) {
+            const popP = (p - 0.65) / 0.35;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.globalAlpha = Math.max(0, 1 - popP);
+
+            const cloudScale = 40 + popP * 30;
+            ctx.font = `${cloudScale}px sans-serif`;
+            ctx.fillText('💨', 0, 0);
+
+            const starCount = 5;
+            const starDist = popP * 60;
+            ctx.font = `${22 * (1 - popP * 0.3)}px sans-serif`;
+            for (let i = 0; i < starCount; i++) {
+              const a = (i * Math.PI * 2) / starCount + popP * 2;
+              ctx.fillText('✨', Math.cos(a) * starDist, Math.sin(a) * starDist);
+            }
+          }
+
+          ctx.restore(); // 【第 1 次 restore：一次還原所有坐標與屬性】
+        }
+      },
+      'han5': {
+        name: '愛心公主', 
+        prefix: 'han5', 
+        size: 165, 
+        hitboxOffsetX: 120, 
+        hitboxOffsetY: 0, 
+        hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save();
+          
+          // 1. 完全直線衝刺 (無拋物線)
+          const currentX = startX + (targetX - startX) * p;
+          const currentY = startY + (targetY - startY) * p;
+
+          // 2. 乾淨的直線殘影 (降低寬度與亮度，不干擾主體)
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = `rgba(255, 182, 193, ${0.4 * (1 - p)})`;
+          ctx.lineWidth = 3; 
+          ctx.stroke();
+
+          // 3. 畫出飛翔中的「大愛心」本體
+          ctx.translate(currentX, currentY);
+          
+          let heartScale = 1;
+          if (p < 0.2) heartScale = p / 0.2; 
+          else if (p > 0.8) heartScale = 1 - (p - 0.8); 
+          
+          // 大幅降低旋轉角度，確保高速移動時肉眼能辨識形狀
+          ctx.rotate(Math.sin(p * Math.PI * 2) * 0.05); 
+          ctx.scale(heartScale, heartScale);
+
+          // 縮小至 65px 讓輪廓更銳利，並移除耗能的發光陰影
+          ctx.font = '65px sans-serif'; 
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'transparent'; 
+          ctx.shadowBlur = 0;
+          
+          ctx.globalAlpha = p > 0.85 ? 1 - ((p - 0.85) / 0.15) : 1;
+          ctx.fillText('💖', 0, 0);
+          ctx.restore();
+
+          // 4. 擊中目標點的爆開特效 (極簡爆破光圈，無星芒)
+          if (p > 0.8) {
+            ctx.save();
+            // 將最後 20% 的時間當作爆破動畫
+            const burstP = (p - 0.8) / 0.2; 
+            ctx.translate(targetX, targetY);
+            ctx.globalAlpha = 1 - burstP;
+
+            // 俐落的粉紅衝擊光圈
+            ctx.beginPath();
+            ctx.arc(0, 0, burstP * 65, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 20, 147, ${1 - burstP})`;
+            ctx.lineWidth = 5 * (1 - burstP);
+            ctx.stroke();
+
+            ctx.restore();
+          }
+        }
+      }
+    };
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let kills = 0;
+    let coins = 0;
+    let timeLeft = 20.0;
+    let isPlaying = false;
+    let lastTime = 0; 
+    let activeEffects = []; 
+    let clockItems = []; 
+    let clockSpawnTimer = 0;
+    let popupTexts = []; 
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    const player = {
+      x: 0, y: 0, size: charConfig.size, speedPxPerSec: 900, targetX: 0, targetY: 0, frame: 0, 
+      isAttacking: false, isFacingLeft: false, isMoving: false, walkCycle: 0,        
+      hitboxOffsetX: charConfig.hitboxOffsetX, hitboxOffsetY: charConfig.hitboxOffsetY, hitboxRadius: charConfig.hitboxRadius     
+    };
+
+    const monster = {
+      x: 0, y: 0, size: 120, isVisible: false, frame: 0, animationInterval: null,
+      scale: 0, 
+      spawnTime: 0
+    };
+
+    const spawnZones = [
+      [{ x: 443, y: 117 }, { x: 99, y: 405 }, { x: 102, y: 1103 }, { x: 818, y: 1106 }, { x: 821, y: 332 }]
+    ];
+
+    function getRandomZonePoint() {
+      const zonePoints = spawnZones[0];
+      const path = new Path2D();
+      path.moveTo(zonePoints[0].x, zonePoints[0].y);
+      for (let i = 1; i < zonePoints.length; i++) path.lineTo(zonePoints[i].x, zonePoints[i].y);
+      path.closePath();
+
+      let rx, ry, isInside = false;
+      while (!isInside) {
+        rx = Math.random() * canvas.width;
+        ry = Math.random() * canvas.height;
+        if (ctx.isPointInPath(path, rx, ry)) isInside = true;
+      }
+      return { x: rx, y: ry };
+    }
+
+    function spawnMonster() {
+      const pos = getRandomZonePoint();
+      monster.x = pos.x;
+      monster.y = pos.y;
+      monster.isVisible = true;
+      monster.frame = 0;
+      monster.scale = 0; 
+      monster.spawnTime = performance.now(); 
+
+      if (monster.animationInterval) clearInterval(monster.animationInterval);
+      monster.animationInterval = setInterval(() => {
+        if (monster.frame < 2) monster.frame++;
+        else clearInterval(monster.animationInterval);
+      }, 150);
+    }
+
+    function spawnClock() {
+      const pos = getRandomZonePoint();
+      clockItems.push({
+          x: pos.x,
+          y: pos.y,
+          size: 80,
+          spawnTime: performance.now()
+      });
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 30) {
+        popupTexts.push({
+            text: text,
+            x: x,
+            y: y,
+            color: color,
+            size: size,
+            startTime: performance.now(),
+            duration: 1000 
+        });
+    }
+
+    let totalAssets = 5; 
+    let loadedAssets = 0;
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `娃娃屋載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        draw(); 
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map1.webp'; 
+    bgImg.onload = () => {
+      canvas.width = bgImg.width;
+      canvas.height = bgImg.height;
+      document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      checkLoadProgress();
+    };
+
+    const playerImages = [];
+    [1, 2, 3].forEach((num, idx) => {
+      const img = new Image();
+      img.src = `assets/han/${charConfig.prefix}-${num}.webp`; 
+      img.onload = () => checkLoadProgress();
+      playerImages[idx] = img;
+    });
+
+    const monsterImages = [];
+    ['bad1-1.webp', 'bad1-2.webp', 'bad1-3.webp'].forEach((src, idx) => {
+      const img = new Image();
+      img.src = `assets/bad/${src}`;
+      img.onload = () => { if(idx === 0) checkLoadProgress(); };
+      monsterImages[idx] = img;
+    });
+
+    function startGame() {
+      kills = 0;
+      coins = 0;
+      timeLeft = 20.0;
+      isPlaying = true;
+      activeEffects = [];
+      clockItems = [];
+      popupTexts = [];
+      clockSpawnTimer = 0;
+      
+      document.getElementById('back-btn').style.display = 'block';
+      updateHUD();
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      player.isMoving = false;
+      player.isAttacking = false;
+      player.frame = 0;
+      
+      spawnMonster();
+    }
+
+    function updateHUD() {
+        document.getElementById('killDisplay').innerText = kills;
+        document.getElementById('coinDisplay').innerText = coins;
+        document.getElementById('timerDisplay').innerText = Math.max(0, timeLeft).toFixed(1);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      if (monster.animationInterval) clearInterval(monster.animationInterval);
+      document.getElementById('back-btn').style.display = 'none';
+      monster.isVisible = false;
+      player.isMoving = false;
+      document.getElementById('hud').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + coins;
+      localStorage.setItem('playerCoins', newTotalCoins); 
+      if (localStorage.getItem('sticker_smap1') !== 'true') {
+        localStorage.setItem('sticker_smap1', 'new');
+      }
+      
+      document.getElementById('finalKills').innerText = kills;
+      document.getElementById('newCoins').innerText = "+" + coins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let killsHtml = '';
+      for (let i = 1; i <= coins; i++) {
+        killsHtml += '⭐';
+        if (i % 10 === 0) killsHtml += '<br>'; 
+      }
+      document.getElementById('star-container').innerHTML = killsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if(isPlaying || activeEffects.length > 0 || popupTexts.length > 0) {
+        update(Math.min(dt, 0.1));
+        draw();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (isPlaying) {
+          timeLeft -= dt;
+          updateHUD();
+          
+          if (timeLeft <= 0) {
+              endGame();
+              return;
+          }
+
+          clockSpawnTimer += dt;
+          if (clockSpawnTimer >= 5.0) {
+              spawnClock();
+              clockSpawnTimer = 0;
+          }
+      }
+
+      if (!player.isAttacking) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.isMoving = true;
+          player.walkCycle += 25 * dt; 
+        } else {
+          if (player.isMoving) {
+            player.x = player.targetX;
+            player.y = player.targetY;
+            player.isMoving = false;
+            player.walkCycle = 0;
+            playSlash();
+          }
+        }
+      }
+    }
+
+    function draw() {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      const now = performance.now();
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let clock of clockItems) {
+          ctx.save();
+          ctx.translate(clock.x, clock.y);
+          let sway = Math.sin((now - clock.spawnTime) / 150) * 0.3; 
+          ctx.rotate(sway);
+          ctx.font = `${clock.size}px sans-serif`;
+          ctx.fillText('⏱️', 0, 0);
+          ctx.restore();
+      }
+
+      if (monster.isVisible && monsterImages[monster.frame]) {
+        ctx.save();
+        ctx.translate(monster.x, monster.y);
+        
+        const timeAlive = now - monster.spawnTime;
+        let scale = 1;
+        let rotation = 0;
+
+        if (timeAlive < 600) { 
+            let p = timeAlive / 600; 
+            scale = Math.min(1, p * 1.5); 
+            rotation = Math.sin(p * Math.PI * 6) * (1 - p) * 0.6; 
+        }
+
+        ctx.rotate(rotation);
+        ctx.scale(scale, scale);
+        ctx.drawImage(monsterImages[monster.frame], -monster.size / 2, -monster.size / 2, monster.size, monster.size);
+        ctx.restore();
+      }
+
+      ctx.save(); 
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.20 : 0;   
+
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      
+      const currentImg = playerImages[player.frame];
+      if(currentImg) {
+          if (player.isFacingLeft) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          } else {
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          }
+      }
+      ctx.restore(); 
+
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const fx = activeEffects[i];
+        const progress = (now - fx.startTime) / fx.duration;
+        if (progress >= 1) {
+          activeEffects.splice(i, 1);
+        } else {
+          charConfig.drawEffect(ctx, progress, fx.startX, fx.startY, fx.targetX, fx.targetY);
+        }
+      }
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+          const popup = popupTexts[i];
+          const progress = (now - popup.startTime) / popup.duration;
+          
+          if (progress >= 1) {
+              popupTexts.splice(i, 1);
+          } else {
+              ctx.save();
+              ctx.globalAlpha = 1 - Math.pow(progress, 3); 
+              const floatY = popup.y - (progress * 50); 
+              ctx.font = `bold ${popup.size}px sans-serif`;
+              ctx.fillStyle = popup.color;
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 4;
+              ctx.strokeText(popup.text, popup.x, floatY);
+              ctx.fillText(popup.text, popup.x, floatY);
+              ctx.restore();
+          }
+      }
+    }
+
+    function playSlash() {
+      if (player.isAttacking) return;
+      player.isAttacking = true;
+      const frameSpeed = 100;
+
+      player.frame = 0; 
+      setTimeout(() => {
+        player.frame = 1; 
+        
+        const currentOffsetX = player.isFacingLeft ? -player.hitboxOffsetX : player.hitboxOffsetX;
+        const attackCenterX = player.x + currentOffsetX;
+        const attackCenterY = player.y + player.hitboxOffsetY;
+        const attackRadius = player.hitboxRadius;
+        
+        activeEffects.push({
+            startTime: performance.now(),
+            duration: 250, 
+            startX: player.x,
+            startY: player.y - 20, 
+            targetX: attackCenterX,
+            targetY: attackCenterY
+        });
+        
+        if (isPlaying) {
+            const distToMonster = Math.sqrt(Math.pow(attackCenterX - monster.x, 2) + Math.pow(attackCenterY - monster.y, 2));
+            if (monster.isVisible && distToMonster <= (attackRadius + monster.size / 2)) {
+              monster.isVisible = false;
+              kills++;
+
+              if (Math.random() < 0.50) {
+                  coins++;
+                  addPopup('⭐', monster.x, monster.y, '#FFD700', 40);
+              }
+
+              updateHUD();
+              spawnMonster(); 
+            }
+
+            for (let i = clockItems.length - 1; i >= 0; i--) {
+                let clock = clockItems[i];
+                let distToClock = Math.sqrt(Math.pow(attackCenterX - clock.x, 2) + Math.pow(attackCenterY - clock.y, 2));
+                if (distToClock <= (attackRadius + clock.size / 2)) {
+                    timeLeft += 2.5;
+                    addPopup('+2.5s', clock.x, clock.y, '#00FF00', 30);
+                    clockItems.splice(i, 1); 
+                    updateHUD();
+                }
+            }
+        }
+
+        setTimeout(() => {
+          player.frame = 2; 
+          setTimeout(() => {
+            player.frame = 0; 
+            player.isAttacking = false;
+          }, frameSpeed);
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+
+      if (!isPlaying || player.isAttacking) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      player.isFacingLeft = clickX < player.x;
+      player.targetX = player.isFacingLeft ? clickX + player.hitboxOffsetX : clickX - player.hitboxOffsetX;
+      player.targetY = clickY - player.hitboxOffsetY;
+
+      if (Math.sqrt(Math.pow(player.targetX - player.x, 2) + Math.pow(player.targetY - player.y, 2)) <= 15) {
+        playSlash();
+      } else {
+        player.isMoving = true;
+      }
+    });
+  </script>
+</body>
+</html>
+```<FollowUp>請問還有其他關卡的 HTML 檔案也需要加上一樣的手機版相容設計嗎？</FollowUp>
