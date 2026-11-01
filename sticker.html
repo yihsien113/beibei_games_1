@@ -75,9 +75,14 @@
       pointer-events: none;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
+      transform: translate3d(0, 0, 5px);
+      -webkit-transform: translate3d(0, 0, 5px);
     }
     .sticker-slot.is-hovered,
-    .sticker-slot.is-pressed { transform: scale(1.06); }
+    .sticker-slot.is-pressed { 
+      transform: translate3d(0, 0, 5px) scale(1.06);
+      -webkit-transform: translate3d(0, 0, 5px) scale(1.06); 
+    }
     .sticker-img { 
       width: 72%; height: 72%; object-fit: contain; transition: filter 0.3s ease; position: relative; z-index: 10;
       backface-visibility: hidden;
@@ -97,8 +102,8 @@
     }
 
     @keyframes badge-bounce {
-      0%, 100% { transform: translateY(0) scale(1) rotate(8deg); }
-      50% { transform: translateY(-6px) scale(1.12) rotate(12deg); }
+      0%, 100% { transform: translate3d(0, 0, 10px) scale(1) rotate(8deg); }
+      50% { transform: translate3d(0, -6px, 10px) scale(1.12) rotate(12deg); }
     }
     .new-badge {
       position: absolute;
@@ -577,12 +582,12 @@
         paper._zTimer = null;
 
         paper.innerHTML = `
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]" style="transform: translateZ(1px); -webkit-transform: translateZ(1px);">
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]" style="transform: translate3d(0, 0, 2px); -webkit-transform: translate3d(0, 0, 2px); -webkit-mask-image: -webkit-radial-gradient(white, black);">
             <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
             <div id="canvas-front-${i}" class="absolute w-[200%] h-full right-0"></div>
             <div class="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-20"></div>
           </div>
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px);">
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-mask-image: -webkit-radial-gradient(white, black);">
             <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
             <div id="canvas-back-${i}" class="absolute w-[200%] h-full left-0"></div>
             <div class="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black/40 to-transparent pointer-events-none z-20"></div>
