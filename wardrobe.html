@@ -314,6 +314,12 @@
     let ownsHan4 = localStorage.getItem('owns_han4') === 'true';
     let ownsHan5 = localStorage.getItem('owns_han5') === 'true';
 
+    // 👇 新增：確保玩家一開始就擁有「揮劍公主(shan1)」的貼紙
+    if (!localStorage.getItem('sticker_shan1')) {
+      // 設為 'new'，讓玩家第一次進貼紙簿時可以點擊拆開；若不想有 NEW 特效也可直接設為 'true'
+      localStorage.setItem('sticker_shan1', 'new');
+    }
+
     document.getElementById('myCoins').innerText = coins;
 
     const TEXT_EQUIPPED = '<ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby> ✔️';
@@ -541,6 +547,10 @@
           coins -= cost;
           localStorage.setItem('playerCoins', coins);
           localStorage.setItem(ownsProp, 'true');
+          
+          // 👇 新增：獲得對應的公主貼紙
+          let stickerId = charKey.replace('han', 'shan'); // 將 han2 轉換成 shan2
+          localStorage.setItem('sticker_' + stickerId, 'new'); // 存入 localStorage 觸發貼紙簿的 NEW 特效
 
           if (charKey === 'han2') ownsHan2 = true;
           if (charKey === 'han3') ownsHan3 = true;
@@ -550,7 +560,8 @@
           document.getElementById('myCoins').innerText = coins;
           equipChar(charKey);
 
-          showBopoAlert('<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby>🎉🎉🎉');
+          // 可選：你也可以在提示訊息中告訴玩家獲得了貼紙
+          showBopoAlert('<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby>🎉🎉🎉<br><span style="font-size: 24px; color: #facc15;">(獲得新貼紙！)</span>');
         } else {
           showBopoAlert('⭐ <ruby>不<rt>ㄅㄨˊ</rt></ruby><ruby>夠<rt>ㄍㄡˋ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby>');
         }
