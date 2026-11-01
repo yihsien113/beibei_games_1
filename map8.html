@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 深海數獨</title>
+  
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #00e5ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #064057;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      background-color: rgba(0, 0, 0, 0.82);
+      border: 2px solid rgba(0, 229, 255, 0.35);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #00b894;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 184, 148, 0.45);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn, #skip-btn {
+      position: absolute;
+      top: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+    #back-btn { left: 15px; background-color: #333; }
+    #skip-btn { right: 15px; background-color: #e17055; }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">深海謎題載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <button id="skip-btn" class="btn" onclick="skipTutorial()">⏭️ 跳過教學</button>
+    
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 26px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>深<rt>ㄕㄣ</rt></ruby>
+          <ruby>海<rt>ㄏㄞˇ</rt></ruby>
+          <ruby>數<rt>ㄕㄨˋ</rt></ruby>
+          <ruby>獨<rt>ㄉㄨˊ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.6;">
+          <ruby>破<rt>ㄆㄛˋ</rt></ruby>
+          <ruby>解<rt>ㄐㄧㄝˇ</rt></ruby>
+          <ruby>謎<rt>ㄇㄧˊ</rt></ruby>
+          <ruby>題<rt>ㄊㄧˊ</rt></ruby>
+          <span>，</span><br>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <ruby>到<rt>ㄉㄠˋ</rt></ruby>
+          <ruby>星<rt>ㄒㄧㄥ</rt></ruby>
+          <ruby>星<rt>ㄒㄧㄥ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="initTutorial()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <div id="result-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>全<rt>ㄑㄩㄢˊ</rt></ruby>
+        <ruby>部<rt>ㄅㄨˋ</rt></ruby>
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <span>！</span>
+      </h1>
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 420px;">
+        <button id="challenge-btn" class="btn" style="width: 100%; font-size: 34px; padding: 16px 10px; margin: 0; background-color: #9c88ff; display: none;" onclick="startChallenge()">
+          <ruby>我<rt>ㄨㄛˇ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>挑<rt>ㄊㄧㄠˇ</rt></ruby><ruby>戰<rt>ㄓㄢˋ</rt></ruby><ruby>更<rt>ㄍㄥˋ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>題<rt>ㄊㄧˊ</rt></ruby><ruby>目<rt>ㄇㄨˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="initTutorial()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 將對話框模組移到 body 內部底部，確保 DOM 生成完畢才掛載 -->
+  <script src="rpg-dialog-ui.js" onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
+
+  <script>
+    const OPTION_AREA = { y: 90, width: 110, height: 110, gap: 50, startX: 180 };
+    const GRID = { startX: 106, startY: 240, cellW: 172, cellH: 174.5 };
+    const BLOCK_COLORS = ['#aedcf4', '#fbd1b2', '#cbe8a8', '#fae999'];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900;
+    canvas.height = 1200;
+
+    let bgLoaded = false;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map8.webp'; 
+    bgImg.onload = () => bgLoaded = true;
+
+    const CHARACTERS = {
+       'han1': {
+        name: '揮劍女孩', prefix: 'han1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; ctx.shadowColor = '#00bfff'; ctx.shadowBlur = 15; ctx.lineWidth = 12 * (1 - p);
+          ctx.beginPath(); 
+          if (targetX < startX) ctx.arc(targetX, targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5); 
+          else ctx.arc(targetX, targetY, 30 + p * 40, -Math.PI / 2, Math.PI / 2);  
+          ctx.stroke(); ctx.restore();
+        }
+      },
+      'han2': {
+        name: '弓箭公主', prefix: 'han2', size: 170, hitboxOffsetX: 130, hitboxOffsetY: 0, hitboxRadius: 50,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.strokeStyle = `rgba(255, 105, 180, ${1 - p})`; ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 20; ctx.lineWidth = 8 * (1 - p);
+          ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(targetX, targetY); ctx.stroke();
+          ctx.font = `${30 + p * 30}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 1 - p; ctx.fillText('💖', targetX, targetY - p * 20); ctx.restore();
+        }
+      },
+      'han3': {
+        name: '魔法仙子', prefix: 'han3', size: 160, hitboxOffsetX: 110, hitboxOffsetY: 0, hitboxRadius: 60,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save();
+          const dropY = targetY - 200 * (1 - p); ctx.translate(targetX, dropY); ctx.rotate(p * Math.PI * 4); 
+          ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 15 + p * 15; ctx.globalAlpha = Math.min(1, p * 2.5); 
+          ctx.font = `${60 + Math.sin(p * Math.PI) * 20}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🌙', 0, 0);
+          if (p > 0.7) {
+            const burstP = (p - 0.7) / 0.3; ctx.rotate(-p * Math.PI * 4); 
+            for (let i = 0; i < 6; i++) {
+              const angle = (i * Math.PI * 2) / 6; const dist = burstP * 80;
+              ctx.globalAlpha = 1 - burstP; ctx.font = `${25 * (1 - burstP * 0.5)}px sans-serif`;
+              ctx.fillText('✨', Math.cos(angle) * dist, Math.sin(angle) * dist);
+            } 
+          }
+          ctx.restore();
+        }
+      },
+      'han4': {
+        name: '漩渦公主', prefix: 'han4', size: 165, hitboxOffsetX: 120, hitboxOffsetY: 0, hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.translate(targetX, targetY); ctx.rotate(-p * Math.PI * 8); ctx.lineWidth = 6 * (1 - p);
+          for (let r = 25; r <= 95; r += 22) {
+            ctx.strokeStyle = `rgba(186, 104, 200, ${1 - p})`; ctx.shadowColor = '#e1bee7'; ctx.shadowBlur = 12 * (1 - p);
+            ctx.beginPath(); ctx.arc(0, 0, r * (1 - p * 0.4), 0, Math.PI * 1.4); ctx.stroke();
+          }
+          const items = ['🧦', '🧱', '🧸', '✨', '💨'];
+          items.forEach((item, idx) => {
+            const angle = (idx * Math.PI * 2) / items.length + p * Math.PI * 4;
+            const dist = (1 - p) * 115; const itemScale = Math.max(0.2, 1 - p * 0.8);
+            ctx.save(); ctx.font = `${26 * itemScale}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.globalAlpha = Math.max(0, 1 - p * 0.5); ctx.fillText(item, Math.cos(angle) * dist, Math.sin(angle) * dist); ctx.restore();
+          });
+          if (p > 0.65) {
+            const popP = (p - 0.65) / 0.35;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = Math.max(0, 1 - popP);
+            ctx.font = `${40 + popP * 30}px sans-serif`; ctx.fillText('💨', 0, 0);
+          }
+          ctx.restore();
+        }
+      },
+      'han5': {
+        name: '愛心公主', prefix: 'han5', size: 165, hitboxOffsetX: 120, hitboxOffsetY: 0, hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save();
+          const currentX = startX + (targetX - startX) * p; const currentY = startY + (targetY - startY) * p;
+          ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = `rgba(255, 182, 193, ${0.4 * (1 - p)})`; ctx.lineWidth = 3; ctx.stroke();
+          ctx.translate(currentX, currentY);
+          let heartScale = 1;
+          if (p < 0.2) heartScale = p / 0.2; else if (p > 0.8) heartScale = 1 - (p - 0.8); 
+          ctx.rotate(Math.sin(p * Math.PI * 2) * 0.05); ctx.scale(heartScale, heartScale);
+          ctx.font = '65px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+          ctx.globalAlpha = p > 0.85 ? 1 - ((p - 0.85) / 0.15) : 1; ctx.fillText('💖', 0, 0); ctx.restore();
+          if (p > 0.8) {
+            ctx.save(); const burstP = (p - 0.8) / 0.2; ctx.translate(targetX, targetY); ctx.globalAlpha = 1 - burstP;
+            ctx.beginPath(); ctx.arc(0, 0, burstP * 65, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 20, 147, ${1 - burstP})`; ctx.lineWidth = 5 * (1 - burstP); ctx.stroke(); ctx.restore();
+          }
+        }
+      }
+    };
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    let playerImages = [];
+    let loadedAssets = 0;
+    const totalAssets = 3;
+
+    function checkLoad() {
+      loadedAssets++;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    [1, 2, 3].forEach((num, idx) => {
+      const img = new Image();
+      img.src = `assets/han/${charConfig.prefix}-${num}.webp`;
+      img.onload = checkLoad;
+      img.onerror = checkLoad;
+      playerImages[idx] = img;
+    });
+
+    const player = {
+      x: 450, y: 1050, size: charConfig.size, speedPxPerSec: 900, 
+      targetX: 450, targetY: 1050, frame: 0, 
+      isFacingLeft: false, isMoving: false, walkCycle: 0, isAttacking: false,
+      hitboxOffsetX: charConfig.hitboxOffsetX, hitboxOffsetY: charConfig.hitboxOffsetY
+    };
+
+    let gamePhase = 'start'; 
+    let tutorialStep = -1;
+    let actionState = 'idle'; 
+    let challengeMode = 0; 
+    let currentLevel = 0;
+    let blanksPerLevel = [2, 2, 4, 4]; 
+    let currentStarReward = 2; 
+    
+    let stars = 0;
+    let popupTexts = [];
+    let activeEffects = []; 
+    let lastTime = 0;
+
+    let board = [];
+    let selectedCell = null; 
+    let optionButtons = [];
+
+    const tutorialDialogs = {
+      row: {
+        text: `<ruby>一<rt>ㄧ</rt></ruby><ruby>排<rt>ㄆㄞˊ</rt></ruby><ruby>數<rt>ㄕㄨˋ</rt></ruby><ruby>字<rt>ㄗˋ</rt></ruby><ruby>只<rt>ㄓˇ</rt></ruby><ruby>會<rt>ㄏㄨㄟˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby> 1 . 2 . 3 . 4`,
+        audio: 'assets/mp3/map8-1.mp3' //*一排數字的語音*
+      },
+      col: {
+        text: `<ruby>直<rt>ㄓˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>也<rt>ㄧㄝˇ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>只<rt>ㄓˇ</rt></ruby><ruby>會<rt>ㄏㄨㄟˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby> 1 . 2 . 3 . 4`,
+        audio: 'assets/mp3/map8-2.mp3' //*直的也是的語音*
+      },
+      block: {
+        text:`<ruby>相<rt>ㄒㄧㄤ</rt></ruby><ruby>同<rt>ㄊㄨㄥˊ</rt></ruby><ruby>顏<rt>ㄧㄢˊ</rt></ruby><ruby>色<rt>ㄙㄜˋ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>格<rt>ㄍㄜˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby><ruby>也<rt>ㄧㄝˇ</rt></ruby><ruby>只<rt>ㄓˇ</rt></ruby><ruby>會<rt>ㄏㄨㄟˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby> 1 . 2 . 3 . 4`,
+        audio: 'assets/mp3/map8-3.mp3' //*同一個顏色的語音*
+      }
+    };
+
+    function generateValidBoard() {
+      let base = [ [1,2,3,4], [3,4,1,2], [2,1,4,3], [4,3,2,1] ];
+      let nums = [1, 2, 3, 4].sort(() => Math.random() - 0.5);
+      for (let r=0; r<4; r++) for (let c=0; c<4; c++) base[r][c] = nums[base[r][c]-1];
+      if (Math.random() > 0.5) [base[0], base[1]] = [base[1], base[0]];
+      if (Math.random() > 0.5) [base[2], base[3]] = [base[3], base[2]];
+      
+      board = [];
+      for (let r=0; r<4; r++) {
+        for (let c=0; c<4; c++) {
+          board.push({
+            row: r, col: c, correctVal: base[r][c], currentVal: base[r][c],
+            isFixed: true, x: GRID.startX + c * GRID.cellW, y: GRID.startY + r * GRID.cellH, w: GRID.cellW, h: GRID.cellH
+          });
+        }
+      }
+    }
+
+    function initOptions() {
+      optionButtons = [];
+      for(let i=0; i<4; i++) {
+        optionButtons.push({
+          val: i + 1, x: OPTION_AREA.startX + i * (OPTION_AREA.width + OPTION_AREA.gap),
+          y: OPTION_AREA.y, w: OPTION_AREA.width, h: OPTION_AREA.height
+        });
+      }
+    }
+
+    function initTutorial() {
+      challengeMode = 0;
+      blanksPerLevel = [3, 4, 4, 5]; 
+      currentStarReward = 2; 
+      
+      gamePhase = 'tutorial';
+      tutorialStep = 0;
+      stars = 0;
+      document.getElementById('coinDisplay').innerText = stars;
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'block';
+      initOptions();
+      
+      generateValidBoard();
+      board.forEach(c => {
+        if ((c.row === 0 && c.col === 1) || (c.row === 1 && c.col === 0)) {
+          c.isFixed = false;
+          c.currentVal = null;
+        }
+      });
+      
+      showDialog(tutorialDialogs.row);
+    }
+
+    function showDialog(dialogObj) {
+      if (window.RPGDialog) window.RPGDialog.show(dialogObj.text, dialogObj.audio);
+    }
+
+    function hideDialog() {
+      if (window.RPGDialog) window.RPGDialog.hide();
+    }
+
+    function skipTutorial() {
+      hideDialog();
+      document.getElementById('skip-btn').style.display = 'none';
+      startOfficialLevel(0);
+    }
+
+    function startChallenge() {
+      document.getElementById('result-screen').style.display = 'none';
+      
+      if (challengeMode === 0) {
+        challengeMode = 1; 
+        blanksPerLevel = [6]; 
+        currentStarReward = 3;
+      } else if (challengeMode === 1) {
+        challengeMode = 2; 
+        blanksPerLevel = [8]; 
+        currentStarReward = 4;
+      }
+      
+      stars = 0; 
+      document.getElementById('coinDisplay').innerText = stars;
+      startOfficialLevel(0);
+    }
+
+    function startOfficialLevel(levelIndex) {
+      gamePhase = 'playing';
+      tutorialStep = -1;
+      currentLevel = levelIndex;
+      actionState = 'idle';
+      selectedCell = null;
+      document.getElementById('skip-btn').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('hud').style.display = 'block';
+      
+      generateValidBoard();
+      let blanksNeeded = blanksPerLevel[currentLevel];
+      let indices = Array.from({length: 16}, (_, i) => i).sort(() => Math.random() - 0.5);
+      for (let i=0; i<blanksNeeded; i++) {
+        board[indices[i]].isFixed = false;
+        board[indices[i]].currentVal = null;
+      }
+
+      player.x = 450; player.y = 1050;
+      player.targetX = 450; player.targetY = 1050;
+      
+      let levelTitle = `第 ${currentLevel + 1} 關`;
+      if (challengeMode === 1) levelTitle = '挑戰關卡 (一)';
+      if (challengeMode === 2) levelTitle = '挑戰關卡 (二)';
+      addPopup(levelTitle, 450, 600, '#00e5ff', 80);
+    }
+
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius); ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height); ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius); ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath();
+    }
+
+    function playSlash(attackCenterX, attackCenterY) {
+      if (player.isAttacking) return;
+      player.isAttacking = true;
+      const frameSpeed = 100;
+      player.frame = 0; 
+      setTimeout(() => {
+        player.frame = 1; 
+        activeEffects.push({
+            startTime: performance.now(), duration: 250, 
+            startX: player.x, startY: player.y - 20, 
+            targetX: attackCenterX, targetY: attackCenterY
+        });
+        setTimeout(() => {
+          player.frame = 2; 
+          setTimeout(() => {
+            player.frame = 0; player.isAttacking = false; actionState = 'selectingOption'; 
+          }, frameSpeed);
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 50) {
+      popupTexts.push({ text: text, x: x, y: y, color: color, size: size, startTime: performance.now(), duration: 1200 });
+    }
+
+    function gameLoop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      update(dt);
+      draw(currentTime);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (!player.isAttacking && actionState === 'walkingToCell') {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.isMoving = true;
+          player.walkCycle += 25 * dt; 
+        } else {
+          player.x = player.targetX; player.y = player.targetY; player.isMoving = false; player.walkCycle = 0;
+          playSlash(selectedCell.x + selectedCell.w / 2, selectedCell.y + selectedCell.h / 2);
+        }
+      }
+    }
+
+    function drawCell(cell) {
+      ctx.save();
+      let blockIdx = (cell.row < 2 ? 0 : 2) + (cell.col < 2 ? 0 : 1);
+      ctx.fillStyle = BLOCK_COLORS[blockIdx];
+      ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 4; ctx.strokeRect(cell.x, cell.y, cell.w, cell.h);
+
+      if (selectedCell === cell && actionState === 'selectingOption') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+        ctx.strokeStyle = '#fff200'; ctx.lineWidth = 8; ctx.strokeRect(cell.x + 4, cell.y + 4, cell.w - 8, cell.h - 8);
+      }
+      if (cell.currentVal !== null) {
+        ctx.font = 'bold 85px "Microsoft JhengHei", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = cell.isFixed ? '#2c3e50' : '#d35400';
+        ctx.fillText(cell.currentVal, cell.x + cell.w / 2, cell.y + cell.h / 2 + 5);
+      }
+      ctx.restore();
+    }
+
+    function draw(now) {
+      if (bgLoaded) ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      else { ctx.fillStyle = '#064057'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+      board.forEach(cell => drawCell(cell));
+      ctx.save(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 10;
+      ctx.strokeRect(GRID.startX, GRID.startY, GRID.cellW * 4, GRID.cellH * 4);
+      ctx.beginPath();
+      ctx.moveTo(GRID.startX + GRID.cellW * 2, GRID.startY); ctx.lineTo(GRID.startX + GRID.cellW * 2, GRID.startY + GRID.cellH * 4);
+      ctx.moveTo(GRID.startX, GRID.startY + GRID.cellH * 2); ctx.lineTo(GRID.startX + GRID.cellW * 4, GRID.startY + GRID.cellH * 2);
+      ctx.stroke(); ctx.restore();
+
+      let isDarkMask = false; let litCells = [];
+      if (gamePhase === 'tutorial') {
+        if (tutorialStep === 0) { isDarkMask = true; litCells = board.filter(c => c.row === 0); }
+        else if (tutorialStep === 1) { isDarkMask = true; litCells = board.filter(c => c.col === 1); }
+        else if (tutorialStep === 4) { isDarkMask = true; litCells = board.filter(c => c.row < 2 && c.col < 2); }
+      }
+      
+      if (actionState === 'selectingOption' && selectedCell) { isDarkMask = true; litCells = [selectedCell]; }
+      if (isDarkMask) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        litCells.forEach(cell => drawCell(cell));
+      }
+
+      if (gamePhase === 'tutorial' && (tutorialStep === 2 || tutorialStep === 5)) {
+        let bounce = Math.sin(now / 150) * 15;
+        ctx.font = '60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        
+        if (actionState === 'selectingOption' && selectedCell) {
+          let correctBtn = optionButtons.find(b => b.val === selectedCell.correctVal);
+          if (correctBtn) ctx.fillText('👇', correctBtn.x + correctBtn.w / 2, correctBtn.y - 20 + bounce);
+        } else {
+          let targetC = tutorialStep === 2 ? board.find(c => c.row===0 && c.col===1) : board.find(c => c.row===1 && c.col===0);
+          ctx.fillText('👇', targetC.x + targetC.w/2, targetC.y + 60 + bounce);
+        }
+      }
+
+      optionButtons.forEach(btn => {
+        ctx.save();
+        if (actionState === 'selectingOption') {
+          if (gamePhase === 'tutorial' && selectedCell && btn.val === selectedCell.correctVal) {
+             let pulse = Math.sin(now / 150) * 0.15 + 1;
+             ctx.translate(btn.x + btn.w/2, btn.y + btn.h/2); ctx.scale(pulse, pulse); ctx.translate(-(btn.x + btn.w/2), -(btn.y + btn.h/2));
+             ctx.shadowColor = '#fff200'; ctx.shadowBlur = 30; ctx.fillStyle = '#f39c12';
+          } else { ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 20; ctx.fillStyle = '#1e3799'; }
+        } else { ctx.fillStyle = 'rgba(30, 55, 153, 0.5)'; }
+        drawRoundRect(ctx, btn.x, btn.y, btn.w, btn.h, 20); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#82ccdd'; ctx.stroke();
+        ctx.shadowBlur = 0; ctx.font = 'bold 60px "Microsoft JhengHei", sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(btn.val, btn.x + btn.w / 2, btn.y + btn.h / 2 + 5); ctx.restore();
+      });
+
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const fx = activeEffects[i]; const progress = (now - fx.startTime) / fx.duration;
+        if (progress >= 1) activeEffects.splice(i, 1);
+        else charConfig.drawEffect(ctx, progress, fx.startX, fx.startY, fx.targetX, fx.targetY);
+      }
+
+      ctx.save();
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.20 : 0;   
+      ctx.translate(player.x, player.y + offsetY); ctx.rotate(rotationAngle);
+      const currentImg = playerImages[player.frame];
+      if(currentImg) {
+          if (player.isFacingLeft) { ctx.scale(-1, 1); ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size); } 
+          else { ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size); }
+      }
+      ctx.restore(); 
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        const popup = popupTexts[i]; const progress = (now - popup.startTime) / popup.duration;
+        if (progress >= 1) popupTexts.splice(i, 1);
+        else {
+          ctx.save(); ctx.globalAlpha = 1 - Math.pow(progress, 3); const py = popup.y - progress * 60;
+          ctx.font = `bold ${popup.size}px "Microsoft JhengHei", sans-serif`;
+          ctx.fillStyle = popup.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 6; ctx.textAlign = 'center'; 
+          ctx.strokeText(popup.text, popup.x, py); ctx.fillText(popup.text, popup.x, py); ctx.restore();
+        }
+      }
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
+    }
+
+    function advanceTutorial() {
+      if (tutorialStep === 0) { hideDialog(); tutorialStep = 1; showDialog(tutorialDialogs.col); }
+      else if (tutorialStep === 1) { hideDialog(); tutorialStep = 2; }
+      else if (tutorialStep === 4) { hideDialog(); tutorialStep = 5; }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      // 加入鎖定判斷：如果顯示對話框且還沒播完語音，就不推進
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (!window.RPGDialog.isLocked()) {
+          advanceTutorial();
+        }
+        return;
+      }
+
+      if (gamePhase !== 'tutorial' && gamePhase !== 'playing') return;
+      if (player.isAttacking) return; 
+
+      const pos = getCanvasPos(e);
+
+      if (actionState === 'idle') {
+        let clickedCell = board.find(c => !c.isFixed && pos.x >= c.x && pos.x <= c.x + c.w && pos.y >= c.y && pos.y <= c.y + c.h);
+        
+        if (clickedCell) {
+          if (gamePhase === 'tutorial') {
+             if (tutorialStep === 2 && (clickedCell.row !== 0 || clickedCell.col !== 1)) return;
+             if (tutorialStep === 5 && (clickedCell.row !== 1 || clickedCell.col !== 0)) return;
+          }
+
+          selectedCell = clickedCell;
+          let clickX = selectedCell.x + selectedCell.w / 2; let clickY = selectedCell.y + selectedCell.h / 2;
+          player.isFacingLeft = clickX < player.x;
+          player.targetX = player.isFacingLeft ? clickX + player.hitboxOffsetX : clickX - player.hitboxOffsetX;
+          player.targetY = clickY - player.hitboxOffsetY;
+
+          if (Math.sqrt(Math.pow(player.targetX - player.x, 2) + Math.pow(player.targetY - player.y, 2)) <= 15) {
+             playSlash(clickX, clickY); 
+          } else {
+             actionState = 'walkingToCell'; player.isMoving = true;
+          }
+        }
+      } 
+      else if (actionState === 'selectingOption') {
+        let clickedOption = optionButtons.find(b => pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h);
+
+        if (clickedOption) {
+          if (gamePhase === 'tutorial' && clickedOption.val !== selectedCell.correctVal) return;
+          selectedCell.currentVal = clickedOption.val; actionState = 'idle';
+          
+          if (gamePhase === 'tutorial') {
+            if (tutorialStep === 2) { tutorialStep = 4; selectedCell = null; showDialog(tutorialDialogs.block); }
+            else if (tutorialStep === 5) {
+              selectedCell = null; addPopup('⭐ 教學完成', 450, 600, '#ffeb3b', 80);
+              setTimeout(() => { document.getElementById('skip-btn').style.display = 'none'; startOfficialLevel(0); }, 1500);
+            }
+          } else {
+            let tmpCell = selectedCell; selectedCell = null; checkBoardProgress(tmpCell);
+          }
+        } else {
+          actionState = 'idle'; selectedCell = null;
+        }
+      }
+    });
+
+    function checkBoardProgress(lastFilledCell) {
+      if (lastFilledCell.currentVal !== lastFilledCell.correctVal) {
+        addPopup('❌ 有錯喔！', 450, 600, '#ff4757', 80); setTimeout(() => { lastFilledCell.currentVal = null; }, 800);
+        return; 
+      }
+      let isFull = board.every(cell => cell.currentVal !== null);
+      if (isFull) {
+        addPopup(`⭐ +${currentStarReward}`, 450, 600, '#ffeb3b', 100);
+        stars += currentStarReward; document.getElementById('coinDisplay').innerText = stars;
+        setTimeout(() => {
+          currentLevel++;
+          if (currentLevel >= blanksPerLevel.length) endGame(); else startOfficialLevel(currentLevel);
+        }, 1500);
+      }
+    }
+
+    function endGame() {
+      gamePhase = 'result';
+      document.getElementById('back-btn').style.display = 'none'; document.getElementById('skip-btn').style.display = 'none'; document.getElementById('hud').style.display = 'none';
+
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars; localStorage.setItem('playerCoins', newTotalCoins);
+      if (localStorage.getItem('sticker_smap8') !== 'true') localStorage.setItem('sticker_smap8', 'new');
+
+      document.getElementById('newCoins').innerText = "+" + stars; document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= stars; i++) { starsHtml += '⭐'; if (i % 4 === 0) starsHtml += '<br>'; }
+      document.getElementById('star-container').innerHTML = starsHtml;
+      
+      let challengeBtn = document.getElementById('challenge-btn');
+      if (challengeMode === 0 || challengeMode === 1) challengeBtn.style.display = 'block'; else challengeBtn.style.display = 'none';
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    window.onload = () => { 
+      // 加入鎖定判斷：確保對話框本體點擊時，也必須等語音播完
+      if (window.RPGDialog && window.RPGDialog.boxElement) {
+        window.RPGDialog.boxElement.addEventListener('pointerdown', (e) => {
+          if (window.RPGDialog.boxElement.style.display === 'block' && !window.RPGDialog.isLocked()) {
+            advanceTutorial();
+          }
+        });
+      }
+      setTimeout(() => { if(!bgLoaded) checkLoad(); }, 1000); 
+    };
+  </script>
+</body>
+</html>
+```<FollowUp>請問其他已經完成的地圖，需要一起調整對話框模組嗎？</FollowUp>

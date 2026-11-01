@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 帆船重量平衡</title>
+  
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  
+  <style>
+    * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: none; }
+    body {
+      margin: 0; padding: 0; background-color: #000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212; color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 20px; z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px; width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2); border-top: 4px solid #00e5ff;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative; width: 95vw; max-width: 100%; max-height: 85vh;
+      border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden; display: none; background-color: #021a2f;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+
+    .overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85); color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px; text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%; max-width: 720px; padding: 18px 22px; border-radius: 16px;
+      background-color: rgba(0, 0, 0, 0.82); border: 2px solid rgba(255, 215, 0, 0.5);
+      margin-bottom: 25px;
+    }
+    
+    .btn {
+      padding: 18px 10px; font-size: 38px; font-weight: bold; width: 100%;
+      color: #fff; border: none; border-radius: 18px;
+      cursor: pointer; transition: transform 0.1s; 
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-easy { background-color: #00b894; box-shadow: 0 8px 0 #008f73; }
+    .btn-normal { background-color: #0984e3; box-shadow: 0 8px 0 #076ebc; }
+
+    #back-btn, #skip-btn {
+      position: absolute; margin: 0; padding: 8px 16px;
+      font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 101; display: none;
+      border: none; border-radius: 10px; color: white; cursor: pointer;
+    }
+    #back-btn { top: 15px; left: 15px; background-color: #333; }
+    #skip-btn { top: 15px; right: 15px; background-color: #e17055; }
+
+    #hud {
+      position: absolute; top: 15px; right: 15px; color: #fff;
+      font-size: 24px; font-weight: bold; background: rgba(0, 0, 0, 0.55);
+      padding: 10px 20px; border-radius: 15px; pointer-events: none;
+      z-index: 100; display: none; backdrop-filter: blur(4px);
+    }
+
+    #q-counter {
+      position: absolute;
+      top: 2%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(20px, 4.5vw, 30px);
+      font-weight: bold;
+      color: #fff;
+      background: rgba(15, 25, 35, 0.88);
+      padding: 10px 28px;
+      border-radius: 20px;
+      z-index: 20;
+      border: 2px solid #00e5ff;
+      white-space: nowrap;
+      display: none;
+    }
+
+    #star-container { font-size: 36px; margin-top: 15px; width: 100%; text-align: center; line-height: 1.5; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+    .math-box { background: rgba(43, 39, 39, 0.85); padding: 15px 25px; border-radius: 10px; margin: 15px 0; font-size: 28px; text-align: center; line-height: 1.8; }
+
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">帆船起航準備中...</div>
+  </div>
+
+  <div id="game-container">
+    
+    <button id="back-btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <button id="skip-btn" onclick="endTutorial()">⏭️ 跳過教學</button>
+    
+    <!-- 題號顯示器置中 -->
+    <div id="q-counter"></div>
+
+    <!-- HUD 改為只顯示星星數量 -->
+    <div id="hud">
+      ⭐ <span id="coinDisplay">0</span>
+    </div>
+
+    <!-- 初始開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button style="position: absolute; top: 15px; left: 15px; padding: 8px 16px; font-size: 18px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onclick="window.location.href='index.html'">🔙 EXIT</button>
+
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 15px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>帆<rt>ㄈㄢˊ</rt></ruby><ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>平<rt>ㄆㄧㄥˊ</rt></ruby><ruby>衡<rt>ㄏㄥˊ</rt></ruby><ruby>島<rt>ㄉㄠˇ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); color: #ffd32a; line-height: 1.6;">
+           <ruby>搬<rt>ㄅㄢ</rt></ruby><ruby>運<rt>ㄩㄣˋ</rt></ruby><ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>底<rt>ㄉㄧˇ</rt></ruby><ruby>砝<rt>ㄈㄚˇ</rt></ruby><ruby>碼<rt>ㄇㄚˇ</rt></ruby><br><ruby>讓<rt>ㄖㄤˋ</rt></ruby><ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>保<rt>ㄅㄠˇ</rt></ruby><ruby>持<rt>ㄔˊ</rt></ruby><ruby>平<rt>ㄆ一ㄥˊ</rt></ruby><ruby>衡<rt>ㄏㄥˊ</rt></ruby>
+        </p>
+      </div>
+      
+      <div style="width: 100%; max-width: 320px;">
+        <button class="btn btn-easy" onclick="startTutorial()">
+          <div><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>始<rt>ㄕˇ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>囉<rt>ㄌㄨㄛ</rt></ruby><span>！</span>
+      </h1>
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      <div id="star-container"></div>
+      
+      <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px;">
+        <button class="btn btn-normal" style="font-size: 34px; padding: 15px; flex-direction: row;" onclick="playAgain()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn btn-easy" style="font-size: 34px; padding: 15px; flex-direction: row; background-color: #e17055; box-shadow: 0 8px 0 #c25e46;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 修正點 1：將模組移至 body 尾部，確保 document.body 已經生成不會報錯 -->
+  <script src="rpg-dialog-ui.js" onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900; 
+    canvas.height = 1200;
+
+    let bgLoaded = false;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map11.webp';
+    bgImg.onerror = () => { bgImg.src = 'map11.webp'; }; 
+    bgImg.onload = () => { bgLoaded = true; };
+
+    const WATER_SURFACE_Y = 583;
+    const SHIP_X = 450;
+
+    const CHARACTERS = {
+      'han1': { prefix: 'han1', size: 160 },
+      'han2': { prefix: 'han2', size: 170 },
+      'han3': { prefix: 'han3', size: 160 },
+      'han4': { prefix: 'han4', size: 165 },
+      'han5': { prefix: 'han5', size: 160 }
+    };
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    const playerConfig = { size: charConfig.size, hitboxOffsetX: 80, hitboxOffsetY: 10, speedPxPerSec: 2200 };
+    
+    let playerImages = [];
+    let loadedAssets = 0; const totalAssets = 3;
+    
+    function checkLoad() {
+      loadedAssets++;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop);
+        returnToMenu();
+      }
+    }
+
+    [1, 2, 3].forEach((num, idx) => {
+      const img = new Image(); 
+      img.src = `assets/han/${charConfig.prefix}-${num}.webp`;
+      img.onload = checkLoad; img.onerror = checkLoad;
+      playerImages[idx] = img;
+    });
+
+    const player = {
+      x: 450, y: 750, targetX: 450, targetY: 750, size: playerConfig.size, 
+      speed: playerConfig.speedPxPerSec, frame: 0, isFacingLeft: false, 
+      isMoving: false, walkCycle: 0, isAttacking: false
+    };
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let actx = null;
+    function playSound(type) {
+      if (!actx) actx = new AudioContext();
+      const t = actx.currentTime;
+      if (type === 'drop') {
+        const o = actx.createOscillator(); const g = actx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(220, t);
+        o.frequency.exponentialRampToValueAtTime(60, t + 0.12);
+        g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+        o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.12);
+      } else if (type === 'bell') {
+        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+          const o = actx.createOscillator(); const g = actx.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(freq, t + idx * 0.08);
+          g.gain.setValueAtTime(0.2, t + idx * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.08 + 1.0);
+          o.connect(g); g.connect(actx.destination); o.start(t + idx * 0.08); o.stop(t + idx * 0.08 + 1.0);
+        });
+      } else if (type === 'wrong') {
+        const o = actx.createOscillator(); const g = actx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(140, t);
+        o.frequency.linearRampToValueAtTime(80, t + 0.25);
+        g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+        o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.25);
+      }
+    }
+
+    const dialogs = {
+      tut1: `<ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>尾<rt>ㄨㄟˇ</rt></ruby><ruby>重<rt>ㄓㄨㄥˋ</rt></ruby><ruby>量<rt>ㄌㄧㄤˋ</rt></ruby><ruby>太<rt>ㄊㄞˋ</rt></ruby><ruby>重<rt>ㄓㄨㄥˋ</rt></ruby><ruby>了<rt>ㄌㄜ˙</rt></ruby>，<ruby>把<rt>ㄅㄚˇ</rt></ruby><ruby>相<rt>ㄒㄧㄤ</rt></ruby><ruby>同<rt>ㄊㄨㄥˊ</rt></ruby><ruby>重<rt>ㄓㄨㄥˋ</rt></ruby><ruby>量<rt>ㄌㄧㄤˋ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>品<rt>ㄆㄧㄣˇ</rt></ruby><ruby>放<rt>ㄈㄤˋ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby><ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>吧<rt>ㄅㄚ˙</rt></ruby>！`,
+      tut2: `<ruby>答<rt>ㄉㄚˊ</rt></ruby><ruby>對<rt>ㄉㄨㄟˋ</rt></ruby><ruby>了<rt>ㄌㄜ˙</rt></ruby>，<ruby>答<rt>ㄉㄚˊ</rt></ruby><ruby>案<rt>ㄢˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby> 4 + 2，<ruby>但<rt>ㄉㄢˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>還<rt>ㄏㄞˊ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>其<rt>ㄑㄧˊ</rt></ruby><ruby>他<rt>ㄊㄚ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>能<rt>ㄋㄥˊ</rt></ruby>`,
+      tut3: `<ruby>答<rt>ㄉㄚˊ</rt></ruby><ruby>對<rt>ㄉㄨㄟˋ</rt></ruby><ruby>了<rt>ㄌㄜ˙</rt></ruby>，<ruby>也<rt>ㄧㄝˇ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby> 1 + 2 + 3`
+    };
+
+    let gamePhase = 'start'; 
+    let currentQuestion = 1;     
+    let targetWeight = 6;
+    let rightCargos = [];        
+    let poolWeights = [];        
+    let shipAngle = 0;
+    let actionState = 'idle';    
+    let tutorialStep = -1;
+    let popupTexts = [];
+    let confettiList = [];
+    let lastTime = 0;
+    let currentStars = 0;
+
+    const COLOR_SCHEME = {
+      1: '#3498db', 2: '#2ecc71', 3: '#e67e22', 4: '#9b59b6', 5: '#e74c3c',
+      6: '#1abc9c', 7: '#d35400', 8: '#2c3e50', 9: '#f39c12', 10: '#c0392b'
+    };
+
+    function showDialog(html) {
+      if (window.RPGDialog) window.RPGDialog.show(html);
+    }
+    
+    function hideDialog() { 
+      if (window.RPGDialog) window.RPGDialog.hide();
+    }
+
+    function returnToMenu() {
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('start-screen').style.display = 'flex';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('q-counter').style.display = 'none';
+      hideDialog();
+    }
+
+    function startTutorial() {
+      currentStars = 0;
+      document.getElementById('coinDisplay').innerText = currentStars;
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'block';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      document.getElementById('q-counter').style.display = 'block';
+      document.getElementById('q-counter').innerText = `教學示範`;
+
+      gamePhase = 'tutorial';
+      actionState = 'idle';
+      targetWeight = 6;
+      rightCargos = []; poolWeights = [];
+      tutorialStep = 0;
+
+      const rawNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      const cols = 5;
+      const startX = 140, startY = 890, gapX = 155, gapY = 105;
+
+      rawNumbers.forEach((val, idx) => {
+        poolWeights.push({
+          id: 'w_' + idx, val: val,
+          x: startX + (idx % cols) * gapX, y: startY + Math.floor(idx / cols) * gapY,
+          w: 86, h: 86, color: COLOR_SCHEME[val] || '#34495e', active: true
+        });
+      });
+
+      player.x = 450; player.y = 720; player.targetX = 450; player.targetY = 720;
+      showDialog(dialogs.tut1);
+    }
+
+    function endTutorial() {
+      hideDialog();
+      document.getElementById('skip-btn').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      gamePhase = 'playing';
+      initQuestion(1);
+    }
+
+    function playAgain() {
+      document.getElementById('result-screen').style.display = 'none';
+      hideDialog();
+      
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('q-counter').style.display = 'block';
+      document.getElementById('skip-btn').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      
+      gamePhase = 'playing';
+      currentStars = 0;
+      document.getElementById('coinDisplay').innerText = currentStars;
+      initQuestion(1);
+    }
+
+    // 修正點 2：必須嚴格比對 display 是否為 'block'，防止一開始空字串時被誤判為開啟狀態卡死遊戲
+    function tryAdvanceDialog() {
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (tutorialStep === 0) {
+          hideDialog(); tutorialStep = 1; 
+        } else if (tutorialStep === 3) {
+          hideDialog();
+          rightCargos.forEach(w => w.active = true);
+          rightCargos = [];
+          tutorialStep = 4;
+        } else if (tutorialStep === 7) {
+          hideDialog(); endTutorial();
+        }
+        return true; // 確實是顯示對話框的階段，攔截並推進對話
+      }
+      return false; // 對話框未顯示，不攔截點擊
+    }
+
+    // 修正點 3：綁定點擊事件至模組本身
+    if (window.RPGDialog) {
+      window.RPGDialog.boxElement.addEventListener('pointerdown', tryAdvanceDialog);
+    }
+
+    function generateWeightsForTarget(target) {
+      let num1 = Math.floor(Math.random() * (target - 3)) + 1;
+      let num2 = target - num1;
+      let core = [num1, num2];
+      if (num2 > 9) {
+        let half = Math.floor(num2 / 2);
+        core = [num1, half, num2 - half];
+      }
+      let list = [...core];
+      while (list.length < 10) { list.push(Math.floor(Math.random() * (target >= 15 ? 9 : 6)) + 1); }
+      return list.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuestion(qNum) {
+      currentQuestion = qNum;
+      document.getElementById('q-counter').style.display = 'block';
+      document.getElementById('q-counter').innerText = `第 ${currentQuestion} / 4 題`;
+
+      if (currentQuestion <= 2) targetWeight = Math.floor(Math.random() * 5) + 6; 
+      else targetWeight = Math.floor(Math.random() * 7) + 12;
+
+      rightCargos = []; poolWeights = [];
+      actionState = 'idle';
+
+      const rawNumbers = generateWeightsForTarget(targetWeight);
+      const cols = 5;
+      const startX = 140, startY = 890, gapX = 155, gapY = 105;
+
+      rawNumbers.forEach((val, idx) => {
+        poolWeights.push({
+          id: 'w_' + idx, val: val,
+          x: startX + (idx % cols) * gapX, y: startY + Math.floor(idx / cols) * gapY,
+          w: 86, h: 86, color: COLOR_SCHEME[val], active: true
+        });
+      });
+      player.x = 450; player.y = 750; player.targetX = 450; player.targetY = 750;
+    }
+
+    function showFinalResult() {
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('q-counter').style.display = 'none';
+
+      let storedCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotal = storedCoins + currentStars; 
+      localStorage.setItem('playerCoins', newTotal);
+
+      if (localStorage.getItem('sticker_smap11') !== 'true') {
+        localStorage.setItem('sticker_smap11', 'new');
+      }
+
+      document.getElementById('newCoins').innerText = "+" + currentStars;
+      document.getElementById('totalCoins').innerText = newTotal;
+      
+      let starsHtml = '';
+      for (let i = 0; i < currentStars; i++) {
+        starsHtml += '⭐';
+        if ((i + 1) % 4 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+      
+      document.getElementById('result-screen').style.display = 'flex';
+      if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+    }
+
+    function playSlash(callback) {
+      player.isAttacking = true;
+      const frameSpeed = 60; player.frame = 0; 
+      setTimeout(() => { player.frame = 1; 
+        setTimeout(() => { player.frame = 2; if(callback) callback(); 
+          setTimeout(() => { player.frame = 0; player.isAttacking = false; }, frameSpeed);
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 150) {
+      popupTexts.push({ text, x, y, color, size, startTime: performance.now(), duration: 1100 });
+    }
+
+    function triggerConfetti() {
+      for (let i = 0; i < 60; i++) {
+        confettiList.push({
+          x: SHIP_X, y: WATER_SURFACE_Y - 140,
+          vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 12 - 5,
+          size: Math.random() * 10 + 6,
+          color: ['#f1c40f', '#e74c3c', '#2ecc71', '#3498db', '#9b59b6'][Math.floor(Math.random() * 5)],
+          rot: Math.random() * Math.PI, rotSpeed: (Math.random() - 0.5) * 0.2
+        });
+      }
+    }
+
+    function gameLoop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      update(dt);
+      draw(currentTime);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (!player.isAttacking && (actionState === 'walkingToWeight' || actionState === 'walkingToDeck')) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let dist = Math.hypot(dx, dy);
+        let step = player.speed * dt;
+
+        if (dist > step) {
+          player.x += (dx / dist) * step; player.y += (dy / dist) * step;
+          player.isMoving = true; player.walkCycle += 25 * dt;
+        } else {
+          player.x = player.targetX; player.y = player.targetY;
+          player.isMoving = false; player.walkCycle = 0;
+
+          if (actionState === 'walkingToWeight') {
+            let targetWeightItem = player.targetWeightItem;
+            playSlash(() => {
+              targetWeightItem.active = false;
+              rightCargos.push(targetWeightItem);
+              playSound('drop');
+              verifyWeightBalance();
+            });
+            actionState = 'idle';
+          } else if (actionState === 'walkingToDeck') {
+            playSlash(() => {
+              if (rightCargos.length > 0) {
+                let removed = rightCargos.pop();
+                removed.active = true;
+                playSound('drop');
+                verifyWeightBalance();
+              }
+            });
+            actionState = 'idle';
+          }
+        }
+      }
+    }
+
+    function verifyWeightBalance() {
+      let currentRightWeight = rightCargos.reduce((s, it) => s + it.val, 0);
+
+      if (gamePhase === 'tutorial') {
+        if (tutorialStep === 1) tutorialStep = 2;
+        else if (tutorialStep === 2) {
+          if (currentRightWeight === targetWeight) {
+            tutorialStep = 3; showDialog(dialogs.tut2); playSound('bell'); triggerConfetti();
+          }
+        } else if (tutorialStep === 4) tutorialStep = 5;
+        else if (tutorialStep === 5) tutorialStep = 6;
+        else if (tutorialStep === 6) {
+          if (currentRightWeight === targetWeight) {
+            tutorialStep = 7; showDialog(dialogs.tut3); playSound('bell'); triggerConfetti();
+          }
+        }
+        return;
+      }
+
+      if (currentRightWeight === targetWeight) {
+        playSound('bell');
+        addPopup('⭕', 450, 480, '#60ff40', 160);
+        triggerConfetti();
+        actionState = 'roundClearing';
+        
+        currentStars += 2;
+        document.getElementById('coinDisplay').innerText = currentStars;
+
+        setTimeout(() => {
+          if (currentQuestion < 4) initQuestion(currentQuestion + 1);
+          else showFinalResult();
+        }, 1600);
+      } else {
+        if (currentRightWeight > targetWeight) {
+          playSound('wrong');
+          addPopup('❌', 450, 480, '#ff4757', 160);
+        }
+      }
+    }
+
+    function draw(now) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (bgLoaded) ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      else { ctx.fillStyle = '#0a3d62'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+      let currentRightWeight = rightCargos.reduce((s, it) => s + it.val, 0);
+      let diff = currentRightWeight - targetWeight;
+      let targetTilt = Math.max(-0.35, Math.min(0.35, diff * 0.05));
+      shipAngle += (targetTilt - shipAngle) * 0.08;
+
+      let waveBob = Math.sin(now * 0.003) * 5;
+      let pivotY = WATER_SURFACE_Y - 20 + waveBob;
+      
+      drawSailboat(SHIP_X, pivotY, shipAngle, now);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.beginPath(); ctx.moveTo(0, WATER_SURFACE_Y);
+      for (let x = 0; x <= 900; x += 30) ctx.lineTo(x, WATER_SURFACE_Y + Math.sin(x * 0.02 + now * 0.005) * 5);
+      ctx.lineTo(900, WATER_SURFACE_Y + 16); ctx.lineTo(0, WATER_SURFACE_Y + 16);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      poolWeights.forEach(item => { if (item.active) drawWeightTile(item.x, item.y, item.val, item.color, item.w, item.h); });
+
+      if (gamePhase === 'tutorial') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let pointerTarget = null;
+        let pointerYOffset = -90;
+
+        if (tutorialStep === 0) {
+          ctx.save(); ctx.translate(SHIP_X, pivotY); ctx.rotate(shipAngle);
+          drawWeightTile(-130, -55, targetWeight, '#8e44ad', 96, 96, true);
+          drawDeckLabel(-130, 28, '左舷目標');
+          ctx.restore();
+          pointerTarget = { x: SHIP_X - 130, y: pivotY - 55 }; 
+        } else {
+          poolWeights.forEach(item => { if (item.active) drawWeightTile(item.x, item.y, item.val, item.color, item.w, item.h); });
+          ctx.save(); ctx.translate(SHIP_X, pivotY); ctx.rotate(shipAngle);
+          let stackY = -55; rightCargos.forEach(item => { drawWeightTile(130, stackY, item.val, item.color, 82, 82); stackY -= 88; });
+          ctx.restore();
+
+          let targetVal = -1;
+          if (tutorialStep === 1) targetVal = 2; else if (tutorialStep === 2) targetVal = 4;
+          else if (tutorialStep === 4) targetVal = 1; else if (tutorialStep === 5) targetVal = 2;
+          else if (tutorialStep === 6) targetVal = 3;
+
+          if (targetVal !== -1) {
+            let tItem = poolWeights.find(w => w.val === targetVal && w.active);
+            if (tItem) { pointerTarget = { x: tItem.x, y: tItem.y }; pointerYOffset = -70; }
+          }
+        }
+
+        if (pointerTarget) {
+          let bounce = Math.sin(now / 150) * 15;
+          ctx.font = '75px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('👇', pointerTarget.x, pointerTarget.y + pointerYOffset + bounce);
+        }
+      }
+
+      ctx.save();
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 8 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;   
+      ctx.translate(player.x, player.y + offsetY); ctx.rotate(rotationAngle);
+      const currentImg = playerImages[player.frame];
+      if (currentImg) {
+        if (player.isFacingLeft) { ctx.scale(-1, 1); ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size); } 
+        else { ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size); }
+      }
+      ctx.restore();
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        const popup = popupTexts[i]; const progress = (now - popup.startTime) / popup.duration;
+        if (progress >= 1) popupTexts.splice(i, 1);
+        else {
+          ctx.save(); ctx.globalAlpha = 1 - Math.pow(progress, 3);
+          const py = popup.y - progress * 70;
+          ctx.font = `bold ${popup.size}px "Microsoft JhengHei", sans-serif`;
+          ctx.fillStyle = popup.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 6;
+          ctx.textAlign = 'center'; ctx.strokeText(popup.text, popup.x, py); ctx.fillText(popup.text, popup.x, py);
+          ctx.restore();
+        }
+      }
+
+      for (let i = confettiList.length - 1; i >= 0; i--) {
+        const p = confettiList[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.rot += p.rotSpeed;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
+        if (p.y > 1200) confettiList.splice(i, 1);
+      }
+    }
+
+    function drawSailboat(x, y, angle, time) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+      ctx.fillStyle = '#5d4037'; ctx.fillRect(-6, -260, 12, 260);
+
+      ctx.fillStyle = '#fdfdfd'; ctx.strokeStyle = '#dcdde1'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-10, -245); ctx.quadraticCurveTo(-75, -150, -130, -35); ctx.lineTo(-10, -35); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10, -235); ctx.quadraticCurveTo(80, -140, 135, -35); ctx.lineTo(10, -35); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = '#795548';
+      ctx.beginPath(); ctx.moveTo(-220, -5); ctx.lineTo(220, -5); ctx.quadraticCurveTo(190, 55, 140, 70);
+      ctx.lineTo(-140, 70); ctx.quadraticCurveTo(-190, 55, -220, -5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(-210, 15); ctx.lineTo(210, 15); ctx.stroke();
+
+      drawWeightTile(-130, -55, targetWeight, '#8e44ad', 96, 96, true);
+      drawDeckLabel(-130, 28, '左舷目標');
+
+      let stackY = -55;
+      rightCargos.forEach(item => { drawWeightTile(130, stackY, item.val, item.color, 82, 82); stackY -= 88; });
+      drawDeckLabel(130, 28, '右舷（卸貨）');
+      ctx.restore();
+    }
+
+    function drawDeckLabel(x, y, text) {
+      ctx.save(); ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; ctx.beginPath(); ctx.roundRect(x - 65, y - 10, 130, 22, 6); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, x, y + 6); ctx.restore();
+    }
+
+    function drawWeightTile(x, y, val, color, w, h, isTarget = false) {
+      ctx.save(); ctx.translate(x, y);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 14); ctx.fill();
+      ctx.lineWidth = isTarget ? 5 : 4; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = `bold ${isTarget ? '52px' : '44px'} sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(val, 0, 2);
+      ctx.restore();
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: (cx - rect.left) * (canvas.width / rect.width), y: (cy - rect.top) * (canvas.height / rect.height) };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      // 若是點擊畫布時剛好有對話框顯示，就會在 tryAdvanceDialog() 被攔截處理掉
+      if (tryAdvanceDialog()) return; 
+
+      if (actionState !== 'idle' || player.isAttacking) return;
+      const pos = getCanvasPos(e);
+
+      if (gamePhase === 'tutorial') {
+        let targetVal = -1;
+        if (tutorialStep === 1) targetVal = 2; else if (tutorialStep === 2) targetVal = 4;
+        else if (tutorialStep === 4) targetVal = 1; else if (tutorialStep === 5) targetVal = 2;
+        else if (tutorialStep === 6) targetVal = 3;
+
+        if (targetVal !== -1) {
+          let clicked = poolWeights.find(w => w.active && Math.abs(pos.x - w.x) <= w.w/2 + 10 && Math.abs(pos.y - w.y) <= w.h/2 + 10);
+          if (clicked && clicked.val === targetVal) {
+            actionState = 'walkingToWeight';
+            player.targetWeightItem = clicked;
+            player.isFacingLeft = clicked.x < player.x;
+            player.targetX = player.isFacingLeft ? clicked.x + playerConfig.hitboxOffsetX : clicked.x - playerConfig.hitboxOffsetX;
+            player.targetY = clicked.y - playerConfig.hitboxOffsetY;
+            player.isMoving = true;
+          }
+        }
+        return; 
+      }
+
+      if (pos.x >= 480 && pos.x <= 720 && pos.y >= 350 && pos.y <= 620) {
+        if (rightCargos.length > 0) {
+          actionState = 'walkingToDeck'; player.isFacingLeft = 580 < player.x;
+          player.targetX = 580; player.targetY = 680; player.isMoving = true;
+          return;
+        }
+      }
+
+      for (let i = poolWeights.length - 1; i >= 0; i--) {
+        const item = poolWeights[i];
+        if (item.active && Math.abs(pos.x - item.x) <= item.w / 2 + 10 && Math.abs(pos.y - item.y) <= item.h / 2 + 10) {
+          actionState = 'walkingToWeight'; player.targetWeightItem = item;
+          player.isFacingLeft = item.x < player.x;
+          player.targetX = player.isFacingLeft ? item.x + playerConfig.hitboxOffsetX : item.x - playerConfig.hitboxOffsetX;
+          player.targetY = item.y - playerConfig.hitboxOffsetY; player.isMoving = true;
+          return;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

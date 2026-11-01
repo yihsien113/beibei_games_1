@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>粢涵尋寶去 - 衣櫃</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    /* 與 map1/map2 一模一樣的容器架構 */
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 96vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    /* 頂部 HUD (EXIT 按鈕與星星) */
+    .top-bar {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .top-bar > * {
+      pointer-events: auto;
+    }
+    .btn-back {
+      background: #333;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .coin-display {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ffeb3b;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 16px;
+      border-radius: 15px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* 衣櫥滑動卡片 UI (疊加於畫布上方) */
+    .wardrobe-wrapper {
+      position: absolute;
+      top: 75px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      z-index: 80;
+      padding: 0 10px;
+    }
+
+    .scroll-arrow {
+      position: absolute;
+      top: 50%;
+      font-size: 46px;
+      color: #ffeb3b;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .left-arrow { left: 5px; animation: bounce-left 1.2s infinite; }
+    .right-arrow { right: 5px; animation: bounce-right 1.2s infinite; }
+
+    @keyframes bounce-left {
+      0%, 100% { transform: translate(0, -50%); }
+      50% { transform: translate(-10px, -50%); }
+    }
+    @keyframes bounce-right {
+      0%, 100% { transform: translate(0, -50%); }
+      50% { transform: translate(10px, -50%); }
+    }
+
+    .scroll-container {
+      display: flex;
+      gap: 15px;
+      width: 100%;
+      padding: 10px 15px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch; /* 開啟 iOS 慣性滾動 */
+      touch-action: pan-x;               /* 允許水平滑動 */
+    }
+    .scroll-container * {
+      touch-action: pan-x;
+    }
+    .scroll-container::-webkit-scrollbar { display: none; }
+
+    .char-card {
+      scroll-snap-align: center;
+      flex: 0 0 auto;
+      background: rgba(22, 33, 62, 0.88);
+      backdrop-filter: blur(6px);
+      border: 3px solid #0f3460;
+      border-radius: 18px;
+      padding: 15px;
+      text-align: center;
+      width: 250px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+    .char-card.equipped {
+      border-color: #4caf50;
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.7);
+    }
+    .char-card img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+    .char-name {
+      font-size: 26px;
+      margin-bottom: 16px;
+      font-weight: bold;
+      color: #fff;
+    }
+    .btn {
+      padding: 12px 16px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #fff;
+      border: none;
+      border-radius: 22px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-equip { background-color: #2196f3; }
+    .btn-buy { background-color: #e94560; }
+    .btn:active { transform: scale(0.95); }
+
+    /* ====== 超大注音彈出視窗 ====== */
+    .custom-modal-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .custom-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .custom-modal-box {
+      background: #1e293b;
+      border: 4px solid #facc15;
+      border-radius: 28px;
+      padding: 30px 20px;
+      max-width: 95%;
+      width: 520px;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+      transform: scale(0.85);
+      transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+    .custom-modal-overlay.active .custom-modal-box {
+      transform: scale(1);
+    }
+    .modal-msg {
+      font-size: 42px;
+      font-weight: bold;
+      color: #ffffff;
+      line-height: 1.5;
+      margin-bottom: 22px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-modal-ok {
+      background: #4caf50;
+      color: #fff;
+      font-size: 30px;
+      font-weight: bold;
+      padding: 10px 40px;
+      border-radius: 35px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+    }
+    .btn-modal-ok:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- 頂部列 -->
+    <div class="top-bar">
+      <button class="btn-back" onclick="location.href='index.html'">🔙 EXIT</button>
+      <div class="coin-display"><span id="myCoins">0</span> ⭐</div>
+    </div>
+
+    <!-- 櫥窗選擇清單 -->
+    <div class="wardrobe-wrapper" id="wardrobeWrapper">
+      <div class="scroll-arrow left-arrow" id="leftArrow">◀</div>
+
+      <div class="scroll-container" id="scrollContainer">
+        <!-- 角色 1 -->
+        <div class="char-card" id="card-han1">
+          <img src="assets/han/han1-1.webp" alt="揮劍女孩">
+          <div class="char-name"><ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>女<rt>ㄋㄩˇ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby></div>
+          <button class="btn btn-equip" id="btn-han1" onclick="equipChar('han1')"></button>
+        </div>
+
+        <!-- 角色 2 -->
+        <div class="char-card" id="card-han2">
+          <img src="assets/han/han2-1.webp" alt="弓箭公主">
+          <div class="char-name"><ruby>弓<rt>ㄍㄨㄥ</rt></ruby><ruby>箭<rt>ㄐㄧㄢˋ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
+          <button class="btn btn-buy" id="btn-han2" onclick="buyOrEquip('han2', 80)"></button>
+        </div>
+        
+        <!-- 角色 3 -->
+        <div class="char-card" id="card-han3">
+          <img src="assets/han/han3-1.webp" alt="魔法仙子">
+          <div class="char-name"><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>仙<rt>ㄒㄧㄢ</rt></ruby><ruby>子<rt>ㄗ˙</rt></ruby></div>
+          <button class="btn btn-buy" id="btn-han3" onclick="buyOrEquip('han3', 80)"></button>
+        </div>
+
+        <!-- 角色 4：漩渦公主 -->
+        <div class="char-card" id="card-han4">
+          <img src="assets/han/han4-1.webp" alt="漩渦公主">
+          <div class="char-name"><ruby>漩<rt>ㄒㄩㄢˊ</rt></ruby><ruby>渦<rt>ㄨㄛ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
+          <button class="btn btn-buy" id="btn-han4" onclick="buyOrEquip('han4', 80)"></button>
+        </div>
+
+        <!-- 角色 5：愛心公主 -->
+        <div class="char-card" id="card-han5">
+          <img src="assets/han/han5-1.webp" alt="愛心公主">
+          <div class="char-name"><ruby>愛<rt>ㄞˋ</rt></ruby><ruby>心<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
+          <button class="btn btn-buy" id="btn-han5" onclick="buyOrEquip('han5', 80)"></button>
+        </div>
+      </div>
+
+      <div class="scroll-arrow right-arrow" id="rightArrow">▶</div>
+    </div>
+
+    <!-- 彈出視窗 -->
+    <div class="custom-modal-overlay" id="customModal">
+      <div class="custom-modal-box">
+        <div class="modal-msg" id="modalMessage"></div>
+        <button class="btn-modal-ok" onclick="closeModal()">
+          <ruby>好<rt>ㄏㄠˇ</rt></ruby><ruby>的<rt>ㄉㄜ˙</rt></ruby 👍
+        </button>
+      </div>
+    </div>
+
+    <!-- 核心渲染畫布（背景與點擊走動角色） -->
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 數據管理
+    let coins = parseInt(localStorage.getItem('playerCoins') || '0');
+    let equipped = localStorage.getItem('equippedCharacter') || 'han1';
+    let ownsHan2 = localStorage.getItem('owns_han2') === 'true';
+    let ownsHan3 = localStorage.getItem('owns_han3') === 'true';
+    let ownsHan4 = localStorage.getItem('owns_han4') === 'true';
+    let ownsHan5 = localStorage.getItem('owns_han5') === 'true';
+
+    document.getElementById('myCoins').innerText = coins;
+
+    const TEXT_EQUIPPED = '<ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby> ✔️';
+    const TEXT_EQUIP = '<ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby>';
+    const TEXT_BUY_80 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (80⭐)';
+
+    // 角色設定（固定 Y: 988，初始 X: 449，邊界: 265 ~ 640）
+    const player = {
+      x: 449,
+      y: 988,
+      targetX: 449,
+      size: 400,
+      minX: 265,
+      maxX: 640,
+      speedPxPerSec: 600,
+      isMoving: false,
+      isFacingLeft: false,
+      walkCycle: 0
+    };
+
+    // 圖片載入系統
+    const bgImg = new Image();
+    bgImg.src = 'assets/system/wardrobe.webp';
+
+    const charImages = {
+      han1: new Image(),
+      han2: new Image(),
+      han3: new Image(),
+      han4: new Image(),
+      han5: new Image()
+    };
+    charImages.han1.src = 'assets/han/han1-1.webp';
+    charImages.han2.src = 'assets/han/han2-1.webp';
+    charImages.han3.src = 'assets/han/han3-1.webp';
+    charImages.han4.src = 'assets/han/han4-1.webp';
+    charImages.han5.src = 'assets/han/han5-1.webp';
+
+    let lastTime = performance.now();
+
+    bgImg.onload = () => {
+      canvas.width = bgImg.width;   // 900
+      canvas.height = bgImg.height; // 1200
+      document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+    };
+
+    // 遊戲主循環
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      update(Math.min(dt, 0.1));
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 更新角色走動邏輯（只橫向移動 X）
+    function update(dt) {
+      if (player.isMoving) {
+        let dx = player.targetX - player.x;
+        let distance = Math.abs(dx);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distance > moveDist) {
+          player.x += Math.sign(dx) * moveDist;
+          player.walkCycle += 25 * dt;
+        } else {
+          player.x = player.targetX;
+          player.isMoving = false;
+          player.walkCycle = 0;
+        }
+      }
+    }
+
+    // 繪製函數（包含走路微晃動、左右鏡像翻轉）
+    function draw() {
+      if (!canvas.width || !canvas.height) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. 繪製背景 (900x1200)
+      if (bgImg.complete) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      }
+
+      // 2. 繪製走動角色
+      const currentImg = charImages[equipped] || charImages.han1;
+      if (currentImg && currentImg.complete) {
+        ctx.save();
+        
+        let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;
+        let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;
+
+        ctx.translate(player.x, player.y + offsetY);
+        ctx.rotate(rotationAngle);
+
+        if (player.isFacingLeft) {
+          ctx.scale(-1, 1);
+        }
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 8;
+
+        ctx.drawImage(
+          currentImg,
+          -player.size / 2,
+          -player.size / 2,
+          player.size,
+          player.size
+        );
+        ctx.restore();
+      }
+    }
+
+    // 點擊畫布走動互動
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      if (clickY >= 750) {
+        const clampedTargetX = Math.max(player.minX, Math.min(player.maxX, clickX));
+        
+        player.targetX = clampedTargetX;
+        player.isFacingLeft = player.targetX < player.x;
+        player.isMoving = true;
+      }
+    });
+
+    // UI 換裝與彈窗邏輯
+    function showBopoAlert(htmlWithRuby) {
+      const modal = document.getElementById('customModal');
+      const msgBox = document.getElementById('modalMessage');
+      msgBox.innerHTML = htmlWithRuby;
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('customModal').classList.remove('active');
+    }
+
+    function updateUI() {
+      document.getElementById('card-han1').className = equipped === 'han1' ? 'char-card equipped' : 'char-card';
+      document.getElementById('btn-han1').innerHTML = equipped === 'han1' ? TEXT_EQUIPPED : TEXT_EQUIP;
+      document.getElementById('btn-han1').style.backgroundColor = equipped === 'han1' ? '#4caf50' : '#2196f3';
+
+      const card2 = document.getElementById('card-han2');
+      const btn2 = document.getElementById('btn-han2');
+      if (ownsHan2) {
+        card2.className = equipped === 'han2' ? 'char-card equipped' : 'char-card';
+        btn2.innerHTML = equipped === 'han2' ? TEXT_EQUIPPED : TEXT_EQUIP;
+        btn2.className = 'btn btn-equip';
+        btn2.style.backgroundColor = equipped === 'han2' ? '#4caf50' : '#2196f3';
+      } else {
+        card2.className = 'char-card';
+        btn2.innerHTML = TEXT_BUY_80;
+        btn2.className = 'btn btn-buy';
+      }
+
+      const card3 = document.getElementById('card-han3');
+      const btn3 = document.getElementById('btn-han3');
+      if (ownsHan3) {
+        card3.className = equipped === 'han3' ? 'char-card equipped' : 'char-card';
+        btn3.innerHTML = equipped === 'han3' ? TEXT_EQUIPPED : TEXT_EQUIP;
+        btn3.className = 'btn btn-equip';
+        btn3.style.backgroundColor = equipped === 'han3' ? '#4caf50' : '#2196f3';
+      } else {
+        card3.className = 'char-card';
+        btn3.innerHTML = TEXT_BUY_80;
+        btn3.className = 'btn btn-buy';
+      }
+
+      const card4 = document.getElementById('card-han4');
+      const btn4 = document.getElementById('btn-han4');
+      if (ownsHan4) {
+        card4.className = equipped === 'han4' ? 'char-card equipped' : 'char-card';
+        btn4.innerHTML = equipped === 'han4' ? TEXT_EQUIPPED : TEXT_EQUIP;
+        btn4.className = 'btn btn-equip';
+        btn4.style.backgroundColor = equipped === 'han4' ? '#4caf50' : '#2196f3';
+      } else {
+        card4.className = 'char-card';
+        btn4.innerHTML = TEXT_BUY_80;
+        btn4.className = 'btn btn-buy';
+      }
+
+      const card5 = document.getElementById('card-han5');
+      const btn5 = document.getElementById('btn-han5');
+      if (ownsHan5) {
+        card5.className = equipped === 'han5' ? 'char-card equipped' : 'char-card';
+        btn5.innerHTML = equipped === 'han5' ? TEXT_EQUIPPED : TEXT_EQUIP;
+        btn5.className = 'btn btn-equip';
+        btn5.style.backgroundColor = equipped === 'han5' ? '#4caf50' : '#2196f3';
+      } else {
+        card5.className = 'char-card';
+        btn5.innerHTML = TEXT_BUY_80;
+        btn5.className = 'btn btn-buy';
+      }
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+    }
+
+    function equipChar(charKey) {
+      equipped = charKey;
+      localStorage.setItem('equippedCharacter', charKey);
+      updateUI();
+    }
+
+    function buyOrEquip(charKey, cost) {
+      let ownsProp = 'owns_' + charKey;
+      let owns = localStorage.getItem(ownsProp) === 'true';
+
+      if (owns) {
+        equipChar(charKey);
+      } else {
+        if (coins >= cost) {
+          coins -= cost;
+          localStorage.setItem('playerCoins', coins);
+          localStorage.setItem(ownsProp, 'true');
+
+          if (charKey === 'han2') ownsHan2 = true;
+          if (charKey === 'han3') ownsHan3 = true;
+          if (charKey === 'han4') ownsHan4 = true;
+          if (charKey === 'han5') ownsHan5 = true;
+
+          document.getElementById('myCoins').innerText = coins;
+          equipChar(charKey);
+
+          showBopoAlert('<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby>🎉🎉🎉');
+        } else {
+          showBopoAlert('⭐ <ruby>不<rt>ㄅㄨˊ</rt></ruby><ruby>夠<rt>ㄍㄡˋ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby>');
+        }
+      }
+    }
+
+    updateUI();
+
+    // 控制箭頭滾動提示
+    const scrollContainer = document.getElementById('scrollContainer');
+    const leftArrow = document.getElementById('leftArrow');
+    const rightArrow = document.getElementById('rightArrow');
+
+    function checkArrows() {
+      const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+      leftArrow.style.opacity = scrollContainer.scrollLeft > 5 ? '1' : '0';
+      rightArrow.style.opacity = scrollContainer.scrollLeft < maxScroll - 5 ? '1' : '0';
+    }
+
+    scrollContainer.addEventListener('scroll', checkArrows);
+    setTimeout(checkArrows, 150);
+  </script>
+</body>
+</html>

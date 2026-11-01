@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 雙人關卡1</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  outline: none; 
+  -webkit-tap-highlight-color: transparent; 
+  -webkit-touch-callout: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  height: 100dvh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  overflow: hidden;
+  
+  /* 加入這兩行鎖定畫面，防止 iPad 畫畫時拖曳或回彈 */
+  overscroll-behavior: none; 
+  position: fixed; 
+  width: 100%;
+}
+
+    /* 載入畫面 (與 map1 一致) */
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ff4081;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* 遊戲主容器 */
+    #game-container {
+      position: relative;
+      width: 96vw;
+      height: 92dvh;
+      max-width: 1200px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none;
+      background-color: #1e272e;
+      flex-direction: column;
+    }
+
+    /* 覆蓋層 (開始畫面 / 結算畫面，與 map1 一致) */
+    .overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.80); /* 稍微調低透明度讓模糊更明顯 */
+  backdrop-filter: blur(30px); /* 加入這行產生模糊效果 */
+  -webkit-backdrop-filter: blur(15px); /* 支援 Safari 瀏覽器 */
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  text-align: center;
+}
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 18px 22px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #ff4081;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 64, 129, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101;
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 8px 16px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%;
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* ========= 你畫我猜 專屬版面 ========= */
+    .board-wrapper {
+      flex: 1;
+      position: relative;
+      margin: 62px 14px 10px 14px;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 4px solid #ff4081;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    #drawCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    /* 畫布頂部狀態提示與偷看題目按鈕 */
+    .phase-banner {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.78);
+      color: #ffeb3b;
+      padding: 6px 20px;
+      border-radius: 999px;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 80;
+      pointer-events: none;
+      white-space: nowrap;
+      display: none;
+    }
+
+    #peek-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: #ff9800;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      z-index: 20;
+      display: none;
+    }
+    #peek-btn:active { transform: scale(0.95); }
+
+    /* 抽題與展示題目彈窗 */
+    #turn-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.50); 
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(12px); 
+      z-index: 200; /* 改為 200，確保模糊效果能蓋過畫布邊框、頂部狀態列與底部工具列 */
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .turn-card {
+      background: #2b2727;
+      border: 3px solid #ff4081;
+      border-radius: 20px;
+      padding: 28px 36px;
+      max-width: 540px;
+      width: 92%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .player-badge {
+      background: #2196F3;
+      color: #fff;
+      padding: 6px 22px;
+      border-radius: 999px;
+      font-size: 38px;
+      font-weight: bold;
+    }
+    .player-badge.p2 {
+      background: #9c27b0;
+    }
+
+    .secret-word-box {
+      background: #2d3436; 
+      border: 4px dashed #ff4081;
+      border-radius: 18px;
+      padding: 16px 36px;
+      color: #fff;         
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .secret-emoji {
+      font-size: 68px;
+      line-height: 1.1;
+    }
+
+    .secret-word-text {
+      font-size: 46px;
+      font-weight: 900;
+      color: #ffffff;      
+    }
+
+    /* 底部控制面板 */
+    .bottom-bar {
+      height: 220px; 
+      margin: 0 14px 14px 14px;
+      background: #2d3436;
+      border-radius: 16px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* 畫筆工具列 */
+    #draw-controls {
+      width: 100%;
+      height: 100%;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .palette-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 2px;
+    }
+
+    .color-dot {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.6);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .color-dot.active {
+      transform: scale(1.22);
+      border: 4px solid #ffeb3b;
+      box-shadow: 0 0 10px rgba(255,235,59,0.8);
+    }
+
+    .tool-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tool-chip {
+      background: #485460;
+      color: #fff;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      /* 加入 Flex 屬性確保裡面的圓圈完美置中 */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tool-chip.active {
+      background: #f1f2f6; /* 將原本的黃色改為淺色 */
+      color: #000;
+      border-color: #fff;
+    }
+    .tool-chip:active { transform: scale(0.95); }
+
+    .ok-draw-btn {
+      height: 125px;
+      min-width: 135px;
+      background: #00c853;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      font-size: 30px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #009624;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .ok-draw-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #009624;
+    }
+
+    /* 十選一猜題按鈕網格 */
+    #guess-controls {
+      width: 100%;
+      height: 100%;
+      display: none;
+      grid-template-columns: repeat(3, 1fr); 
+      grid-template-rows: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .guess-option-btn {
+      background: #1e272e; 
+      color: #fff;         
+      border: 3px solid #ff4081;
+      border-radius: 14px;
+      font-size: 36px;     
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #c51162;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1px;
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    .guess-option-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #c51162;
+    }
+    .guess-option-btn.wrong {
+      background: #636e72;
+      color: #b2bec3;
+      border-color: #636e72;
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .guess-option-btn.correct {
+      background: #60ff40;
+      color: #000;
+      border-color: #00c853;
+      box-shadow: 0 4px 0 #009624;
+    }
+
+    #idle-hint {
+      color: #dfe6e9;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    /* 答對時中央浮現 +2⭐ 動畫 */
+    .star-burst {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+      z-index: 60;
+      font-size: 64px;
+      font-weight: 900;
+      color: #ffeb3b;
+      text-shadow: 0 4px 16px rgba(0,0,0,0.9);
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      #guess-controls {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+      }
+      .guess-option-btn { font-size: 32px; } 
+      .bottom-bar { height: 260px; }         
+      
+      .color-dot { width: 34px; height: 34px; }
+      .tool-chip { font-size: 15px; padding: 6px 10px; }
+      .ok-draw-btn { min-width: 105px; font-size: 24px; }
+      .phase-banner { font-size: 16px; }
+    }
+    
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">雙人畫板載入中 (1/1)...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <div class="phase-banner" id="phaseBanner">準備開始</div>
+    <div id="hud">🎨 <span id="roundDisplay">1/4</span> | ⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>你<rt>ㄋㄧˇ</rt></ruby>
+          <ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby>
+          <ruby>我<rt>ㄨㄛˇ</rt></ruby>
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>輪<rt>ㄌㄨㄣˊ</rt></ruby>
+          <ruby>流<rt>ㄌㄧㄡˊ</rt></ruby>
+          <ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby>
+          <ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby>
+          <span>，</span>
+          <br>
+          <ruby>互<rt>ㄏㄨˋ</rt></ruby>
+          <ruby>相<rt>ㄒㄧㄤ</rt></ruby>
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+          <ruby>題<rt>ㄊㄧˊ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 class="zh-text" style="font-size: 38px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>成<rt>ㄔㄥˊ</rt></ruby>
+        <ruby>功<rt>ㄍㄨㄥ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        ⭐: <span id="newCoins" style="color:#60ff40;">+8</span> <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 26px; padding: 12px 0; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 30px; padding: 15px 0; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <!-- 中央畫布舞台 -->
+    <div class="board-wrapper">
+      <button type="button" id="peek-btn">
+        👀 <ruby>看<rt>ㄎㄢˋ</rt></ruby><ruby>題<rt>ㄊㄧˊ</rt></ruby><ruby>目<rt>ㄇㄨˋ</rt></ruby>
+      </button>
+
+      <canvas id="drawCanvas"></canvas>
+
+      <div class="star-burst" id="starBurst">⭐⭐ +2</div>
+    </div> <!-- .board-wrapper 提早結束 -->
+
+    <!-- 將彈窗移到這裡，讓它能覆蓋整個遊戲介面 -->
+    <div id="turn-modal">
+      <div class="turn-card" id="turnCardContent"></div>
+    </div>
+
+    <!-- 下方工具列 -->
+    <div class="bottom-bar">
+      <div id="idle-hint" class="zh-text">
+      </div>
+
+      <div id="draw-controls">
+        <div class="palette-area">
+          <div class="color-row" id="colorRow"></div>
+          <div class="tool-row">
+            <!-- 筆刷：細 -->
+            <button type="button" class="tool-chip active" data-size="6" style="width: 44px; height: 44px; padding: 0;">
+              <div style="width: 6px; height: 6px; background-color: currentColor; border-radius: 50%;"></div>
+            </button>
+            <!-- 筆刷：中 -->
+            <button type="button" class="tool-chip" data-size="14" style="width: 44px; height: 44px; padding: 0;">
+              <div style="width: 14px; height: 14px; background-color: currentColor; border-radius: 50%;"></div>
+            </button>
+            <!-- 筆刷：粗 -->
+            <button type="button" class="tool-chip" data-size="26" style="width: 44px; height: 44px; padding: 0;">
+              <div style="width: 26px; height: 26px; background-color: currentColor; border-radius: 50%;"></div>
+            </button>
+            <!-- 其他功能鍵維持不變 -->
+            <button type="button" class="tool-chip" id="undoBtn">
+              ↩️ 
+            </button>
+            <button type="button" class="tool-chip" id="clearBtn">
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="ok-draw-btn" id="finishDrawOkBtn">
+          <span>OK</span>
+        </button>
+      </div>
+
+      <div id="guess-controls"></div>
+    </div>
+  </div>
+
+  <script>
+    const WORD_BANK = [
+      { word: '太陽', emoji: '☀️', ruby: '<ruby>太<rt>ㄊㄞˋ</rt></ruby><ruby>陽<rt>ㄧㄤˊ</rt></ruby>' },
+      { word: '蘋果', emoji: '🍎', ruby: '<ruby>蘋<rt>ㄆㄧㄥˊ</rt></ruby><ruby>果<rt>ㄍㄨㄛˇ</rt></ruby>' },
+      { word: '愛心', emoji: '❤️', ruby: '<ruby>愛<rt>ㄞˋ</rt></ruby><ruby>心<rt>ㄒㄧㄣ</rt></ruby>' },
+      { word: '星星', emoji: '⭐', ruby: '<ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>' },
+      { word: '雨傘', emoji: '☂️', ruby: '<ruby>雨<rt>ㄩˇ</rt></ruby><ruby>傘<rt>ㄙㄢˇ</rt></ruby>' },
+      { word: '氣球', emoji: '🎈', ruby: '<ruby>氣<rt>ㄑㄧˋ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>' },
+      { word: '小魚', emoji: '🐟', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>' },
+      { word: '花朵', emoji: '🌸', ruby: '<ruby>花<rt>ㄏㄨㄚ</rt></ruby><ruby>朵<rt>ㄉㄨㄛˇ</rt></ruby>' },
+      { word: '房子', emoji: '🏠', ruby: '<ruby>房<rt>ㄈㄤˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '汽車', emoji: '🚗', ruby: '<ruby>汽<rt>ㄑㄧˋ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '月亮', emoji: '🌙', ruby: '<ruby>月<rt>ㄩㄝˋ</rt></ruby><ruby>亮<rt>ㄌㄧㄤˋ</rt></ruby>' },
+      { word: '西瓜', emoji: '🍉', ruby: '<ruby>西<rt>ㄒㄧ</rt></ruby><ruby>瓜<rt>ㄍㄨㄚ</rt></ruby>' },
+      { word: '彩虹', emoji: '🌈', ruby: '<ruby>彩<rt>ㄘㄞˇ</rt></ruby><ruby>虹<rt>ㄏㄨㄥˊ</rt></ruby>' },
+      { word: '蝴蝶', emoji: '🦋', ruby: '<ruby>蝴<rt>ㄏㄨˊ</rt></ruby><ruby>蝶<rt>ㄉㄧㄝˊ</rt></ruby>' },
+      { word: '大樹', emoji: '🌳', ruby: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>樹<rt>ㄕㄨˋ</rt></ruby>' },
+      { word: '蛋糕', emoji: '🎂', ruby: '<ruby>蛋<rt>ㄉㄢˋ</rt></ruby><ruby>糕<rt>ㄍㄠ</rt></ruby>' },
+      { word: '草莓', emoji: '🍓', ruby: '<ruby>草<rt>ㄘㄠˇ</rt></ruby><ruby>莓<rt>ㄇㄟˊ</rt></ruby>' },
+      { word: '笑臉', emoji: '😊', ruby: '<ruby>笑<rt>ㄒㄧㄠˋ</rt></ruby><ruby>臉<rt>ㄌㄧㄢˇ</rt></ruby>' },
+      { word: '香蕉', emoji: '🍌', ruby: '<ruby>香<rt>ㄒㄧㄤ</rt></ruby><ruby>蕉<rt>ㄐㄧㄠ</rt></ruby>' },
+      { word: '烏龜', emoji: '🐢', ruby: '<ruby>烏<rt>ㄨ</rt></ruby><ruby>龜<rt>ㄍㄨㄟ</rt></ruby>' },
+      { word: '兔子', emoji: '🐰', ruby: '<ruby>兔<rt>ㄊㄨˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '眼鏡', emoji: '👓', ruby: '<ruby>眼<rt>ㄧㄢˇ</rt></ruby><ruby>鏡<rt>ㄐㄧㄥˋ</rt></ruby>' },
+      { word: '皇冠', emoji: '👑', ruby: '<ruby>皇<rt>ㄏㄨㄤˊ</rt></ruby><ruby>冠<rt>ㄍㄨㄢ</rt></ruby>' },
+      { word: '蘑菇', emoji: '🍄', ruby: '<ruby>蘑<rt>ㄇㄛˊ</rt></ruby><ruby>菇<rt>ㄍㄨ</rt></ruby>' },
+      { word: '飛機', emoji: '✈️', ruby: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby>' },
+      { word: '鉛筆', emoji: '✏️', ruby: '<ruby>鉛<rt>ㄑㄧㄢ</rt></ruby><ruby>筆<rt>ㄅㄧˇ</rt></ruby>' },
+      { word: '禮物', emoji: '🎁', ruby: '<ruby>禮<rt>ㄌㄧˇ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby>' },
+      { word: '雲朵', emoji: '☁️', ruby: '<ruby>雲<rt>ㄩㄣˊ</rt></ruby><ruby>朵<rt>ㄉㄨㄛˇ</rt></ruby>' },
+      { word: '冰淇淋', emoji: '🍦', ruby: '<ruby>冰<rt>ㄅㄧㄥ</rt></ruby><ruby>淇<rt>ㄑㄧˊ</rt></ruby><ruby>淋<rt>ㄌㄧㄣˊ</rt></ruby>' },
+      { word: '棒棒糖', emoji: '🍭', ruby: '<ruby>棒<rt>ㄅㄤˋ</rt></ruby><ruby>棒<rt>ㄅㄤˋ</rt></ruby><ruby>糖<rt>ㄊㄤˊ</rt></ruby>' },
+      { word: '葡萄', emoji: '🍇', ruby: '<ruby>葡<rt>ㄆㄨˊ</rt></ruby><ruby>萄<rt>ㄊㄠˊ</rt></ruby>' },
+      { word: '鳳梨', emoji: '🍍', ruby: '<ruby>鳳<rt>ㄈㄥˋ</rt></ruby><ruby>梨<rt>ㄌㄧˊ</rt></ruby>' },
+      { word: '橘子', emoji: '🍊', ruby: '<ruby>橘<rt>ㄐㄩˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '櫻桃', emoji: '🍒', ruby: '<ruby>櫻<rt>ㄧㄥ</rt></ruby><ruby>桃<rt>ㄊㄠˊ</rt></ruby>' },
+      { word: '玉米', emoji: '🌽', ruby: '<ruby>玉<rt>ㄩˋ</rt></ruby><ruby>米<rt>ㄇㄧˇ</rt></ruby>' },
+      { word: '胡蘿蔔', emoji: '🥕', ruby: '<ruby>胡<rt>ㄏㄨˊ</rt></ruby><ruby>蘿<rt>ㄌㄨㄛˊ</rt></ruby><ruby>蔔<rt>˙ㄅㄛ</rt></ruby>' },
+      { word: '漢堡', emoji: '🍔', ruby: '<ruby>漢<rt>ㄏㄢˋ</rt></ruby><ruby>堡<rt>ㄅㄠˇ</rt></ruby>' },
+      { word: '薯條', emoji: '🍟', ruby: '<ruby>薯<rt>ㄕㄨˇ</rt></ruby><ruby>條<rt>ㄊㄧㄠˊ</rt></ruby>' },
+      { word: '披薩', emoji: '🍕', ruby: '<ruby>披<rt>ㄆㄧ</rt></ruby><ruby>薩<rt>ㄙㄚˋ</rt></ruby>' },
+      { word: '甜甜圈', emoji: '🍩', ruby: '<ruby>甜<rt>ㄊㄧㄢˊ</rt></ruby><ruby>甜<rt>ㄊㄧㄢˊ</rt></ruby><ruby>圈<rt>ㄑㄩㄢ</rt></ruby>' },
+      { word: '餅乾', emoji: '🍪', ruby: '<ruby>餅<rt>ㄅㄧㄥˇ</rt></ruby><ruby>乾<rt>ㄍㄢ</rt></ruby>' },
+      { word: '布丁', emoji: '🍮', ruby: '<ruby>布<rt>ㄅㄨˋ</rt></ruby><ruby>丁<rt>ㄉㄧㄥ</rt></ruby>' },
+      { word: '荷包蛋', emoji: '🍳', ruby: '<ruby>荷<rt>ㄏㄜˊ</rt></ruby><ruby>包<rt>ㄅㄠ</rt></ruby><ruby>蛋<rt>ㄉㄢˋ</rt></ruby>' },
+      { word: '飯糰', emoji: '🍙', ruby: '<ruby>飯<rt>ㄈㄢˋ</rt></ruby><ruby>糰<rt>ㄊㄨㄢˊ</rt></ruby>' },
+      { word: '麵包', emoji: '🍞', ruby: '<ruby>麵<rt>ㄇㄧㄢˋ</rt></ruby><ruby>包<rt>ㄅㄠ</rt></ruby>' },
+      { word: '小貓', emoji: '🐱', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>貓<rt>ㄇㄠ</rt></ruby>' },
+      { word: '小狗', emoji: '🐶', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby>' },
+      { word: '小豬', emoji: '🐷', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>豬<rt>ㄓㄨ</rt></ruby>' },
+      { word: '青蛙', emoji: '🐸', ruby: '<ruby>青<rt>ㄑㄧㄥ</rt></ruby><ruby>蛙<rt>ㄨㄚ</rt></ruby>' },
+      { word: '小雞', emoji: '🐥', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>雞<rt>ㄐㄧ</rt></ruby>' },
+      { word: '企鵝', emoji: '🐧', ruby: '<ruby>企<rt>ㄑㄧˋ</rt></ruby><ruby>鵝<rt>ㄜˊ</rt></ruby>' },
+      { word: '大象', emoji: '🐘', ruby: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>象<rt>ㄒㄧㄤˋ</rt></ruby>' },
+      { word: '獅子', emoji: '🦁', ruby: '<ruby>獅<rt>ㄕ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '螃蟹', emoji: '🦀', ruby: '<ruby>螃<rt>ㄆㄤˊ</rt></ruby><ruby>蟹<rt>ㄒㄧㄝˋ</rt></ruby>' },
+      { word: '章魚', emoji: '🐙', ruby: '<ruby>章<rt>ㄓㄤ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>' },
+      { word: '鯨魚', emoji: '🐳', ruby: '<ruby>鯨<rt>ㄐㄧㄥ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>' },
+      { word: '蝸牛', emoji: '🐌', ruby: '<ruby>蝸<rt>ㄍㄨㄚ</rt></ruby><ruby>牛<rt>ㄋㄧㄡˊ</rt></ruby>' },
+      { word: '蜜蜂', emoji: '🐝', ruby: '<ruby>蜜<rt>ㄇㄧˋ</rt></ruby><ruby>蜂<rt>ㄈㄥ</rt></ruby>' },
+      { word: '瓢蟲', emoji: '🐞', ruby: '<ruby>瓢<rt>ㄆㄧㄠˊ</rt></ruby><ruby>蟲<rt>ㄔㄨㄥˊ</rt></ruby>' },
+      { word: '毛毛蟲', emoji: '🐛', ruby: '<ruby>毛<rt>ㄇㄠˊ</rt></ruby><ruby>毛<rt>ㄇㄠˊ</rt></ruby><ruby>蟲<rt>ㄔㄨㄥˊ</rt></ruby>' },
+      { word: '恐龍', emoji: '🦖', ruby: '<ruby>恐<rt>ㄎㄨㄥˇ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>' },
+      { word: '小蛇', emoji: '🐍', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>蛇<rt>ㄕㄜˊ</rt></ruby>' },
+      { word: '腳踏車', emoji: '🚲', ruby: '<ruby>腳<rt>ㄐㄧㄠˇ</rt></ruby><ruby>踏<rt>ㄊㄚˋ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '火車', emoji: '🚂', ruby: '<ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '火箭', emoji: '🚀', ruby: '<ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>箭<rt>ㄐㄧㄢˋ</rt></ruby>' },
+      { word: '帆船', emoji: '⛵', ruby: '<ruby>帆<rt>ㄈㄢˊ</rt></ruby><ruby>船<rt>ㄔㄨㄢˊ</rt></ruby>' },
+      { word: '警車', emoji: '🚓', ruby: '<ruby>警<rt>ㄐㄧㄥˇ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '消防車', emoji: '🚒', ruby: '<ruby>消<rt>ㄒㄧㄠ</rt></ruby><ruby>防<rt>ㄈㄤˊ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '雪人', emoji: '⛄', ruby: '<ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby>' },
+      { word: '閃電', emoji: '⚡', ruby: '<ruby>閃<rt>ㄕㄢˇ</rt></ruby><ruby>電<rt>ㄉㄧㄢˋ</rt></ruby>' },
+      { word: '火焰', emoji: '🔥', ruby: '<ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>焰<rt>ㄧㄢˋ</rt></ruby>' },
+      { word: '聖誕樹', emoji: '🎄', ruby: '<ruby>聖<rt>ㄕㄥˋ</rt></ruby><ruby>誕<rt>ㄉㄢˋ</rt></ruby><ruby>樹<rt>ㄕㄨˋ</rt></ruby>' },
+      { word: '仙人掌', emoji: '🌵', ruby: '<ruby>仙<rt>ㄒㄧㄢ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>掌<rt>ㄓㄤˇ</rt></ruby>' },
+      { word: '向日葵', emoji: '🌻', ruby: '<ruby>向<rt>ㄒㄧㄤˋ</rt></ruby><ruby>日<rt>ㄖˋ</rt></ruby><ruby>葵<rt>ㄎㄨㄟˊ</rt></ruby>' },
+      { word: '樹葉', emoji: '🍃', ruby: '<ruby>樹<rt>ㄕㄨˋ</rt></ruby><ruby>葉<rt>ㄧㄝˋ</rt></ruby>' },
+      { word: '鑰匙', emoji: '🔑', ruby: '<ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby>' },
+      { word: '剪刀', emoji: '✂️', ruby: '<ruby>剪<rt>ㄐㄧㄢˇ</rt></ruby><ruby>刀<rt>ㄉㄠ</rt></ruby>' },
+      { word: '時鐘', emoji: '⏰', ruby: '<ruby>時<rt>ㄕˊ</rt></ruby><ruby>鐘<rt>ㄓㄨㄥ</rt></ruby>' },
+      { word: '衣服', emoji: '👕', ruby: '<ruby>衣<rt>ㄧ</rt></ruby><ruby>服<rt>ㄈㄨˊ</rt></ruby>' },
+      { word: '鞋子', emoji: '👟', ruby: '<ruby>鞋<rt>ㄒㄧㄝˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '帽子', emoji: '🧢', ruby: '<ruby>帽<rt>ㄇㄠˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '襪子', emoji: '🧦', ruby: '<ruby>襪<rt>ㄨㄚˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '牙刷', emoji: '🪥', ruby: '<ruby>牙<rt>ㄧㄚˊ</rt></ruby><ruby>刷<rt>ㄕㄨㄚ</rt></ruby>' },
+      { word: '杯子', emoji: '🥛', ruby: '<ruby>杯<rt>ㄅㄟ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '湯匙', emoji: '🥄', ruby: '<ruby>湯<rt>ㄊㄤ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby>' },
+      { word: '吉他', emoji: '🎸', ruby: '<ruby>吉<rt>ㄐㄧˊ</rt></ruby><ruby>他<rt>ㄊㄚ</rt></ruby>' },
+      { word: '足球', emoji: '⚽', ruby: '<ruby>足<rt>ㄗㄨˊ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>' },
+      { word: '籃球', emoji: '🏀', ruby: '<ruby>籃<rt>ㄌㄢˊ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>' },
+      { word: '機器人', emoji: '🤖', ruby: '<ruby>機<rt>ㄐㄧ</rt></ruby><ruby>器<rt>ㄑㄧˋ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby>' },
+      { word: '幽靈', emoji: '👻', ruby: '<ruby>幽<rt>ㄧㄡ</rt></ruby><ruby>靈<rt>ㄌㄧㄥˊ</rt></ruby>' },
+      // === 新增：食物與點心 (15題) ===
+      { word: '雞蛋', emoji: '🥚', ruby: '<ruby>雞<rt>ㄐㄧ</rt></ruby><ruby>蛋<rt>ㄉㄢˋ</rt></ruby>' },
+      { word: '起司', emoji: '🧀', ruby: '<ruby>起<rt>ㄑㄧˇ</rt></ruby><ruby>司<rt>ㄙ</rt></ruby>' },
+      { word: '熱狗', emoji: '🌭', ruby: '<ruby>熱<rt>ㄖㄜˋ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby>' },
+      { word: '水餃', emoji: '🥟', ruby: '<ruby>水<rt>ㄕㄨㄟˇ</rt></ruby><ruby>餃<rt>ㄐㄧㄠˇ</rt></ruby>' },
+      { word: '壽司', emoji: '🍣', ruby: '<ruby>壽<rt>ㄕㄡˋ</rt></ruby><ruby>司<rt>ㄙ</rt></ruby>' },
+      { word: '巧克力', emoji: '🍫', ruby: '<ruby>巧<rt>ㄑㄧㄠˇ</rt></ruby><ruby>克<rt>ㄎㄜˋ</rt></ruby><ruby>力<rt>ㄌㄧˋ</rt></ruby>' },
+      { word: '糖果', emoji: '🍬', ruby: '<ruby>糖<rt>ㄊㄤˊ</rt></ruby><ruby>果<rt>ㄍㄨㄛˇ</rt></ruby>' },
+      { word: '爆米花', emoji: '🍿', ruby: '<ruby>爆<rt>ㄅㄠˋ</rt></ruby><ruby>米<rt>ㄇㄧˇ</rt></ruby><ruby>花<rt>ㄏㄨㄚ</rt></ruby>' },
+      { word: '牛奶', emoji: '🍼', ruby: '<ruby>牛<rt>ㄋㄧㄡˊ</rt></ruby><ruby>奶<rt>ㄋㄞˇ</rt></ruby>' },
+      { word: '果汁', emoji: '🧃', ruby: '<ruby>果<rt>ㄍㄨㄛˇ</rt></ruby><ruby>汁<rt>ㄓ</rt></ruby>' },
+      { word: '水蜜桃', emoji: '🍑', ruby: '<ruby>水<rt>ㄕㄨㄟˇ</rt></ruby><ruby>蜜<rt>ㄇㄧˋ</rt></ruby><ruby>桃<rt>ㄊㄠˊ</rt></ruby>' },
+      { word: '檸檬', emoji: '🍋', ruby: '<ruby>檸<rt>ㄋㄧㄥˊ</rt></ruby><ruby>檬<rt>ㄇㄥˊ</rt></ruby>' },
+      { word: '酪梨', emoji: '🥑', ruby: '<ruby>酪<rt>ㄌㄨㄛˋ</rt></ruby><ruby>梨<rt>ㄌㄧˊ</rt></ruby>' },
+      { word: '茄子', emoji: '🍆', ruby: '<ruby>茄<rt>ㄑㄧㄝˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '花生', emoji: '🥜', ruby: '<ruby>花<rt>ㄏㄨㄚ</rt></ruby><ruby>生<rt>ㄕㄥ</rt></ruby>' },
+
+      // === 新增：動物與海洋生物 (20題) ===
+      { word: '熊貓', emoji: '🐼', ruby: '<ruby>熊<rt>ㄒㄩㄥˊ</rt></ruby><ruby>貓<rt>ㄇㄠ</rt></ruby>' },
+      { word: '無尾熊', emoji: '🐨', ruby: '<ruby>無<rt>ㄨˊ</rt></ruby><ruby>尾<rt>ㄨㄟˇ</rt></ruby><ruby>熊<rt>ㄒㄩㄥˊ</rt></ruby>' },
+      { word: '長頸鹿', emoji: '🦒', ruby: '<ruby>長<rt>ㄔㄤˊ</rt></ruby><ruby>頸<rt>ㄐㄧㄥˇ</rt></ruby><ruby>鹿<rt>ㄌㄨˋ</rt></ruby>' },
+      { word: '猴子', emoji: '🐵', ruby: '<ruby>猴<rt>ㄏㄡˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '老鼠', emoji: '🐭', ruby: '<ruby>老<rt>ㄌㄠˇ</rt></ruby><ruby>鼠<rt>ㄕㄨˇ</rt></ruby>' },
+      { word: '狐狸', emoji: '🦊', ruby: '<ruby>狐<rt>ㄏㄨˊ</rt></ruby><ruby>狸<rt>ㄌㄧˊ</rt></ruby>' },
+      { word: '刺蝟', emoji: '🦔', ruby: '<ruby>刺<rt>ㄘˋ</rt></ruby><ruby>蝟<rt>ㄨㄟˋ</rt></ruby>' },
+      { word: '蝙蝠', emoji: '🦇', ruby: '<ruby>蝙<rt>ㄅㄧㄢ</rt></ruby><ruby>蝠<rt>ㄈㄨˊ</rt></ruby>' },
+      { word: '貓頭鷹', emoji: '🦉', ruby: '<ruby>貓<rt>ㄇㄠ</rt></ruby><ruby>頭<rt>ㄊㄡˊ</rt></ruby><ruby>鷹<rt>ㄧㄥ</rt></ruby>' },
+      { word: '鴨子', emoji: '🦆', ruby: '<ruby>鴨<rt>ㄧㄚ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '天鵝', emoji: '🦢', ruby: '<ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>鵝<rt>ㄜˊ</rt></ruby>' },
+      { word: '孔雀', emoji: '🦚', ruby: '<ruby>孔<rt>ㄎㄨㄥˇ</rt></ruby><ruby>雀<rt>ㄑㄩㄝˋ</rt></ruby>' },
+      { word: '海豚', emoji: '🐬', ruby: '<ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>豚<rt>ㄊㄨㄣˊ</rt></ruby>' },
+      { word: '鯊魚', emoji: '🦈', ruby: '<ruby>鯊<rt>ㄕㄚ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>' },
+      { word: '蝦子', emoji: '🦐', ruby: '<ruby>蝦<rt>ㄒㄧㄚ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '水母', emoji: '🪼', ruby: '<ruby>水<rt>ㄕㄨㄟˇ</rt></ruby><ruby>母<rt>ㄇㄨˇ</rt></ruby>' },
+      { word: '海星', emoji: '⭐', ruby: '<ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>' },
+      { word: '蜘蛛', emoji: '🕷️', ruby: '<ruby>蜘<rt>ㄓ</rt></ruby><ruby>蛛<rt>ㄓㄨ</rt></ruby>' },
+      { word: '螞蟻', emoji: '🐜', ruby: '<ruby>螞<rt>ㄇㄚˇ</rt></ruby><ruby>蟻<rt>ㄧˇ</rt></ruby>' },
+      { word: '鱷魚', emoji: '🐊', ruby: '<ruby>鱷<rt>ㄜˋ</rt></ruby><ruby>魚<rt>ㄩˊ</rt></ruby>' },
+      { word: '筷子', emoji: '🥢', ruby: '<ruby>筷<rt>ㄎㄨㄞˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '奶瓶', emoji: '🍼', ruby: '<ruby>奶<rt>ㄋㄞˇ</rt></ruby><ruby>瓶<rt>ㄆㄧㄥˊ</rt></ruby>' },
+      { word: '馬桶', emoji: '🚽', ruby: '<ruby>馬<rt>ㄇㄚˇ</rt></ruby><ruby>桶<rt>ㄊㄨㄥˇ</rt></ruby>' },
+      { word: '浴缸', emoji: '🛁', ruby: '<ruby>浴<rt>ㄩˋ</rt></ruby><ruby>缸<rt>ㄍㄤ</rt></ruby>' },
+      { word: '扇子', emoji: '🪭', ruby: '<ruby>扇<rt>ㄕㄢˋ</rt></ruby><ruby>子<rt>ㄗ˙</rt></ruby>' },
+      { word: '電視', emoji: '📺', ruby: '<ruby>電<rt>ㄉㄧㄢˋ</rt></ruby><ruby>視<rt>ㄕˋ</rt></ruby>' },
+      { word: '手機', emoji: '📱', ruby: '<ruby>手<rt>ㄕㄡˇ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby>' },
+      { word: '相機', emoji: '📷', ruby: '<ruby>相<rt>ㄒㄧㄤˋ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby>' },
+      { word: '燈泡', emoji: '💡', ruby: '<ruby>燈<rt>ㄉㄥ</rt></ruby><ruby>泡<rt>ㄆㄠˋ</rt></ruby>' },
+      { word: '手電筒', emoji: '🔦', ruby: '<ruby>手<rt>ㄕㄡˇ</rt></ruby><ruby>電<rt>ㄉㄧㄢˋ</rt></ruby><ruby>筒<rt>ㄊㄨㄥˇ</rt></ruby>' },
+      { word: '書本', emoji: '📖', ruby: '<ruby>書<rt>ㄕㄨ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby>' },
+      { word: '書包', emoji: '🎒', ruby: '<ruby>書<rt>ㄕㄨ</rt></ruby><ruby>包<rt>ㄅㄠ</rt></ruby>' },
+      { word: '手套', emoji: '🧤', ruby: '<ruby>手<rt>ㄕㄡˇ</rt></ruby><ruby>套<rt>ㄊㄠˋ</rt></ruby>' },
+      { word: '圍巾', emoji: '🧣', ruby: '<ruby>圍<rt>ㄨㄟˊ</rt></ruby><ruby>巾<rt>ㄐㄧㄣ</rt></ruby>' },
+      { word: '褲子', emoji: '👖', ruby: '<ruby>褲<rt>ㄎㄨˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '裙子', emoji: '👗', ruby: '<ruby>裙<rt>ㄑㄩㄣˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '戒指', emoji: '💍', ruby: '<ruby>戒<rt>ㄐㄧㄝˋ</rt></ruby><ruby>指<rt>ㄓˇ</rt></ruby>' },
+      { word: '梳子', emoji: '🪮', ruby: '<ruby>梳<rt>ㄕㄨ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+      { word: '鏡子', emoji: '🪞', ruby: '<ruby>鏡<rt>ㄐㄧㄥˋ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby>' },
+
+      // === 新增：交通、自然與玩具 (15題) ===
+      { word: '救護車', emoji: '🚑', ruby: '<ruby>救<rt>ㄐㄧㄡˋ</rt></ruby><ruby>護<rt>ㄏㄨˋ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '公車', emoji: '🚌', ruby: '<ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby>' },
+      { word: '直升機', emoji: '🚁', ruby: '<ruby>直<rt>ㄓˊ</rt></ruby><ruby>升<rt>ㄕㄥ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby>' },
+      { word: '氣球', emoji: '🎈', ruby: '<ruby>氣<rt>ㄑㄧˋ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>' },
+      { word: '紅綠燈', emoji: '🚦', ruby: '<ruby>紅<rt>ㄏㄨㄥˊ</rt></ruby><ruby>綠<rt>ㄌㄩˋ</rt></ruby><ruby>燈<rt>ㄉㄥ</rt></ruby>' },
+      { word: '帳篷', emoji: '⛺', ruby: '<ruby>帳<rt>ㄓㄤˋ</rt></ruby><ruby>篷<rt>ㄆㄥˊ</rt></ruby>' },
+      { word: '城堡', emoji: '🏰', ruby: '<ruby>城<rt>ㄔㄥˊ</rt></ruby><ruby>堡<rt>ㄅㄠˇ</rt></ruby>' },
+      { word: '火山', emoji: '🌋', ruby: '<ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>山<rt>ㄕㄢ</rt></ruby>' },
+      { word: '風箏', emoji: '🪁', ruby: '<ruby>風<rt>ㄈㄥ</rt></ruby><ruby>箏<rt>ㄓㄥ</rt></ruby>' },
+      { word: '溜滑梯', emoji: '🛝', ruby: '<ruby>溜<rt>ㄌㄧㄡ</rt></ruby><ruby>滑<rt>ㄏㄨㄚˊ</rt></ruby><ruby>梯<rt>ㄊㄧ</rt></ruby>' },
+      { word: '摩天輪', emoji: '🎡', ruby: '<ruby>摩<rt>ㄇㄛˊ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>輪<rt>ㄌㄨㄣˊ</rt></ruby>' },
+      { word: '小鼓', emoji: '🥁', ruby: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>鼓<rt>ㄍㄨˇ</rt></ruby>' },
+      { word: '鋼琴', emoji: '🎹', ruby: '<ruby>鋼<rt>ㄍㄤ</rt></ruby><ruby>琴<rt>ㄑㄧㄣˊ</rt></ruby>' },
+      { word: '鑽石', emoji: '💎', ruby: '<ruby>鑽<rt>ㄗㄨㄢˋ</rt></ruby><ruby>石<rt>ㄕˊ</rt></ruby>' },
+      { word: '棒球', emoji: '⚾', ruby: '<ruby>棒<rt>ㄅㄤˋ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>' } 
+    ];
+    const COLORS = [
+      '#2d3436', 
+      '#e74c3c', 
+      '#ff9800', 
+      '#f1c40f', 
+      '#2ecc71', 
+      '#00cec9', 
+      '#2196f3', 
+      '#9b59b6', 
+      '#ff4081', 
+      '#8d6e63'  
+    ];
+
+    const TOTAL_ROUNDS = 4;     
+    const STARS_PER_ANSWER = 2; 
+
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentRound = 0; 
+    let coins = 0;        
+    let roundQuestions = [];
+    let currentTarget = null;
+
+    // 畫筆狀態
+    let isDrawing = false;
+    let brushColor = COLORS[0];
+    let brushSize = 6;
+    let undoStack = [];
+
+    // 音效合成器 (離線可用)
+    let audioCtx = null;
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(540, now);
+          osc.frequency.exponentialRampToValueAtTime(700, now + 0.07);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.07);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        } else if (type === 'correct') {
+          [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.22, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.08 + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.25);
+          });
+        } else if (type === 'wrong') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(210, now);
+          osc.frequency.linearRampToValueAtTime(140, now + 0.2);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        }
+      } catch (e) {}
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // 初始化調色盤與畫布工具
+    function initTools() {
+      const colorRow = document.getElementById('colorRow');
+      colorRow.innerHTML = '';
+      COLORS.forEach((c, idx) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'color-dot' + (idx === 0 ? ' active' : '');
+        dot.style.backgroundColor = c;
+        dot.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); // 阻止瀏覽器的預設點擊與焦點判定，達成秒觸發
+  playSound('click');
+  brushColor = c;
+  document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('active'));
+  dot.classList.add('active');
+});
+        colorRow.appendChild(dot);
+      });
+
+      document.querySelectorAll('.tool-chip[data-size]').forEach(btn => {
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    playSound('click');
+    brushSize = Number(btn.dataset.size);
+    document.querySelectorAll('.tool-chip[data-size]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+      document.getElementById('undoBtn').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        playSound('click');
+        if (undoStack.length > 0) {
+          const lastData = undoStack.pop();
+          const img = new Image();
+          img.onload = () => {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            ctx.restore();
+          };
+          img.src = lastData;
+        }
+      });
+
+      document.getElementById('clearBtn').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        playSound('click');
+        saveSnapshot();
+        fillCanvasWhite();
+      });
+
+      document.getElementById('finishDrawOkBtn').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        playSound('click');
+        startGuessPhase();
+      });
+
+      document.getElementById('peek-btn').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        playSound('click');
+        showPeekModal();
+      });
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      const prev = canvas.width > 0 ? canvas.toDataURL() : null;
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      fillCanvasWhite();
+
+      if (prev && prev !== 'data:,') {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        img.src = prev;
+      }
+    }
+
+    function fillCanvasWhite() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+    }
+
+    function saveSnapshot() {
+      if (undoStack.length >= 10) undoStack.shift();
+      undoStack.push(canvas.toDataURL());
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: cx - rect.left, y: cy - rect.top };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.cancelable) e.preventDefault();
+      saveSnapshot();
+      isDrawing = true;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = brushColor;
+      ctx.lineWidth = brushSize;
+      ctx.stroke();
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return;
+      if (e.cancelable) e.preventDefault();
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      ctx.closePath();
+    });
+
+    function updateHUD() {
+      document.getElementById('roundDisplay').innerText = `${currentRound + 1}/${TOTAL_ROUNDS}`;
+      document.getElementById('coinDisplay').innerText = coins;
+    }
+
+    function startGame() {
+      playSound('click');
+      currentRound = 0;
+      coins = 0;
+      roundQuestions = shuffle(WORD_BANK).slice(0, TOTAL_ROUNDS);
+
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('phaseBanner').style.display = 'block';
+
+      resizeCanvas();
+      updateHUD();
+      prepareRound();
+    }
+
+    function prepareRound() {
+      currentTarget = roundQuestions[currentRound];
+      undoStack = [];
+      fillCanvasWhite();
+
+      // 重設畫筆為黑色
+      brushColor = COLORS[0];
+      document.querySelectorAll('.color-dot').forEach((d, idx) => d.classList.toggle('active', idx === 0));
+
+      updateHUD();
+
+      const isPlayer2 = (currentRound % 2 === 1);
+      const drawerNum = isPlayer2 ? '2' : '1';
+
+      document.getElementById('peek-btn').style.display = 'none';
+      document.getElementById('draw-controls').style.display = 'none';
+      document.getElementById('guess-controls').style.display = 'none';
+      document.getElementById('idle-hint').style.display = 'block';
+      document.getElementById('phaseBanner').innerHTML = `第 ${currentRound + 1} 題：玩家 ${drawerNum} 準備畫畫`;
+
+      const turnModal = document.getElementById('turn-modal');
+      const card = document.getElementById('turnCardContent');
+      turnModal.style.display = 'flex';
+
+     card.innerHTML = `
+        <div class="player-badge ${isPlayer2 ? 'p2' : ''} zh-text">
+          🎨 <ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>題<rt>ㄊㄧˊ</rt></ruby>
+        </div>
+        <h2 class="zh-text" style="font-size: 34px; margin: 4px 0;">
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>家<rt>ㄐㄧㄚ</rt></ruby> ${drawerNum} <ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby><ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby>
+        </h2>
+        <p class="zh-text" style="font-size: 32px; color: #dfe6e9; margin: 0;">
+        
+        <button type="button" class="btn zh-text" style="font-size: 30px; padding: 14px 50px; margin-top: 10px;" id="drawWordStartBtn">
+          <ruby>開<rt>ㄎㄞ</rt></ruby><ruby>始<rt>ㄕˇ</rt></ruby>
+        </button>
+      `;
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      document.getElementById('drawWordStartBtn').onclick = () => {
+        playSound('click');
+        showSecretWordStep();
+      };
+    }
+
+    function showSecretWordStep() {
+      const card = document.getElementById('turnCardContent');
+      card.innerHTML = `
+        <!-- 加入 padding-left: 20px; 把字往右推，達到視覺中心 -->
+        <h2 class="zh-text" style="font-size: 38px; margin: 0; color: #ffeb3b; padding-left: 20px;">
+          <ruby>題<rt>ㄊㄧˊ</rt></ruby><ruby>目<rt>ㄇㄨˋ</rt></ruby>
+        </h2>
+        <div class="secret-word-box">
+          <div class="secret-emoji">${currentTarget.emoji}</div>
+          <!-- 這裡也加上 padding-left: 15px; 讓題目文字能對齊上方的 Emoji 正中心 -->
+          <div class="secret-word-text zh-text" style="padding-left: 15px;">${currentTarget.ruby}</div>
+        </div>
+        <button type="button" class="btn zh-text" style="font-size: 32px; padding: 14px 60px; background-color: #00c853; margin-top: 6px;" id="wordOkBtn">
+          OK
+        </button>
+      `;
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      document.getElementById('wordOkBtn').onclick = () => {
+        playSound('click');
+        startDrawingPhase();
+      };
+    }
+
+    function showPeekModal() {
+      const turnModal = document.getElementById('turn-modal');
+      const card = document.getElementById('turnCardContent');
+      turnModal.style.display = 'flex';
+      card.innerHTML = `
+        <h2 class="zh-text" style="font-size: 30px; margin: 0; color: #ffeb3b;">
+          🤫 <ruby>偷<rt>ㄊㄡ</rt></ruby><ruby>看<rt>ㄎㄢˋ</rt></ruby><ruby>題<rt>ㄊㄧˊ</rt></ruby><ruby>目<rt>ㄇㄨˋ</rt></ruby>
+        </h2>
+        <div class="secret-word-box">
+          <div class="secret-emoji">${currentTarget.emoji}</div>
+          <div class="secret-word-text zh-text">${currentTarget.ruby}</div>
+        </div>
+        <button type="button" class="btn zh-text" style="font-size: 30px; padding: 12px 55px; background-color: #00c853;" id="closePeekOkBtn">
+          OK
+        </button>
+      `;
+      
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      document.getElementById('closePeekOkBtn').onclick = () => {
+        playSound('click');
+        turnModal.style.display = 'none';
+      };
+    }
+
+    function startDrawingPhase() {
+      document.getElementById('turn-modal').style.display = 'none';
+      document.getElementById('peek-btn').style.display = 'block';
+      document.getElementById('idle-hint').style.display = 'none';
+      document.getElementById('guess-controls').style.display = 'none';
+      document.getElementById('draw-controls').style.display = 'flex';
+      canvas.style.pointerEvents = 'auto';
+
+      document.getElementById('phaseBanner').innerHTML = `🎨 畫好後請按右下角 OK`;
+    }
+
+    function startGuessPhase() {
+      document.getElementById('peek-btn').style.display = 'none';
+      document.getElementById('draw-controls').style.display = 'none';
+      document.getElementById('idle-hint').style.display = 'none';
+      canvas.style.pointerEvents = 'none';
+
+      const guesserNum = (currentRound % 2 === 1) ? '1' : '2';
+      document.getElementById('phaseBanner').innerHTML = `🔍 請玩家 ${guesserNum} 從下方選出正確答案！`;
+
+      const distractors = shuffle(
+        WORD_BANK.filter(item => item.word !== currentTarget.word)
+      ).slice(0, 5);
+
+      const options = shuffle([currentTarget, ...distractors]);
+      const guessGrid = document.getElementById('guess-controls');
+      guessGrid.innerHTML = '';
+      guessGrid.style.display = 'grid';
+
+      options.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'guess-option-btn zh-text';
+        btn.innerHTML = item.ruby;
+        
+        // 統一改用 pointerdown，並阻擋預設事件來防止穿透
+        btn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          handleGuess(btn, item);
+        });
+
+        guessGrid.appendChild(btn);
+      });
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+    }
+
+    function handleGuess(btn, item) {
+      if (item.word === currentTarget.word) {
+        btn.classList.add('correct');
+        playSound('correct');
+
+        document.querySelectorAll('.guess-option-btn').forEach(b => b.style.pointerEvents = 'none');
+
+        coins += STARS_PER_ANSWER;
+        updateHUD();
+
+        const starBurst = document.getElementById('starBurst');
+        starBurst.style.display = 'flex';
+
+        setTimeout(() => {
+          starBurst.style.display = 'none';
+          if (currentRound < TOTAL_ROUNDS - 1) {
+            currentRound++;
+            prepareRound();
+          } else {
+            endGame();
+          }
+        }, 900);
+      } else {
+        playSound('wrong');
+        btn.classList.add('wrong');
+      }
+    }
+
+    function endGame() {
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('phaseBanner').style.display = 'none';
+      document.getElementById('peek-btn').style.display = 'none';
+
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + coins;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+
+if (localStorage.getItem('sticker_smap13') !== 'true') {
+  localStorage.setItem('sticker_smap13', 'new');
+}
+      document.getElementById('newCoins').innerText = "+" + coins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= coins; i++) {
+        starsHtml += '⭐';
+        if (i % 10 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initTools();
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('game-container').style.display = 'flex';
+      document.getElementById('start-screen').style.display = 'flex';
+      resizeCanvas();
+    });
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+    });
+  </script>
+</body>
+</html>

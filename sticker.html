@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>粢涵的專屬貼紙簿</title>
+  
+  <!-- 載入本地端 Tailwind CSS 與注音模組 -->
+  <script src="tailwindcss.js"></script>
+  <script src="bopomofo.js"></script>
+  
+  <style>
+    body {
+      /* 與衣櫥系統完全相同的系統原生字型，徹底支援 100% 離線遊玩 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0f172a;
+      background-image: radial-gradient(#1e293b 2px, transparent 2px);
+      background-size: 30px 30px;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ====== 頂部 HUD (EXIT 按鈕與星星) ====== */
+    .top-bar {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .top-bar > * {
+      pointer-events: auto;
+    }
+    .btn-back {
+      background: #333;
+      color: white;
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: none;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .coin-display {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ffeb3b;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 16px;
+      border-radius: 15px;
+      backdrop-filter: blur(4px);
+    }
+
+    /* 擴大貼紙格的視覺與對位範圍 */
+    .slot-1 { left: 15.0%; top: 24.5%; width: 28.5%; height: 21.5%; }
+    .slot-2 { left: 56.5%; top: 24.5%; width: 28.5%; height: 21.5%; }
+    .slot-3 { left: 15.0%; top: 47.5%; width: 28.5%; height: 21.5%; }
+    .slot-4 { left: 56.5%; top: 47.5%; width: 28.5%; height: 21.5%; }
+
+    /* 貼紙共用屬性與特效 */
+    .sticker-slot {
+      position: absolute; display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s ease-out; z-index: 10;
+      pointer-events: none;
+    }
+    .sticker-slot.is-hovered,
+    .sticker-slot.is-pressed { transform: scale(1.06); }
+    .sticker-img { width: 72%; height: 72%; object-fit: contain; transition: filter 0.3s ease; position: relative; z-index: 10; }
+    .silhouette { filter: brightness(0) opacity(0.8) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+    .obtained { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+
+    /* ====== 【基礎建設】三階段狀態與特效系統 ====== */
+    /* 待領取狀態：剪影發金光 + 右上角 NEW 跳動標籤 */
+    @keyframes claimable-pulse {
+      0%, 100% { filter: brightness(0) opacity(0.85) drop-shadow(0 0 6px rgba(251, 191, 36, 0.6)); transform: scale(1); }
+      50% { filter: brightness(0) opacity(0.95) drop-shadow(0 0 16px rgba(251, 191, 36, 1)); transform: scale(1.04); }
+    }
+    .claimable-glow {
+      animation: claimable-pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes badge-bounce {
+      0%, 100% { transform: translateY(0) scale(1) rotate(8deg); }
+      50% { transform: translateY(-6px) scale(1.12) rotate(12deg); }
+    }
+    .new-badge {
+      position: absolute;
+      top: 4%;
+      right: 4%;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      color: #fff;
+      font-weight: 900;
+      font-size: clamp(12px, 2.2vw, 18px);
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 3px solid #fef08a;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.7);
+      z-index: 30;
+      letter-spacing: 1px;
+      animation: badge-bounce 1s infinite ease-in-out;
+    }
+
+    /* 獨立特效畫布層 (疊在貼紙上方，支援 ::before 與 ::after) */
+    .fx-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 25;
+    }
+    /* ------------------ "獲得貼紙特效"放置區  ------------------ */
+    
+
+    /* ------------------ "貼紙永久特效"放置區  ------------------ */
+
+
+
+    /* ------------------ 翻書邏輯!!絕對不能動  ------------------ */
+    .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+
+    @keyframes pop-in {
+      0% { transform: scale(0.5); opacity: 0; }
+      70% { transform: scale(1.12); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .anim-pop-in { animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    ::-webkit-scrollbar { display: none; }
+
+    /* 手勢滑動示意動畫 */
+    @keyframes swipe-tutor {
+      0% { left: 88.44%; opacity: 0; transform: scale(1.2); }
+      10% { left: 88.44%; opacity: 1; transform: scale(1); } 
+      60% { left: 64.77%; opacity: 1; transform: scale(1); } 
+      80% { left: 64.77%; opacity: 0; transform: scale(1.2); } 
+      100% { left: 64.77%; opacity: 0; transform: scale(1.2); }
+    }
+    .tutorial-hand {
+      position: absolute; top: 47.08%; animation: swipe-tutor 2.5s infinite ease-in-out;
+      pointer-events: none; z-index: 100;
+    }
+
+    /* 彈出視窗內的注音排版 (調整暗色背景對比) */
+    #sticker-modal .char-block { margin-right: 0.65em; margin-bottom: 8px; }
+    #sticker-modal .bopo { font-size: 0.42em; font-weight: 800; margin-left: 4px; letter-spacing: 0px; line-height: 1.15; }
+    #modal-condition .bopo { color: #fcd34d; }
+    #modal-condition-label .bopo { color: #fbbf24; }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen m-0 p-2 md:p-6 overflow-hidden">
+
+  <!-- 頂部列：離開按鈕與星星 -->
+  <div class="top-bar">
+    <button class="btn-back" onclick="location.href='index.html'">🔙 EXIT</button>
+    <div class="coin-display"><span id="myCoins">0</span> ⭐</div>
+  </div>
+
+  <!-- 主畫面書本容器 -->
+  <div id="book-container" class="w-full max-w-[900px] aspect-[3/4] max-h-[95vh] relative mx-auto flex flex-col justify-center touch-none">
+    
+    <!-- 新手引導：手勢滑動示意圖 -->
+    <div id="swipe-tutorial" class="tutorial-hand hidden">
+      <div class="relative flex items-center justify-center">
+        <div class="absolute w-12 h-12 bg-white/50 rounded-full animate-ping"></div>
+        <div class="text-6xl drop-shadow-2xl origin-bottom -rotate-12 select-none">👆</div>
+      </div>
+    </div>
+
+    <!-- 多頁 3D 魔法書結構 -->
+    <div id="book-wrapper" class="w-full h-full relative select-none" style="perspective: 2000px;">
+      
+      <!-- 靜態最底層 -->
+      <div class="absolute inset-0 z-0 pointer-events-none">
+        <div class="absolute w-1/2 h-full left-0 overflow-hidden rounded-l-[12px] shadow-[-10px_20px_40px_rgba(0,0,0,0.6)]">
+          <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
+          <div id="canvas-base-left" class="absolute w-[200%] h-full left-0"></div>
+        </div>
+        <div class="absolute w-1/2 h-full right-0 overflow-hidden rounded-r-[12px] shadow-[10px_20px_40px_rgba(0,0,0,0.6)]">
+          <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
+          <div id="canvas-base-right" class="absolute w-[200%] h-full right-0"></div>
+        </div>
+      </div>
+      
+      <!-- 動態 3D 翻頁層的容器 -->
+      <div id="book-pages" class="absolute inset-0 preserve-3d z-10 pointer-events-none"></div>
+      
+      <!-- 書脊中央凹痕陰影 -->
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-full bg-gradient-to-r from-transparent via-black/40 to-transparent pointer-events-none z-50"></div>
+    </div>
+  </div>
+
+  <!-- 說明 Modal 視窗 (改為暗色主題) -->
+  <div id="sticker-modal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-150 touch-none">
+    <div id="modal-content" class="bg-slate-800 rounded-[3rem] p-8 md:p-12 max-w-[760px] w-[92%] mx-4 text-center shadow-2xl transform scale-95 transition-transform duration-150 border-[10px] border-slate-600 relative cursor-default">
+      
+      <button id="btn-close-modal" class="absolute -top-6 -right-6 bg-red-500 text-white w-16 h-16 rounded-full font-bold text-4xl border-4 border-white shadow-xl hover:bg-red-600 active:scale-90 transition-transform z-20 cursor-pointer flex items-center justify-center">&times;</button>
+      
+      <!-- 動態標籤與標題二合一 -->
+      <div id="modal-status-badge" class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-700 text-white py-2.5 rounded-full text-3xl md:text-4xl font-bold shadow-lg border-4 border-white whitespace-nowrap flex items-center justify-center gap-2 w-72 md:w-80"></div>
+
+      <div class="relative w-64 h-64 md:w-80 md:h-80 mx-auto mt-8 mb-8 bg-slate-700 rounded-[2.5rem] shadow-inner flex items-center justify-center overflow-hidden border-8 border-slate-600">
+        <div id="modal-bg-ray" class="absolute inset-0 opacity-0 transition-opacity duration-300" style="background: radial-gradient(circle, rgba(253,230,138,0.5) 0%, rgba(253,230,138,0) 70%);"></div>
+        <img id="modal-img" src="" class="w-48 h-48 md:w-60 md:h-60 object-contain silhouette relative z-10">
+      </div>
+      
+      <div class="bg-slate-700 rounded-3xl p-6 md:p-8 mb-4 border-2 border-slate-500 text-left shadow-sm">
+        <div id="modal-condition-label" class="text-2xl md:text-3xl font-bold text-amber-400 mb-3 flex items-center gap-2">
+          <span>📜</span>
+          <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>條<rt>ㄊㄧㄠˊ</rt></ruby><ruby>件<rt>ㄐㄧㄢˋ</rt></ruby></span>
+        </div>
+        <div id="modal-condition" class="text-amber-200 font-extrabold text-3xl md:text-4xl leading-relaxed zh-text"></div>
+      </div>
+      
+      <!-- 預留擴充：購買按鈕與確認區塊 -->
+      <div id="modal-action-area" class="mt-2 hidden">
+        <!-- 內容會由 JS 動態切換 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let coins = parseInt(localStorage.getItem('playerCoins') || '0');
+    document.getElementById('myCoins').innerText = coins;
+
+    // ====== 0. 內建貝貝專用注音模組保底機制 ======
+    (function () {
+      if (window.Bopomofo) return;
+      const style = document.createElement('style');
+      style.id = 'bopo-module-style';
+      style.textContent = `
+        .char-block {
+          display: inline-flex; flex-direction: row; align-items: center;
+          margin-right: 0.55em; margin-bottom: 4px; vertical-align: middle; line-height: 1;
+        }
+        .bopo {
+          writing-mode: vertical-rl; text-orientation: upright; font-size: 0.35em;
+          color: #ffeb3b; margin-left: 2px; position: relative; padding: 0;
+          line-height: 1.1; letter-spacing: -1px;
+        }
+        .bopo .tone {
+          position: absolute; right: -0.9em; top: 50%;
+          font-family: "標楷體", "BiauKai", "DFKai-SB", serif;
+          font-size: 1.07em; font-weight: bold;
+          transform: translateY(-50%) scaleY(1.3); pointer-events: none;
+        }
+        .bopo .tone.sp {
+          position: absolute; left: 50%; right: auto; top: -0.55em;
+          transform: translateX(-50%);
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 1.6em; line-height: 1; font-weight: 900; pointer-events: none;
+        }
+        .zh-text {
+          display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        }
+      `;
+      document.head.appendChild(style);
+
+      function convertRuby(rubyElement) {
+        const charText = Array.from(rubyElement.childNodes)
+          .filter(node => node.nodeType === Node.TEXT_NODE)
+          .map(node => node.textContent).join('').trim();
+        const rt = rubyElement.querySelector('rt');
+        if (!rt) return;
+        let bopoText = rt.textContent.trim();
+        let tone = '';
+        let bopoBase = bopoText;
+        const normalTones = ['ˊ', 'ˇ', 'ˋ'];
+        if (bopoText.includes('˙')) {
+          tone = '˙';
+          bopoBase = bopoText.replace(/˙/g, '');
+        } else if (normalTones.includes(bopoText.slice(-1))) {
+          tone = bopoText.slice(-1);
+          bopoBase = bopoText.slice(0, -1);
+        }
+        const charBlock = document.createElement('span');
+        charBlock.className = 'char-block';
+        const charSpan = document.createElement('span');
+        charSpan.textContent = charText;
+        charBlock.appendChild(charSpan);
+        const bopoSpan = document.createElement('span');
+        bopoSpan.className = 'bopo';
+        bopoSpan.textContent = bopoBase;
+        if (tone) {
+          const toneSpan = document.createElement('span');
+          toneSpan.className = tone === '˙' ? 'tone sp' : 'tone';
+          toneSpan.textContent = tone;
+          bopoSpan.appendChild(toneSpan);
+        }
+        charBlock.appendChild(bopoSpan);
+        rubyElement.replaceWith(charBlock);
+      }
+
+      function renderAll() {
+        document.querySelectorAll('ruby').forEach(convertRuby);
+      }
+      window.Bopomofo = { render: renderAll, convert: convertRuby };
+    })();
+
+
+    // ====== 1. 貼紙資料庫設定 (新增 onGetEffect 與 effect 欄位) ======
+    const stickersConfig = [
+      { 
+        id: 'smap1',  src: 'assets/bad/bad1-3.webp', 
+        name: '<ruby>宇<rt>ㄩˇ</rt></ruby><ruby>宙<rt>ㄓㄡˋ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>獸<rt>ㄕㄡˋ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap2', src: 'assets/bad/bad2.webp', 
+        name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>強<rt>ㄑㄧㄤˊ</rt></ruby><ruby>先<rt>ㄒㄧㄢ</rt></ruby><ruby>生<rt>ㄕㄥ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>二<rt>ㄦˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap3',  src: 'assets/sticker/map3.webp', 
+        name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>石<rt>ㄕˊ</rt></ruby><ruby>碑<rt>ㄅㄟ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>三<rt>ㄙㄢ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap4',  src: 'assets/sticker/map4.webp', 
+        name: '<ruby>動<rt>ㄉㄨㄥˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>使<rt>ㄕˇ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>四<rt>ㄙˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap5',  src: 'assets/sticker/map5.webp', 
+        name: '<ruby>城<rt>ㄔㄥˊ</rt></ruby><ruby>堡<rt>ㄅㄠˇ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>五<rt>ㄨˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap6',  src: 'assets/sticker/map6.webp', 
+        name: '<ruby>高<rt>ㄍㄠ</rt></ruby><ruby>塔<rt>ㄊㄚˇ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>六<rt>ㄌㄧㄡˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap7',  src: 'assets/sticker/map7.webp', 
+        name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>陣<rt>ㄓㄣˋ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>七<rt>ㄑ一</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap8',  src: 'assets/sticker/map8.webp', 
+        name: '<ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>底<rt>ㄉㄧˇ</rt></ruby><ruby>數<rt>ㄕㄨˋ</rt></ruby><ruby>獨<rt>ㄉㄨˊ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>八<rt>ㄅㄚ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap9',  src: 'assets/sticker/map9.webp', 
+        name: '<ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby><ruby>派<rt>ㄆㄞˋ</rt></ruby><ruby>對<rt>ㄉㄨㄟˋ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>九<rt>ㄐㄧㄡˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap10',  src: 'assets/sticker/map10.webp', 
+        name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>方<rt>ㄈㄤ</rt></ruby><ruby>陣<rt>ㄓㄣˋ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap11',  src: 'assets/sticker/map11.webp', 
+        name: '<ruby>保<rt>ㄅㄠˇ</rt></ruby><ruby>持<rt>ㄔˊ</rt></ruby><ruby>平<rt>ㄆㄧㄥˊ</rt></ruby><ruby>衡<rt>ㄏㄥˊ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap12',  src: 'assets/sticker/map12.webp', 
+        name: '<ruby>深<rt>ㄕㄣ</rt></ruby><ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>巨<rt>ㄐㄩˋ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>二<rt>ㄦˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'smap13',  src: 'assets/sticker/map13.webp', 
+        name: '<ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby><ruby>我<rt>ㄨㄛˇ</rt></ruby><ruby>猜<rt>ㄘㄞ</rt></ruby>', 
+        condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>三<rt>ㄙㄢ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'slobby1',  src: 'assets/sticker/lobby1.webp', 
+        name: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', 
+        condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'slobby2',  src: 'assets/sticker/lobby2.webp', 
+        name: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
+        condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'slobby3',  src: 'assets/sticker/lobby3.webp', 
+        name: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>', 
+        condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>',
+        cost: 0,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar1',  src: 'assets/sticker/1.webp', 
+        name: '<ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>蠍<rt>ㄒㄧㄝ</rt></ruby><ruby>座<rt>ㄗㄨㄛˋ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar2',  src: 'assets/sticker/2.webp', 
+        name: 'Mira', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar3',  src: 'assets/sticker/3.webp', 
+        name: '<ruby><rt>ㄌㄚˇ</rt></ruby><ruby><rt>ㄅㄨ</rt></ruby><ruby><rt>ㄅㄨ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar4',  src: 'assets/sticker/4.webp', 
+        name: '<ruby>咖<rt>ㄎㄚ</rt></ruby><ruby>啡<rt>ㄈㄟ</rt></ruby><ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>夥<rt>ㄏㄨㄛˇ</rt></ruby><ruby>伴<rt>ㄅㄢˋ</rt></ruby>', 
+        condition: '⭐ 10 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 10,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar5',  src: 'assets/sticker/5.webp', 
+        name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>耳<rt>ㄦˇ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar6',  src: 'assets/sticker/6.webp', 
+        name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>醜<rt>ㄔㄡˇ</rt></ruby><ruby>克<rt>ㄎㄜˋ</rt></ruby><ruby>敏<rt>ㄇㄧㄣˇ</rt></ruby>', 
+        condition: '⭐ 5 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 5,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar7',  src: 'assets/sticker/7.webp', 
+        name: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>醜<rt>ㄔㄡˇ</rt></ruby><ruby>克<rt>ㄎㄜˋ</rt></ruby><ruby>敏<rt>ㄇㄧㄣˇ</rt></ruby>', 
+        condition: '⭐ 15 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 15,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar8',  src: 'assets/sticker/8.webp', 
+        name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>菊<rt>ㄐㄩˊ</rt></ruby><ruby>路<rt>ㄌㄨˋ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar9',  src: 'assets/sticker/9.webp', 
+        name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>綠<rt>ㄌㄩˋ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar10',  src: 'assets/sticker/10.webp', 
+        name: '<ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>阿<rt>ㄚ</rt></ruby><ruby>姨<rt>ㄧˊ</rt></ruby><ruby>西<rt>ㄒㄧ</rt></ruby><ruby>瓜<rt>ㄍㄨㄚ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      { 
+        id: 'sstar11',  src: 'assets/sticker/11.webp', 
+        name: '<ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>阿<rt>ㄚ</rt></ruby><ruby>姨<rt>ㄧˊ</rt></ruby><ruby>壽<rt>ㄕㄡˋ</rt></ruby><ruby>司<rt>ㄙ</rt></ruby>', 
+        condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        cost: 20,
+        onGetEffect: '', // 獲得特效
+        effect: ''       // 永久特效
+      },
+      
+      
+    ];
+
+    // ====== 2. 自動計算所有貼紙的頁數與格位 ======
+    stickersConfig.forEach((item, index) => {
+      item.page = Math.floor(index / 4) + 1; // 每 4 個分一頁
+      item.slot = (index % 4) + 1;           // 算出是第 1~4 格
+    });
+
+    // ====== 3. 書本厚度與整格貼紙框座標設定 ======
+    const TOTAL_PAPERS = Math.ceil(stickersConfig.length / 4); // 自動依據貼紙總數計算總頁數，再也不用手動改
+    const SLOT_BOUNDS = {
+      1: { left: 14.5, top: 24.0, width: 29.5, height: 22.5 },
+      2: { left: 56.0, top: 24.0, width: 29.5, height: 22.5 },
+      3: { left: 14.5, top: 47.0, width: 29.5, height: 22.5 },
+      4: { left: 56.0, top: 47.0, width: 29.5, height: 22.5 }
+    };
+
+    // 狀態紀錄：'locked' (未解鎖) | 'new' (待領取) | 'true' (完全獲得)
+    let obtainedState = {};
+    let unlockingIds = {}; // 防止播放獲得特效途中重複點擊
+    let papersDOM = [];
+    let currentPageIndex = 0; 
+    let lastTouchTime = 0;
+    let modalClosedTime = 0;
+    
+    function initBook() {
+      const bookPages = document.getElementById('book-pages');
+      
+      for(let i = 0; i < TOTAL_PAPERS; i++) {
+        const paper = document.createElement('div');
+        paper.className = "absolute right-0 w-1/2 h-full origin-left transition-transform duration-[400ms] ease-[cubic-bezier(0.645,0.045,0.355,1)] preserve-3d pointer-events-none";
+        paper.style.zIndex = TOTAL_PAPERS - i; 
+        paper._zTimer = null;
+
+        paper.innerHTML = `
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]">
+            <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
+            <div id="canvas-front-${i}" class="absolute w-[200%] h-full right-0"></div>
+            <div class="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-20"></div>
+          </div>
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg);">
+            <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
+            <div id="canvas-back-${i}" class="absolute w-[200%] h-full left-0"></div>
+            <div class="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black/40 to-transparent pointer-events-none z-20"></div>
+          </div>
+        `;
+        bookPages.appendChild(paper);
+        papersDOM.push(paper); 
+      }
+
+      stickersConfig.forEach(item => {
+        const savedVal = localStorage.getItem('sticker_' + item.id);
+        // 判定三階段狀態
+        let state = 'locked';
+        if (savedVal === 'true') state = 'true';
+        else if (savedVal === 'new') state = 'new';
+        obtainedState[item.id] = state;
+
+        // 1. 圖片樣式：只有完全獲得 ('true') 才是彩色，'locked' 與 'new' 皆維持剪影
+        let imgClass = 'silhouette anim-pop-in';
+        if (state === 'true') {
+          imgClass = 'obtained';
+        } else if (state === 'new') {
+          imgClass = 'silhouette claimable-glow';
+        }
+
+        // 2. NEW 標籤：只有待領取 ('new') 才顯示
+        const badgeHiddenClass = (state === 'new') ? '' : 'hidden';
+
+        // 3. 永久特效：只有完全獲得 ('true') 且有設定 effect 才掛載
+        const permEffectClass = (state === 'true' && item.effect) ? item.effect : '';
+
+        const html = `
+          <div id="slot-el-${item.id}" class="sticker-slot slot-${item.slot}">
+            <img id="img-${item.id}" src="${item.src}" class="sticker-img ${imgClass}" alt="${item.id}">
+            <div id="badge-${item.id}" class="new-badge ${badgeHiddenClass}">NEW!</div>
+            <div id="perm-fx-${item.id}" class="fx-layer ${permEffectClass}"></div>
+            <div id="get-fx-${item.id}" class="fx-layer"></div>
+          </div>
+        `;
+
+        const spreadIndex = item.page - 1; 
+        
+        if (item.slot === 1 || item.slot === 3) {
+          if (spreadIndex === 0) document.getElementById('canvas-base-left').innerHTML += html;
+          else document.getElementById(`canvas-back-${spreadIndex-1}`).innerHTML += html;
+        } else {
+          if (spreadIndex === TOTAL_PAPERS) document.getElementById('canvas-base-right').innerHTML += html;
+          else document.getElementById(`canvas-front-${spreadIndex}`).innerHTML += html;
+        }
+      });
+
+      setTimeout(() => {
+        document.querySelectorAll('.anim-pop-in').forEach(el => el.classList.remove('anim-pop-in'));
+      }, 450);
+
+      checkTutorial();
+      if (window.Bopomofo) window.Bopomofo.render();
+    }
+
+    // ====== 【核心儀式】點擊待領取 ('new') 貼紙時的解鎖與特效演出 ======
+    function claimSticker(id) {
+      if (unlockingIds[id]) return;
+      unlockingIds[id] = true;
+
+      const item = stickersConfig.find(x => x.id === id);
+      const img = document.getElementById(`img-${id}`);
+      const badge = document.getElementById(`badge-${id}`);
+      const getFx = document.getElementById(`get-fx-${id}`);
+      const permFx = document.getElementById(`perm-fx-${id}`);
+
+      // 1. 更新存檔狀態為「完全獲得 ('true')」
+      obtainedState[id] = 'true';
+      localStorage.setItem('sticker_' + id, 'true');
+
+      // 2. 移除 NEW 標籤與剪影，轉為彩色貼紙並彈出
+      if (badge) badge.classList.add('hidden');
+      if (img) {
+        img.classList.remove('silhouette', 'claimable-glow');
+        img.classList.add('obtained', 'anim-pop-in');
+      }
+
+      // 3. 播放「獲得瞬間特效 (onGetEffect)」
+      if (item && item.onGetEffect && getFx) {
+        getFx.classList.add(item.onGetEffect);
+
+        // 1000 毫秒後移除瞬間特效，並掛上「永久特效 (effect)」
+        setTimeout(() => {
+          getFx.classList.remove(item.onGetEffect);
+          if (img) img.classList.remove('anim-pop-in');
+          if (item.effect && permFx) {
+            permFx.classList.add(item.effect);
+          }
+          unlockingIds[id] = false;
+        }, 1000);
+      } else {
+        // 若無設定瞬間特效，直接掛上永久特效
+        if (item && item.effect && permFx) {
+          permFx.classList.add(item.effect);
+        }
+        setTimeout(() => {
+          if (img) img.classList.remove('anim-pop-in');
+          unlockingIds[id] = false;
+        }, 450);
+      }
+    }
+
+    // 統一處理書本上的貼紙點擊分流
+    function handleStickerTap(id) {
+      if (unlockingIds[id]) return;
+      if (obtainedState[id] === 'new') {
+        // 如果是「待領取 (NEW)」階段，點擊直接觸發領取特效，不開視窗
+        claimSticker(id);
+      } else {
+        // 如果是「未解鎖」或「完全獲得」，打開說明視窗
+        openModal(id);
+      }
+    }
+
+    // ====== 2D 絕對座標雷達 ======
+    const bookWrapper = document.getElementById('book-wrapper');
+
+    function getStickerAtPoint(clientX, clientY) {
+      const rect = bookWrapper.getBoundingClientRect();
+      const pctX = ((clientX - rect.left) / rect.width) * 100;
+      const pctY = ((clientY - rect.top) / rect.height) * 100;
+
+      const activePage = currentPageIndex + 1;
+
+      for (const item of stickersConfig) {
+        if (item.page !== activePage) continue;
+        const b = SLOT_BOUNDS[item.slot];
+        if (!b) continue;
+        if (pctX >= b.left && pctX <= (b.left + b.width) &&
+            pctY >= b.top  && pctY <= (b.top + b.height)) {
+          return item;
+        }
+      }
+      return null;
+    }
+
+    function clearPressedSlots() {
+      document.querySelectorAll('.sticker-slot.is-pressed').forEach(el => el.classList.remove('is-pressed'));
+    }
+
+    // ====== 翻頁核心功能 ======
+    function goToNextPage() {
+      if (currentPageIndex >= TOTAL_PAPERS) return; 
+      const idx = currentPageIndex;
+      const paper = papersDOM[idx];
+      
+      if (paper._zTimer) { clearTimeout(paper._zTimer); paper._zTimer = null; }
+      paper.style.transform = 'rotateY(-180deg)'; 
+      paper.style.zIndex = 50 + idx; 
+      
+      currentPageIndex++;
+      document.activeElement?.blur();
+      hideTutorial(); 
+    }
+
+    function goToPrevPage() {
+      if (currentPageIndex <= 0) return; 
+      currentPageIndex--;
+      const idx = currentPageIndex;
+      const paper = papersDOM[idx];
+      
+      if (paper._zTimer) { clearTimeout(paper._zTimer); paper._zTimer = null; }
+      paper.style.zIndex = 90 - idx;
+      paper.style.transform = 'rotateY(0deg)'; 
+      
+      paper._zTimer = setTimeout(() => {
+        if (idx >= currentPageIndex) paper.style.zIndex = TOTAL_PAPERS - idx;
+        paper._zTimer = null;
+      }, 400);
+
+      document.activeElement?.blur();
+    }
+
+    // ====== 手勢滑動與整格點擊統一引擎 ======
+    const bookContainer = document.getElementById('book-container');
+    let startX = 0; let startY = 0; let isValidTouch = false; let touchedStickerOnStart = null;
+
+    bookContainer.addEventListener('touchstart', (e) => {
+      if (Date.now() - modalClosedTime < 200 || e.target.closest('.top-bar')) {
+        isValidTouch = false; return;
+      }
+      isValidTouch = true;
+      startX = e.changedTouches[0].clientX;
+      startY = e.changedTouches[0].clientY;
+
+      touchedStickerOnStart = getStickerAtPoint(startX, startY);
+      clearPressedSlots();
+      if (touchedStickerOnStart) {
+        const slotEl = document.getElementById(`slot-el-${touchedStickerOnStart.id}`);
+        if (slotEl) slotEl.classList.add('is-pressed');
+      }
+    }, {passive: true});
+
+    bookContainer.addEventListener('touchend', (e) => {
+      clearPressedSlots();
+      if (!isValidTouch) return;
+      isValidTouch = false;
+      lastTouchTime = Date.now();
+
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const diffX = startX - endX;
+      const diffY = startY - endY;
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+
+      if (absX > absY && absX >= 40) {
+        const rect = bookContainer.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        if (startX > centerX && diffX > 0) goToNextPage(); 
+        else if (startX < centerX && diffX < 0) goToPrevPage(); 
+        return;
+      }
+
+      if (absX < 40 && absY < 40) {
+        const hitSticker = getStickerAtPoint(endX, endY) || touchedStickerOnStart;
+        if (hitSticker) handleStickerTap(hitSticker.id);
+      }
+    }, {passive: true});
+
+    bookWrapper.addEventListener('click', (e) => {
+      if (Date.now() - lastTouchTime < 500 || Date.now() - modalClosedTime < 250) return;
+      const hitSticker = getStickerAtPoint(e.clientX, e.clientY);
+      if (hitSticker) handleStickerTap(hitSticker.id);
+    });
+
+    // ====== 新手引導 (Tutorial) 系統 ======
+    const TUTORIAL_KEY = 'stickerBookVisited_v1';
+    const tutorialEl = document.getElementById('swipe-tutorial');
+
+    function checkTutorial() { if (!localStorage.getItem(TUTORIAL_KEY)) tutorialEl.classList.remove('hidden'); }
+    function hideTutorial() {
+      if (!tutorialEl.classList.contains('hidden')) {
+        tutorialEl.classList.add('hidden');
+        localStorage.setItem(TUTORIAL_KEY, 'true'); 
+      }
+    }
+
+    // ====== Modal & 貼紙狀態與購買邏輯 ======
+    const modal = document.getElementById('sticker-modal');
+    const modalContent = document.getElementById('modal-content');
+    const modalImg = document.getElementById('modal-img');
+    const modalCondition = document.getElementById('modal-condition');
+    const modalStatusBadge = document.getElementById('modal-status-badge');
+    const modalBgRay = document.getElementById('modal-bg-ray');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const modalActionArea = document.getElementById('modal-action-area');
+
+    modal.addEventListener('touchstart', (e) => {
+      if (e.target === modal) { e.preventDefault(); e.stopPropagation(); closeModal(); }
+    }, {passive: false});
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    btnCloseModal.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation(); closeModal();
+    }, {passive: false});
+    btnCloseModal.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
+
+    function confirmPurchase(id, cost) {
+      if (coins < cost) {
+        alert("⭐ 星星不夠喔！快去尋寶吧！");
+        return;
+      }
+
+      const remain = coins - cost;
+      
+      modalActionArea.innerHTML = `
+        <div class="bg-slate-700 rounded-3xl p-5 mb-4 border-4 border-slate-500 text-center shadow-inner">
+          <div class="text-red-400 font-extrabold text-3xl md:text-4xl zh-text">
+            <ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>完<rt>ㄨㄢˊ</rt></ruby><ruby>剩<rt>ㄕㄥˋ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby>：⭐ ${remain} 
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <button onclick="processBuySticker('${id}', ${cost})" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-4xl md:text-5xl py-4 rounded-2xl shadow-lg active:scale-95 transition-transform cursor-pointer">⭕</button>
+          <button onclick="resetBuyButton('${id}', ${cost})" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold text-4xl md:text-5xl py-4 rounded-2xl shadow-lg active:scale-95 transition-transform cursor-pointer">❌</button>
+        </div>
+      `;
+      
+      if (window.Bopomofo) window.Bopomofo.render();
+    }
+
+    function resetBuyButton(id, cost) {
+      modalActionArea.innerHTML = `
+        <button onclick="confirmPurchase('${id}', ${cost})" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-2xl md:text-3xl py-5 px-8 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-3 cursor-pointer">
+          <span>⭐ </span><span class="zh-text"> ${cost} </span>
+        </button>
+      `;
+      if (window.Bopomofo) window.Bopomofo.render();
+    }
+
+    // 點擊 ⭕ 確定購買：扣除星星，將狀態設為「待領取 ('new')」並關閉視窗，讓玩家回書本點擊 NEW 觸發特效！
+    function processBuySticker(id, cost) {
+      coins -= cost;
+      localStorage.setItem('playerCoins', coins);
+      document.getElementById('myCoins').innerText = coins;
+      
+      obtainedState[id] = 'new';
+      localStorage.setItem('sticker_' + id, 'new');
+      
+      const img = document.getElementById(`img-${id}`);
+      const badge = document.getElementById(`badge-${id}`);
+      if (img) img.classList.add('claimable-glow');
+      if (badge) badge.classList.remove('hidden');
+      
+      closeModal();
+    }
+
+    function openModal(id) {
+      const item = stickersConfig.find(x => x.id === id);
+      modalImg.src = item.src;
+      modalCondition.innerHTML = item.condition;
+
+      if (obtainedState[id] === 'true') {
+        // 完全獲得的狀態
+        modalStatusBadge.innerHTML = `<span class="zh-text flex-nowrap">${item.name}</span>`;
+        modalStatusBadge.className = 'absolute -top-8 left-1/2 -translate-x-1/2 bg-amber-500 text-white py-2.5 rounded-full text-3xl md:text-4xl font-bold shadow-lg border-4 border-white whitespace-nowrap flex items-center justify-center gap-2 w-[450px] md:w-[550px]';
+        
+        modalImg.classList.remove('silhouette');
+        modalBgRay.style.opacity = '1';
+        
+        modalActionArea.classList.add('hidden');
+      } else {
+        // 未解鎖的狀態
+        modalStatusBadge.innerHTML = '<span class="zh-text flex-nowrap tracking-widest">？？？</span>';
+        modalStatusBadge.className = 'absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-700 text-white py-2.5 rounded-full text-3xl md:text-4xl font-bold shadow-lg border-4 border-white whitespace-nowrap flex items-center justify-center gap-2 w-[450px] md:w-[550px]';
+        
+        modalImg.classList.add('silhouette');
+        modalBgRay.style.opacity = '0';
+
+        if (item.cost && item.cost > 0) {
+          modalActionArea.classList.remove('hidden');
+          resetBuyButton(id, item.cost);
+        } else {
+          modalActionArea.classList.add('hidden');
+        }
+      }
+
+      if (window.Bopomofo) window.Bopomofo.render();
+
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-95'); 
+      modalContent.classList.add('scale-100');
+    }
+
+    function closeModal() {
+      modalClosedTime = Date.now();
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-100'); 
+      modalContent.classList.add('scale-95');
+    }
+
+    window.onload = initBook;
+  </script>
+</body>
+</html>

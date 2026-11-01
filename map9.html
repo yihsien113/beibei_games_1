@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 海洋記憶翻牌</title>
+  
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  <!-- 加入 defer 確保 HTML body 完全解析後才載入模組，避免 DOM 找不到報錯 -->
+  <script src="rpg-dialog-ui.js" defer onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
+  
+  <style>
+    * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: none; }
+    body {
+      margin: 0; padding: 0; background-color: #000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212; color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 20px; z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px; width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2); border-top: 4px solid #00e5ff;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative; width: 95vw; max-width: 100%; max-height: 85vh;
+      border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden; display: none; background-color: #87CEEB;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+
+    .overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85); color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px; text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%; max-width: 720px; padding: 18px 22px; border-radius: 16px;
+      background-color: rgba(0, 0, 0, 0.82); border: 2px solid rgba(255, 215, 0, 0.5);
+      margin-bottom: 25px;
+    }
+    
+    .btn {
+      padding: 22px 10px; font-size: 48px; font-weight: bold; width: 100%;
+      color: #fff; border: none; border-radius: 18px;
+      cursor: pointer; transition: transform 0.1s; 
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .btn:active { transform: scale(0.95); }
+
+    .btn-easy { background-color: #00b894; box-shadow: 0 8px 0 #008f73; }
+    .btn-normal { background-color: #0984e3; box-shadow: 0 8px 0 #076ebc; }
+    .btn-hard { background-color: #e17055; box-shadow: 0 8px 0 #c25e46; }
+    .btn-boss { background-color: #6c5ce7; box-shadow: 0 8px 0 #5246b8; }
+    
+    .grid-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 500px;
+    }
+
+    .btn-subtext {
+      font-size: 28px; font-weight: normal; margin-top: 8px; display: inline-block;
+    }
+
+    #back-btn, #skip-btn {
+      position: absolute; top: 15px; margin: 0; padding: 8px 16px;
+      font-size: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 101; display: none;
+    }
+    #back-btn { left: 15px; background-color: #333; }
+    #skip-btn { right: 15px; background-color: #e17055; }
+
+    #hud {
+      position: absolute; top: 15px; right: 15px; color: #fff;
+      font-size: 24px; font-weight: bold; background: rgba(0, 0, 0, 0.55);
+      padding: 10px 20px; border-radius: 15px; pointer-events: none;
+      z-index: 100; display: none; backdrop-filter: blur(4px);
+    }
+
+    #star-container { font-size: 32px; margin-top: 15px; width: 100%; text-align: center; line-height: 1.5; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+    .math-box { background: rgba(43, 39, 39, 0.85); padding: 15px 25px; border-radius: 10px; margin: 15px 0; font-size: 28px; text-align: center; line-height: 1.8; }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">航海準備中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" style="border: none; border-radius: 10px; color: white; cursor:pointer;" onclick="returnToMenu()">🔙 返回</button>
+    <button id="skip-btn" style="border: none; border-radius: 10px; color: white; cursor:pointer;" onclick="endTutorial()">⏭️ 跳過教學</button>
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 難度選擇畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button style="position: absolute; top: 15px; left: 15px; padding: 8px 16px; font-size: 18px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <button style="position: absolute; top: 15px; right: 15px; padding: 8px 16px; font-size: 18px; background-color: #555; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onclick="startTutorial()">💡 教學</button>
+
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 15px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>洋<rt>ㄧㄤˊ</rt></ruby><ruby>翻<rt>ㄈㄢ</rt></ruby><ruby>翻<rt>ㄈㄢ</rt></ruby><ruby>樂<rt>ㄌㄜˋ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 32px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); color: #ffd32a;">
+          <ruby>請<rt>ㄑㄧㄥˇ</rt></ruby><ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>擇<rt>ㄗㄜˊ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby><span>！</span>
+        </p>
+      </div>
+      
+      <div class="grid-container">
+        <button class="btn btn-easy" onclick="startGame('easy')">
+          <div><ruby>簡<rt>ㄐㄧㄢˇ</rt></ruby><ruby>單<rt>ㄉㄢ</rt></ruby></div>
+          <span class="btn-subtext">6張牌</span>
+        </button>
+        <button class="btn btn-normal" onclick="startGame('normal')">
+          <div><ruby>普<rt>ㄆㄨˇ</rt></ruby><ruby>通<rt>ㄊㄨㄥ</rt></ruby></div>
+          <span class="btn-subtext">8張牌</span>
+        </button>
+        <button class="btn btn-hard" onclick="startGame('hard')">
+          <div><ruby>困<rt>ㄎㄨㄣˋ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby></div>
+          <span class="btn-subtext">12張牌</span>
+        </button>
+        <button class="btn btn-boss" onclick="startGame('boss')">
+          <div><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>王<rt>ㄨㄤˊ</rt></ruby></div>
+          <span class="btn-subtext">16張牌</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>囉<rt>ㄌㄨㄛ</rt></ruby><span>！</span>
+      </h1>
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      <div id="star-container"></div>
+      
+      <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px;">
+        <button class="btn btn-normal" style="font-size: 36px; padding: 15px; flex-direction: row;" onclick="returnToMenu()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn btn-easy" style="font-size: 36px; padding: 15px; flex-direction: row; background-color: #e17055; box-shadow: 0 8px 0 #c25e46;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 遊戲設定與資源載入
+    // ==========================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900; canvas.height = 1200;
+
+    let bgLoaded = false;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map9.webp'; 
+    bgImg.onload = () => bgLoaded = true;
+
+    const PLAY_AREA = { x: 190, y: 260, w: 520, h: 670 };
+
+    // --- 角色動態載入設定 ---
+    const CHARACTERS = {
+      'han1': { prefix: 'han1', size: 160 },
+      'han2': { prefix: 'han2', size: 170 },
+      'han3': { prefix: 'han3', size: 160 },
+      'han4': { prefix: 'han4', size: 165 },
+      'han5': { prefix: 'han5', size: 160 }
+    };
+    
+    // 讀取玩家選用的角色（如果沒有預設選用 han1）
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    const playerConfig = {
+      size: charConfig.size, hitboxOffsetX: 90, hitboxOffsetY: -20, speedPxPerSec: 2200
+    };
+    
+    let playerImages = [];
+    let loadedAssets = 0; const totalAssets = 3;
+    
+    function checkLoad() {
+      loadedAssets++;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+        lastTime = performance.now(); 
+        requestAnimationFrame(gameLoop);
+        
+        // 補回這個觸發，讓遊戲一開始能自動進入教學或展開遊戲畫面
+        startTutorial();
+      }
+    }
+
+    // 動態載入對應角色的圖片
+    [1, 2, 3].forEach((num, idx) => {
+      const img = new Image(); 
+      img.src = `assets/han/${charConfig.prefix}-${num}.webp`;
+      img.onload = checkLoad; img.onerror = checkLoad;
+      playerImages[idx] = img;
+    });
+
+    const player = {
+      x: 450, y: 1080, targetX: 450, targetY: 1080, size: playerConfig.size, 
+      speed: playerConfig.speedPxPerSec, frame: 0, isFacingLeft: false, 
+      isMoving: false, walkCycle: 0, isAttacking: false
+    };
+
+    let gamePhase = 'start'; 
+    let currentMode = ''; 
+    let actionState = 'idle'; 
+    let lastTime = 0;
+    
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let totalPairs = 0;
+    let starReward = 0;
+    let popupTexts = [];
+
+    const EMOJIS = ['🦀','🐙','🐬','🐢','🐳','🦈','🐡','🐠'];
+    
+    let tutorialStep = -2;
+    const dialogs = {
+      intro: `<ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>片<rt>ㄆㄧㄢˋ</rt></ruby><ruby>看<rt>ㄎㄢˋ</rt></ruby><ruby>看<rt>ㄎㄢˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>什<rt>ㄕㄜˊ</rt></ruby><ruby>麼<rt>ㄇㄜ˙</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>案<rt>ㄢˋ</rt></ruby>`,
+      findSame: `<ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby><ruby>相<rt>ㄒㄧㄤ</rt></ruby><ruby>同<rt>ㄊㄨㄥˊ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>案<rt>ㄢˋ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>片<rt>ㄆㄧㄢˋ</rt></ruby>`,
+      found: `<ruby>找<rt>ㄓㄠˇ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>ㄌㄜ˙</rt></ruby>！`,
+      success: `<ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>！`
+    };
+
+    // ==========================================
+    // 2. 遊戲初始化邏輯
+    // ==========================================
+    function returnToMenu() {
+      gamePhase = 'start';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('start-screen').style.display = 'flex';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      hideDialog();
+    }
+
+    function initDeck(mode) {
+      cards = []; flippedCards = []; matchedPairs = 0;
+      let cols, rows, gap = 15;
+      
+      if (mode === 'easy') { cols = 2; rows = 3; totalPairs = 3; starReward = 3; } 
+      else if (mode === 'normal') { cols = 2; rows = 4; totalPairs = 4; starReward = 5; }
+      else if (mode === 'hard') { cols = 3; rows = 4; totalPairs = 6; starReward = 7; }
+      else if (mode === 'boss') { cols = 4; rows = 4; totalPairs = 8; starReward = 10; }
+      else if (mode === 'tutorial') { cols = 2; rows = 2; totalPairs = 2; starReward = 0; }
+
+      let cellW = (PLAY_AREA.w - (cols - 1) * gap) / cols;
+      let cellH = (PLAY_AREA.h - (rows - 1) * gap) / rows;
+      
+      let startX = PLAY_AREA.x;
+      let startY = PLAY_AREA.y;
+      
+      let deckEmojis = [];
+      if (mode === 'tutorial') {
+         deckEmojis = ['🦀', '🐙', '🐙', '🦀']; 
+      } else {
+         for(let i=0; i<totalPairs; i++) {
+           deckEmojis.push(EMOJIS[i], EMOJIS[i]);
+         }
+         deckEmojis.sort(() => Math.random() - 0.5);
+      }
+
+      let i = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          cards.push({
+            id: i, row: r, col: c,
+            x: startX + c * (cellW + gap), y: startY + r * (cellH + gap),
+            w: cellW, h: cellH, emoji: deckEmojis[i],
+            state: 'down', scaleX: 1 
+          });
+          i++;
+        }
+      }
+      player.x = 450; player.y = 1080; player.isFacingLeft = false;
+    }
+
+    function startGame(mode) {
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('hud').style.display = 'block';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      document.getElementById('coinDisplay').innerText = currentCoins;
+      
+      PLAY_AREA.x = 190; PLAY_AREA.w = 520; PLAY_AREA.y = 260; PLAY_AREA.h = 670;
+      currentMode = mode;
+      gamePhase = 'playing';
+      actionState = 'idle';
+      initDeck(mode);
+    }
+
+    function startTutorial() {
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('skip-btn').style.display = 'block';
+      
+      currentMode = 'tutorial';
+      gamePhase = 'tutorial';
+      actionState = 'idle';
+      
+      PLAY_AREA.x = 250; PLAY_AREA.w = 400; 
+      PLAY_AREA.y = 350; PLAY_AREA.h = 400;
+      initDeck('tutorial');
+      
+      tutorialStep = -1;
+      showDialog(dialogs.intro);
+    }
+    
+    function endTutorial() {
+      hideDialog();
+      returnToMenu(); 
+    }
+
+    // 呼叫模組 API 控制對話框
+    function showDialog(html) {
+      if(window.RPGDialog) window.RPGDialog.show(html);
+    }
+    
+    function hideDialog() { 
+      if(window.RPGDialog) window.RPGDialog.hide();
+    }
+
+    // ==========================================
+    // 3. 畫面繪製與動畫
+    // ==========================================
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function drawCard(card) {
+      ctx.save();
+      ctx.translate(card.x + card.w/2, card.y + card.h/2);
+      ctx.scale(card.scaleX, 1);
+      ctx.translate(-(card.x + card.w/2), -(card.y + card.h/2));
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
+
+      if (card.state === 'down') {
+        ctx.fillStyle = '#2980b9';
+        drawRoundRect(ctx, card.x, card.y, card.w, card.h, 15);
+        ctx.fill();
+        ctx.lineWidth = 4; ctx.strokeStyle = '#ecf0f1'; ctx.stroke();
+        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        ctx.fillStyle = '#ecf0f1'; ctx.font = `${card.w * 0.4}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('⚓', card.x + card.w/2, card.y + card.h/2 + 5);
+      } else {
+        ctx.fillStyle = '#fdfdfd';
+        if (card.state === 'matched') ctx.fillStyle = '#f1f2f6'; 
+        drawRoundRect(ctx, card.x, card.y, card.w, card.h, 15);
+        ctx.fill();
+        ctx.lineWidth = 4; ctx.strokeStyle = card.state === 'matched' ? '#f39c12' : '#3498db'; ctx.stroke();
+        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        ctx.font = `${card.w * 0.6}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(card.emoji, card.x + card.w/2, card.y + card.h/2 + 10);
+        
+        if (card.state === 'matched') {
+            ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
+            drawRoundRect(ctx, card.x+5, card.y+5, card.w-10, card.h-10, 10);
+            ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 150) {
+      popupTexts.push({ text, x, y, color, size, startTime: performance.now(), duration: 1000 });
+    }
+
+    function playSlash(attackCenterX, attackCenterY, callback) {
+      player.isAttacking = true;
+      const frameSpeed = 50; 
+      player.frame = 0; 
+      setTimeout(() => {
+        player.frame = 1; 
+        setTimeout(() => {
+          player.frame = 2; 
+          if(callback) callback(); 
+          setTimeout(() => {
+            player.frame = 0; 
+            player.isAttacking = false;
+          }, frameSpeed);
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    function animateFlip(card, toState, callback) {
+      actionState = 'animatingFlip';
+      let speed = 0.3; 
+      let shrinking = true;
+      
+      function step() {
+        if (shrinking) {
+          card.scaleX -= speed;
+          if (card.scaleX <= 0) {
+            card.scaleX = 0; shrinking = false; card.state = toState;
+          }
+        } else {
+          card.scaleX += speed;
+          if (card.scaleX >= 1) {
+            card.scaleX = 1; actionState = 'idle';
+            if (callback) callback();
+            return;
+          }
+        }
+        requestAnimationFrame(step);
+      }
+      step();
+    }
+
+    // ==========================================
+    // 4. 主迴圈與更新邏輯
+    // ==========================================
+    function gameLoop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      update(dt); draw(currentTime);
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (!player.isAttacking && actionState === 'walkingToCard') {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speed * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.isMoving = true;
+          player.walkCycle += 25 * dt; 
+        } else {
+          player.x = player.targetX; player.y = player.targetY;
+          player.isMoving = false; player.walkCycle = 0;
+          let card = player.targetCard;
+          playSlash(card.x + card.w/2, card.y + card.h/2, () => {
+             animateFlip(card, 'up', () => { processCardFlipped(card); });
+          });
+        }
+      }
+    }
+
+    function processCardFlipped(card) {
+      flippedCards.push(card);
+      
+      if (gamePhase === 'tutorial') {
+         if (tutorialStep === 0) {
+            tutorialStep = 0.5; 
+            showDialog(dialogs.findSame);
+         } 
+         else if (tutorialStep === 1) {
+            tutorialStep = 1.5; 
+            showDialog(dialogs.findSame);
+         }
+         else if (tutorialStep === 3) {
+            tutorialStep = 4; 
+         }
+         else if (tutorialStep === 4) {
+            tutorialStep = 4.5; 
+            flippedCards[0].state = 'matched'; flippedCards[1].state = 'matched';
+            showDialog(dialogs.found);
+         }
+         else if (tutorialStep === 5) {
+            tutorialStep = 6; 
+         }
+         else if (tutorialStep === 6) {
+            tutorialStep = 6.5; 
+            flippedCards[0].state = 'matched'; flippedCards[1].state = 'matched';
+            showDialog(dialogs.success);
+         }
+         return;
+      }
+
+      if (flippedCards.length === 2) {
+        actionState = 'matchingDelay';
+        setTimeout(() => {
+          if (flippedCards[0].emoji === flippedCards[1].emoji) {
+            flippedCards[0].state = 'matched'; flippedCards[1].state = 'matched';
+            matchedPairs++;
+            addPopup('⭕', 450, 600, '#60ff40', 150);
+            if (matchedPairs >= totalPairs) setTimeout(showResult, 500); 
+            else actionState = 'idle';
+          } else {
+            addPopup('❌', 450, 600, '#ff4757', 150);
+            animateFlip(flippedCards[0], 'down');
+            animateFlip(flippedCards[1], 'down', () => { actionState = 'idle'; });
+          }
+          flippedCards = [];
+        }, 350); 
+      }
+    }
+
+    function showResult() {
+      gamePhase = 'result';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+
+      let storedCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotal = storedCoins + starReward;
+      localStorage.setItem('playerCoins', newTotal);
+
+      if (localStorage.getItem('sticker_smap9') !== 'true') {
+        localStorage.setItem('sticker_smap9', 'new');
+      }
+
+      document.getElementById('newCoins').innerText = "+" + starReward;
+      document.getElementById('totalCoins').innerText = newTotal;
+
+      let starsHtml = '';
+      for (let i = 1; i <= starReward; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function draw(now) {
+      if (bgLoaded) ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      else { ctx.fillStyle = '#87CEEB'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+      // 嚴謹判定對話框是否開啟 (=== 'block') 避免抓到空字串導致邏輯誤判
+      let isDialogUp = window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block';
+      let maskActive = false;
+      let targetId = -1;
+      let activeIds = [];
+
+      if (gamePhase === 'tutorial') {
+         maskActive = true;
+         if (tutorialStep === -1) {
+             activeIds = [0, 1, 2, 3];
+         } else if (tutorialStep === 0) targetId = 0;
+         else if (tutorialStep === 1) targetId = 1;
+         else if (tutorialStep === 3) targetId = 0;
+         else if (tutorialStep === 4) targetId = 3;
+         else if (tutorialStep === 5) targetId = 1;
+         else if (tutorialStep === 6) targetId = 2;
+
+         cards.forEach(c => { 
+             if (c.state !== 'down' && !activeIds.includes(c.id)) activeIds.push(c.id); 
+         });
+         
+         if (!isDialogUp && targetId !== -1 && !activeIds.includes(targetId)) {
+            activeIds.push(targetId);
+         }
+      }
+
+      if (maskActive) {
+         cards.forEach(c => drawCard(c));
+         
+         ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'; 
+         ctx.fillRect(0, 0, canvas.width, canvas.height);
+         
+         cards.forEach(c => { if(activeIds.includes(c.id)) drawCard(c); });
+         
+         if (!isDialogUp && targetId !== -1 && actionState === 'idle') {
+            let tc = cards.find(c=>c.id === targetId);
+            let bounce = Math.sin(now / 150) * 15;
+            ctx.font = '70px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('👇', tc.x + tc.w/2, tc.y - 30 + bounce);
+         }
+      } else {
+         cards.forEach(c => drawCard(c));
+      }
+
+      ctx.save();
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 8 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;   
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      const currentImg = playerImages[player.frame];
+      if(currentImg) {
+          if (player.isFacingLeft) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          } else {
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+          }
+      }
+      ctx.restore(); 
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        const popup = popupTexts[i];
+        const progress = (now - popup.startTime) / popup.duration;
+        if (progress >= 1) popupTexts.splice(i, 1);
+        else {
+          ctx.save(); ctx.globalAlpha = 1 - Math.pow(progress, 3);
+          const py = popup.y - progress * 80;
+          ctx.font = `bold ${popup.size}px "Microsoft JhengHei", sans-serif`;
+          ctx.fillStyle = popup.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 8;
+          ctx.textAlign = 'center'; ctx.strokeText(popup.text, popup.x, py); ctx.fillText(popup.text, popup.x, py);
+          ctx.restore();
+        }
+      }
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
+    }
+
+    // 獨立處理對話框點擊推進，同樣嚴謹判定 === 'block'
+    function handleDialogClick() {
+        if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+            if (gamePhase === 'tutorial') {
+               if (tutorialStep === -1) { hideDialog(); tutorialStep = 0; } 
+               else if (tutorialStep === 0.5) { hideDialog(); tutorialStep = 1; } 
+               else if (tutorialStep === 1.5) { 
+                  hideDialog(); tutorialStep = 2; 
+                  actionState = 'matchingDelay';
+                  animateFlip(flippedCards[0], 'down');
+                  animateFlip(flippedCards[1], 'down', () => {
+                     flippedCards = []; actionState = 'idle';
+                     tutorialStep = 3; 
+                  });
+               }
+               else if (tutorialStep === 4.5) { 
+                  hideDialog(); tutorialStep = 5; 
+                  flippedCards = [];
+               }
+               else if (tutorialStep === 6.5) { 
+                  hideDialog(); endTutorial(); 
+               }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      // 點擊畫布時，如果有對話框擋在前面就推進對話
+      if (handleDialogClick()) return;
+
+      if ((gamePhase !== 'playing' && gamePhase !== 'tutorial') || actionState !== 'idle' || player.isAttacking) return;
+
+      const pos = getCanvasPos(e);
+      let clickedCard = cards.find(c => pos.x >= c.x && pos.x <= c.x + c.w && pos.y >= c.y && pos.y <= c.y + c.h);
+
+      if (clickedCard && clickedCard.state === 'down') {
+         if (gamePhase === 'tutorial') {
+            if (tutorialStep === 0 && clickedCard.id !== 0) return;
+            if (tutorialStep === 1 && clickedCard.id !== 1) return;
+            if (tutorialStep === 3 && clickedCard.id !== 0) return;
+            if (tutorialStep === 4 && clickedCard.id !== 3) return;
+            if (tutorialStep === 5 && clickedCard.id !== 1) return;
+            if (tutorialStep === 6 && clickedCard.id !== 2) return;
+         }
+
+         actionState = 'walkingToCard';
+         player.targetCard = clickedCard;
+         let clickX = clickedCard.x + clickedCard.w / 2;
+         let clickY = clickedCard.y + clickedCard.h / 2;
+         
+         player.isFacingLeft = clickX < player.x;
+         player.targetX = player.isFacingLeft ? clickX + playerConfig.hitboxOffsetX : clickX - playerConfig.hitboxOffsetX;
+         player.targetY = clickY - playerConfig.hitboxOffsetY;
+         player.isMoving = true;
+      }
+    });
+
+    window.onload = () => { 
+        setTimeout(() => { if(!bgLoaded) checkLoad(); }, 1000);
+        
+        // 綁定外部模組自有的 DOM 點擊事件
+        if (window.RPGDialog) {
+            window.RPGDialog.boxElement.addEventListener('pointerdown', handleDialogClick);
+        }
+    };
+  </script>
+</body>
+</html>
+```<FollowUp>

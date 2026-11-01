@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵討伐去 - 關卡12</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ff4081;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #000;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #ff4081;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 64, 129, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">海域載入中 (0/5)...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <div id="hud">⏳ <span id="timerDisplay">20.0</span> | ⚔️ <span id="killDisplay">0</span> | ⭐ <span id="coinDisplay">0</span></div>
+    
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>深<rt>ㄕㄣ</rt></ruby>
+          <ruby>海<rt>ㄏㄞˇ</rt></ruby>
+          <ruby>巨<rt>ㄐㄩˋ</rt></ruby>
+          <ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>海<rt>ㄏㄞˇ</rt></ruby>
+          <ruby>上<rt>ㄕㄤˋ</rt></ruby>
+          <ruby>有<rt>ㄧㄡˇ</rt></ruby>
+          <ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby>
+          <ruby>獸<rt>ㄕㄡˋ</rt></ruby>
+          <ruby>出<rt>ㄔㄨ</rt></ruby>
+          <ruby>現<rt>ㄒㄧㄢˋ</rt></ruby>
+          <br>
+          <ruby>打<rt>ㄉㄚˇ</rt></ruby>
+          <ruby>敗<rt>ㄅㄞˋ</rt></ruby>
+          <ruby>牠<rt>ㄊㄚ</rt></ruby>
+          <ruby>吧<rt>˙ㄅㄚ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 class="zh-text" style="font-size: 38px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>時<rt>ㄕˊ</rt></ruby>
+        <ruby>間<rt>ㄐㄧㄢ</rt></ruby>
+        <ruby>到<rt>ㄉㄠˋ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        ⚔️: <span id="finalKills">0</span> <br>
+        ⭐: <span id="newCoins" style="color:#60ff40;">+0</span> <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 26px; padding: 12px 0; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 30px; padding: 15px 0; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 完全保留 Map1 的角色特效與設定
+    // ==========================================
+    const CHARACTERS = {
+      'han1': {
+        name: '揮劍女孩', prefix: 'han1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); 
+          ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; 
+          ctx.shadowColor = '#00bfff'; 
+          ctx.shadowBlur = 15; 
+          ctx.lineWidth = 12 * (1 - p);
+          ctx.beginPath(); 
+          
+          // 【修復】判斷攻擊方向：如果目標在左邊，就畫左半圓；在右邊則畫右半圓
+          if (targetX < startX) {
+            ctx.arc(targetX, targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5); // 左半圓
+          } else {
+            ctx.arc(targetX, targetY, 30 + p * 40, -Math.PI / 2, Math.PI / 2);  // 右半圓
+          }
+          
+          ctx.stroke(); 
+          ctx.restore();
+        }
+      },
+      'han2': {
+        name: '弓箭公主', prefix: 'han2', size: 170, hitboxOffsetX: 130, hitboxOffsetY: 0, hitboxRadius: 50,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.strokeStyle = `rgba(255, 105, 180, ${1 - p})`; ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 20; ctx.lineWidth = 8 * (1 - p);
+          ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(targetX, targetY); ctx.stroke();
+          ctx.font = `${30 + p * 30}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 1 - p; ctx.fillText('💖', targetX, targetY - p * 20); ctx.restore();
+        }
+      },
+      'han3': {
+        name: '魔法仙子', 
+        prefix: 'han3', 
+        size: 160, 
+        hitboxOffsetX: 110, 
+        hitboxOffsetY: 0, // 【修正】將打擊點提高到水龍胸口/頭部，不再砸在海面上
+        hitboxRadius: 65,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); 
+          
+          // 前半段 (p: 0 ~ 0.6) 月亮從高空墜落衝擊；後半段 (p: 0.6 ~ 1.0) 產生強烈爆炸與星芒
+          if (p < 0.65) {
+            const dropProgress = p / 0.65;
+            // 從上方 260px 高空砸向目標
+            const dropY = targetY - 260 * (1 - dropProgress); 
+            
+            ctx.translate(targetX, dropY); 
+            ctx.rotate(dropProgress * Math.PI * 2); // 旋轉一圈，動態更平穩清晰
+            
+            // 強烈金色神聖光暈
+            ctx.shadowColor = '#FFE066'; 
+            ctx.shadowBlur = 25; 
+            
+            // 快速淡入，保持實體清晰度
+            ctx.globalAlpha = Math.min(1, dropProgress * 3); 
+            
+            // 尺寸放大至 110px，巨大且顯眼
+            ctx.font = '110px sans-serif'; 
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline = 'middle'; 
+            ctx.fillText('🌙', 0, 0);
+          } else {
+            // 砸中瞬間：月亮炸裂成金色衝擊光環與四散星芒
+            const burstP = (p - 0.65) / 0.35;
+            ctx.translate(targetX, targetY);
+            
+            // 1. 金色擴散衝擊波光圈
+            ctx.strokeStyle = `rgba(255, 223, 70, ${1 - burstP})`;
+            ctx.lineWidth = 8 * (1 - burstP);
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(0, 0, burstP * 90, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 2. 8 顆發光大星星噴發飛散
+            ctx.shadowBlur = 10;
+            for (let i = 0; i < 8; i++) {
+              const angle = (i * Math.PI * 2) / 8 + burstP * 1.5;
+              const dist = burstP * 110;
+              ctx.globalAlpha = 1 - burstP;
+              ctx.font = `${36 * (1 - burstP * 0.4)}px sans-serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText('✨', Math.cos(angle) * dist, Math.sin(angle) * dist);
+            }
+          }
+          
+          ctx.restore();
+        }
+      },
+      'han4': {
+        name: '漩渦公主', prefix: 'han4', size: 165, hitboxOffsetX: 120, hitboxOffsetY: 0, hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save(); ctx.translate(targetX, targetY);
+          ctx.rotate(-p * Math.PI * 8); ctx.lineWidth = 6 * (1 - p);
+          for (let r = 25; r <= 95; r += 22) {
+            ctx.strokeStyle = `rgba(186, 104, 200, ${1 - p})`; ctx.shadowColor = '#e1bee7'; ctx.shadowBlur = 12 * (1 - p);
+            ctx.beginPath(); ctx.arc(0, 0, r * (1 - p * 0.4), 0, Math.PI * 1.4); ctx.stroke();
+          }
+          const items = ['🧦', '🧱', '🧸', '✨', '💨'];
+          items.forEach((item, idx) => {
+            const angle = (idx * Math.PI * 2) / items.length + p * Math.PI * 4; const dist = (1 - p) * 115; const itemScale = Math.max(0.2, 1 - p * 0.8);
+            ctx.save(); ctx.font = `${26 * itemScale}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.globalAlpha = Math.max(0, 1 - p * 0.5); ctx.fillText(item, Math.cos(angle) * dist, Math.sin(angle) * dist); ctx.restore();
+          });
+          if (p > 0.65) {
+            const popP = (p - 0.65) / 0.35; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = Math.max(0, 1 - popP);
+            const cloudScale = 40 + popP * 30; ctx.font = `${cloudScale}px sans-serif`; ctx.fillText('💨', 0, 0);
+            const starCount = 5; const starDist = popP * 60; ctx.font = `${22 * (1 - popP * 0.3)}px sans-serif`;
+            for (let i = 0; i < starCount; i++) {
+              const a = (i * Math.PI * 2) / starCount + popP * 2; ctx.fillText('✨', Math.cos(a) * starDist, Math.sin(a) * starDist);
+            }
+          }
+          ctx.restore(); 
+        }
+      },
+
+      // map12專屬的han5攻擊特效!!,若其他map要使用請跳出警告並通知參考map1或是map2
+      'han5': {
+        name: '愛心公主', 
+        prefix: 'han5', 
+        size: 165, 
+        hitboxOffsetX: 120, 
+        hitboxOffsetY: 0, 
+        hitboxRadius: 55,
+        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+          ctx.save();
+          
+          // 1. 完全直線衝刺 (無拋物線)
+          const currentX = startX + (targetX - startX) * p;
+          const currentY = startY + (targetY - startY) * p;
+
+          // ==========================================
+          // 🌟 新增：銳利的 X 型交叉劍氣 / 星芒切線軌跡
+          // ==========================================
+          ctx.save();
+          // 將畫布中心移至起始點，並轉向攻擊目標的角度
+          const angle = Math.atan2(targetY - startY, targetX - startX);
+          ctx.translate(startX, startY);
+          ctx.rotate(angle);
+          
+          // 畫出一條長度隨進度伸展的中心主線 (高亮度粉白)
+          const lineLength = Math.sqrt(Math.pow(targetX - startX, 2) + Math.pow(targetY - startY, 2)) * p;
+          
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(lineLength, 0);
+          ctx.strokeStyle = `rgba(255, 230, 240, ${0.8 * (1 - p)})`; // 幾乎是白色的粉
+          ctx.lineWidth = 4;
+          ctx.shadowColor = '#ff69b4';
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+          
+          // 在愛心當前位置畫出兩道交叉斜線，形成「星芒衝刺」的車頭燈效果
+          ctx.translate(lineLength, 0); // 移到愛心當前位置
+          ctx.beginPath();
+          // 斜線 1 ( \ )
+          ctx.moveTo(-25, -25);
+          ctx.lineTo(25, 25);
+          // 斜線 2 ( / )
+          ctx.moveTo(-25, 25);
+          ctx.lineTo(25, -25);
+          
+          ctx.strokeStyle = `rgba(255, 105, 180, ${0.9 * (1 - p)})`; // 桃紅色
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+
+          // 3. 畫出飛翔中的「大愛心」本體
+          ctx.translate(currentX, currentY);
+          
+          let heartScale = 1;
+          if (p < 0.2) heartScale = p / 0.2; 
+          else if (p > 0.8) heartScale = 1 - (p - 0.8); 
+          
+          ctx.rotate(Math.sin(p * Math.PI * 2) * 0.05); 
+          ctx.scale(heartScale, heartScale);
+
+          ctx.font = '65px sans-serif'; 
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'transparent'; 
+          ctx.shadowBlur = 0;
+          
+          ctx.globalAlpha = p > 0.85 ? 1 - ((p - 0.85) / 0.15) : 1;
+          ctx.fillText('💖', 0, 0);
+          ctx.restore();
+
+          // 4. 擊中目標點的爆開特效 (極簡爆破光圈)
+          if (p > 0.8) {
+            ctx.save();
+            const burstP = (p - 0.8) / 0.2; 
+            ctx.translate(targetX, targetY);
+            ctx.globalAlpha = 1 - burstP;
+
+            // 俐落的粉紅衝擊光圈，稍微加粗讓打擊感在 map12 的暗色背景更明顯
+            ctx.beginPath();
+            ctx.arc(0, 0, burstP * 65, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 20, 147, ${1 - burstP})`;
+            ctx.lineWidth = 8 * (1 - burstP); // 從 5 加粗到 8
+            ctx.stroke();
+
+            ctx.restore();
+          }
+        }
+      }
+    };
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let kills = 0;
+    let coins = 0;
+    let timeLeft = 20.0;
+    let isPlaying = false;
+    let lastTime = 0; 
+    let activeEffects = []; 
+    let popupTexts = []; 
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    // ==========================================
+    // 2. 海面波浪系統
+    // ==========================================
+    const wavePoints = [
+      {x: 1, y: 608}, {x: 9, y: 613}, {x: 182, y: 560}, {x: 361, y: 629}, 
+      {x: 608, y: 559}, {x: 821, y: 609}, {x: 881, y: 591}, {x: 899, y: 585}
+    ];
+
+    function getWaveY(currentX, timeNow) {
+      let p1 = wavePoints[0], p2 = wavePoints[wavePoints.length - 1];
+      for (let i = 0; i < wavePoints.length - 1; i++) {
+        if (currentX >= wavePoints[i].x && currentX <= wavePoints[i+1].x) {
+          p1 = wavePoints[i]; p2 = wavePoints[i+1]; break;
+        }
+      }
+      let ratio = (currentX - p1.x) / (p2.x - p1.x || 1);
+      let baseY = p1.y + (p2.y - p1.y) * ratio;
+      return baseY + Math.sin(timeNow / 300 + currentX * 0.005) * 12;
+    }
+
+    // ==========================================
+    // 3. 落雷特效系統
+    // ==========================================
+    const lightningPoints = [
+      {x: 149, y: 237}, {x: 332, y: 229}, {x: 555, y: 239}, {x: 803, y: 236}, 
+      {x: 433, y: 286}, {x: 232, y: 294}, {x: 673, y: 94}, {x: 242, y: 103}
+    ];
+    let activeLightnings = [];
+
+    function spawnLightning() {
+      const pt = lightningPoints[Math.floor(Math.random() * lightningPoints.length)];
+      activeLightnings.push({
+        x: pt.x, y: pt.y, spawnTime: performance.now(), duration: 150 + Math.random() * 100
+      });
+    }
+
+    // ==========================================
+    // 4. 角色與長條巨型水龍設定
+    // ==========================================
+    const player = {
+      x: 450, y: 0, size: charConfig.size, 
+      speedPxPerSec: 1800, // 大幅提升移動速度
+      targetX: 450, frame: 0, 
+      isAttacking: false, isFacingLeft: false, isMoving: false, walkCycle: 0,        
+      hitboxOffsetX: charConfig.hitboxOffsetX, hitboxOffsetY: charConfig.hitboxOffsetY, hitboxRadius: charConfig.hitboxRadius     
+    };
+
+    const dragonSpawnXs = [180, 400, 620, 800];
+    let currentSpawnIndex = -1;
+
+    const monster = {
+      x: 0, y: 0, 
+      width: 220, height: 660, // 巨龍長條尺寸 (約 1:3)
+      isVisible: false, hp: 6, spawnTime: 0, hitShake: 0
+    };
+
+    function spawnMonster() {
+      let newIdx;
+      do { newIdx = Math.floor(Math.random() * dragonSpawnXs.length); } while(newIdx === currentSpawnIndex);
+      currentSpawnIndex = newIdx;
+      
+      monster.x = dragonSpawnXs[currentSpawnIndex];
+      monster.hp = 6;
+      monster.isVisible = true;
+      monster.spawnTime = performance.now();
+      monster.hitShake = 0;
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 30) {
+      popupTexts.push({ text: text, x: x, y: y, color: color, size: size, startTime: performance.now(), duration: 1000 });
+    }
+
+    // 資源載入
+    let totalAssets = 5; 
+    let loadedAssets = 0;
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `海域載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        draw(); 
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map12.webp'; // 修改背景圖路徑
+    bgImg.onload = () => {
+      canvas.width = bgImg.width; canvas.height = bgImg.height;
+      document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
+      checkLoadProgress();
+    };
+
+    const playerImages = [];
+    [1, 2, 3].forEach((num, idx) => {
+      const img = new Image();
+      img.src = `assets/han/${charConfig.prefix}-${num}.webp`; 
+      img.onload = () => checkLoadProgress();
+      playerImages[idx] = img;
+    });
+
+    const monsterImg = new Image();
+    monsterImg.src = 'assets/bad/bad12.webp'; // 修改怪獸圖路徑
+    monsterImg.onload = () => checkLoadProgress();
+
+    function startGame() {
+      kills = 0; coins = 0; timeLeft = 20.0;
+      isPlaying = true; activeEffects = []; popupTexts = []; activeLightnings = [];
+      
+      document.getElementById('back-btn').style.display = 'block';
+      updateHUD();
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      player.x = canvas.width / 2;
+      player.targetX = player.x;
+      player.isMoving = false; player.isAttacking = false; player.frame = 0;
+      
+      spawnMonster();
+    }
+
+    function updateHUD() {
+      document.getElementById('killDisplay').innerText = kills;
+      document.getElementById('coinDisplay').innerText = coins;
+      document.getElementById('timerDisplay').innerText = Math.max(0, timeLeft).toFixed(1);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      document.getElementById('back-btn').style.display = 'none';
+      monster.isVisible = false; player.isMoving = false;
+      document.getElementById('hud').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + coins;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+
+if (localStorage.getItem('sticker_smap12') !== 'true') {
+  localStorage.setItem('sticker_smap12', 'new');
+} 
+      
+      document.getElementById('finalKills').innerText = kills;
+      document.getElementById('newCoins').innerText = "+" + coins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let killsHtml = '';
+      for (let i = 1; i <= coins; i++) {
+        killsHtml += '⭐';
+        if (i % 10 === 0) killsHtml += '<br>'; 
+      }
+      document.getElementById('star-container').innerHTML = killsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if(isPlaying || activeEffects.length > 0 || popupTexts.length > 0) {
+        update(Math.min(dt, 0.1), currentTime);
+        draw(currentTime);
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt, timeNow) {
+      if (isPlaying) {
+        timeLeft -= dt;
+        updateHUD();
+        if (timeLeft <= 0) { endGame(); return; }
+        if (Math.random() < dt * 1.5) spawnLightning();
+      }
+
+      if (!player.isAttacking) {
+        let dx = player.targetX - player.x;
+        let distanceX = Math.abs(dx);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distanceX > moveDist) {
+          player.x += Math.sign(dx) * moveDist;
+          player.isMoving = true;
+          player.walkCycle += 25 * dt; 
+        } else {
+          if (player.isMoving) {
+            player.x = player.targetX;
+            player.isMoving = false;
+            player.walkCycle = 0;
+            triggerSlashVisual(); // 移動到位後自動播放一次揮擊
+          }
+        }
+      }
+      player.y = getWaveY(player.x, timeNow);
+    }
+
+    function draw(now) {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+      // 落雷特效
+      ctx.lineWidth = 4;
+      activeLightnings.forEach((lt, idx) => {
+        let progress = (now - lt.spawnTime) / lt.duration;
+        if (progress > 1) { activeLightnings.splice(idx, 1); return; }
+        
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - progress})`;
+        ctx.moveTo(lt.x - 30 + Math.random()*60, 0);
+        ctx.lineTo(lt.x, lt.y);
+        ctx.stroke();
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.1 * (1 - progress)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      });
+
+      // 繪製巨型水龍
+      if (monster.isVisible) {
+        let waveY = getWaveY(monster.x, now);
+        let timeAlive = now - monster.spawnTime;
+        let p = Math.min(1, timeAlive / 400); 
+        
+        // 巨龍浮出水面的 Y 座標計算：完全浮出時下半身仍埋在海線下
+        let targetDrawY = waveY - monster.height + 250; 
+        let startDrawY = waveY + 80;
+        let drawY = startDrawY + p * (targetDrawY - startDrawY);
+        
+        ctx.save();
+        ctx.globalAlpha = p;
+        if (monster.hitShake > 0) {
+          ctx.translate((Math.random() - 0.5) * monster.hitShake, (Math.random() - 0.5) * monster.hitShake);
+          monster.hitShake *= 0.8; 
+        }
+        
+        if (monsterImg.complete && monsterImg.naturalWidth > 0) {
+          ctx.drawImage(monsterImg, monster.x - monster.width/2, drawY, monster.width, monster.height);
+        } else {
+          ctx.fillStyle = '#2ed573';
+          ctx.fillRect(monster.x - monster.width/2, drawY, monster.width, monster.height);
+        }
+        
+        // 血條
+        if (p === 1) {
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(monster.x - 45, drawY - 30, 90, 15);
+          ctx.fillStyle = '#ff4757';
+          ctx.fillRect(monster.x - 45, drawY - 30, 90 * (monster.hp / 6), 15);
+        }
+        ctx.restore();
+      }
+
+      // ==========================
+      // 繪製順序修正：先畫人偶，再畫船體
+      // ==========================
+      
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;         
+      let nextY = getWaveY(player.x + 10, now);
+      let waveSlopeAngle = Math.atan2(nextY - player.y, 10);
+
+      // 1. 先畫人偶
+      const currentImg = playerImages[player.frame];
+      if(currentImg) {
+          ctx.save(); 
+          ctx.translate(player.x, player.y + offsetY);
+          ctx.rotate(waveSlopeAngle * 0.5);
+          
+          if (player.isFacingLeft) {
+            ctx.scale(-1, 1);
+            // 人偶稍微往下移，準備被船體擋住下半身
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2 - 10, player.size, player.size);
+          } else {
+            ctx.drawImage(currentImg, -player.size / 2, -player.size / 2 - 10, player.size, player.size);
+          }
+          ctx.restore(); 
+      }
+
+      // 2. 畫放大的船體（覆蓋在人偶下半身）
+      ctx.save();
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(waveSlopeAngle * 0.5);
+      
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      // 半橢圓形作為船身前擋板
+      ctx.ellipse(0, 45, 110, 42, 0, 0, Math.PI);
+      ctx.fill();
+      
+      ctx.strokeStyle = '#5C2E0B';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.ellipse(0, 45, 110, 42, 0, 0, Math.PI);
+      ctx.stroke();
+      
+      ctx.strokeStyle = '#A0522D';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 45, 100, 32, 0, 0, Math.PI);
+      ctx.stroke();
+      ctx.restore();
+
+      // 特效與飄字
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const fx = activeEffects[i];
+        const progress = (now - fx.startTime) / fx.duration;
+        if (progress >= 1) { activeEffects.splice(i, 1); } 
+        else { charConfig.drawEffect(ctx, progress, fx.startX, fx.startY, fx.targetX, fx.targetY); }
+      }
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+          const popup = popupTexts[i];
+          const progress = (now - popup.startTime) / popup.duration;
+          
+          if (progress >= 1) { popupTexts.splice(i, 1); } 
+          else {
+              ctx.save(); ctx.globalAlpha = 1 - Math.pow(progress, 3); 
+              const floatY = popup.y - (progress * 50); 
+              ctx.font = `bold ${popup.size}px sans-serif`;
+              ctx.fillStyle = popup.color; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+              ctx.strokeText(popup.text, popup.x, floatY); ctx.fillText(popup.text, popup.x, floatY);
+              ctx.restore();
+          }
+      }
+    }
+
+    // ==========================================
+    // 獨立處理：零延遲打擊判定 (支援快速連點)
+    // ==========================================
+    function executeHit() {
+      const currentOffsetX = player.isFacingLeft ? -player.hitboxOffsetX : player.hitboxOffsetX;
+      const attackCenterX = player.x + currentOffsetX;
+      const attackCenterY = player.y + player.hitboxOffsetY; 
+      const attackRadius = player.hitboxRadius;
+      
+      activeEffects.push({
+          startTime: performance.now(), 
+          duration: 420, // 【修正】延長至 420 毫秒，連擊時月亮更清晰、更華麗
+          startX: player.x, 
+          startY: player.y - 20, 
+          targetX: attackCenterX, 
+          targetY: attackCenterY
+      });
+      
+      if (isPlaying) {
+          const distToMonsterX = Math.abs(attackCenterX - monster.x);
+          // 若水龍存活且在攻擊範圍內，立刻扣血
+          if (monster.isVisible && monster.hp > 0 && distToMonsterX <= (attackRadius + monster.width / 2)) {
+            monster.hp--;
+            monster.hitShake = 22; // 強烈受擊震動
+            addPopup('-1', monster.x + (Math.random()-0.5)*50, player.y - 200, '#ff4757', 45);
+
+            if (monster.hp <= 0) {
+              monster.isVisible = false;
+              kills++;
+              
+              // 100% 必定掉落星星
+              coins++;
+              addPopup('⭐', monster.x, player.y - 50, '#FFD700', 60);
+              
+              updateHUD();
+              setTimeout(spawnMonster, 300);
+            }
+          }
+      }
+    }
+
+    // 純視覺揮擊動畫播放 (不阻擋傷害判定)
+    function triggerSlashVisual() {
+      if (player.isAttacking) return;
+      player.isAttacking = true;
+      const frameSpeed = 70; // 加快動畫播放速度
+
+      player.frame = 1; 
+      setTimeout(() => {
+        player.frame = 2; 
+        setTimeout(() => { 
+          player.frame = 0; 
+          player.isAttacking = false; 
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (!isPlaying) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      
+      player.isFacingLeft = clickX < player.x;
+      player.targetX = player.isFacingLeft ? clickX + player.hitboxOffsetX : clickX - player.hitboxOffsetX;
+
+      // 擴大點擊寬容度 (40px)，只要在附近連續點擊，就會瞬間發動攻擊與傷害
+      if (Math.abs(player.targetX - player.x) <= 40) { 
+        executeHit();
+        triggerSlashVisual();
+      } 
+      else { 
+        player.isMoving = true; 
+      }
+    });
+  </script>
+</body>
+</html>

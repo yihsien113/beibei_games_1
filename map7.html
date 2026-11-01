@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡7 (猜猜我是誰)</title>
+  
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #00e5ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #0b1d21;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      background-color: rgba(0, 0, 0, 0.82);
+      border: 2px solid rgba(0, 229, 255, 0.35);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #00b894;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 184, 148, 0.45);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">森林魔法陣載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 26px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+          <ruby>我<rt>ㄨㄛˇ</rt></ruby>
+          <ruby>是<rt>ㄕˋ</rt></ruby>
+          <ruby>誰<rt>ㄕㄟˊ</rt></ruby>
+        </h1>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.6;">
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+          <ruby>猜<rt>ㄘㄞ</rt></ruby>
+          <ruby>魔<rt>ㄇㄛˊ</rt></ruby>
+          <ruby>法<rt>ㄈㄚˇ</rt></ruby>
+          <ruby>陣<rt>ㄓㄣˋ</rt></ruby>
+          <ruby>裡<rt>ㄌㄧˇ</rt></ruby>
+          <ruby>面<rt>ㄇㄧㄢˋ</rt></ruby><br>
+          <ruby>是<rt>ㄕˋ</rt></ruby>
+          <ruby>什<rt>ㄕㄣˊ</rt></ruby>
+          <ruby>麼<rt>˙ㄇㄜ</rt></ruby>
+          <ruby>動<rt>ㄉㄨㄥˋ</rt></ruby>
+          <ruby>物<rt>ㄨˋ</rt></ruby>
+          <span>?</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900;
+    canvas.height = 1200;
+
+    // --- 魔法陣動物剪影座標 ---
+    const MAGIC_CENTER = { x: 455, y: 763 };
+
+    // --- 動物題庫 ---
+    const DB_ANIMALS = [
+      {
+        name: '兔子', emoji: '🐰',
+        words: [
+          { char: '兔', phonics: ['ㄊ', 'ㄨ'], tone: 'ˋ' },
+          { char: '子', phonics: ['ㄗ'], tone: '˙' }
+        ],
+        phonicDistractors: ['ㄉ']
+      },
+      {
+        name: '大象', emoji: '🐘',
+        words: [
+          { char: '大', phonics: ['ㄉ', 'ㄚ'], tone: 'ˋ' },
+          { char: '象', phonics: ['ㄒ', 'ㄧ', 'ㄤ'], tone: 'ˋ' }
+        ],
+        phonicDistractors: ['ㄊ']
+      },
+      {
+        name: '老虎', emoji: '🐯',
+        words: [
+          { char: '老', phonics: ['ㄌ', 'ㄠ'], tone: 'ˇ' },
+          { char: '虎', phonics: ['ㄏ', 'ㄨ'], tone: 'ˇ' }
+        ],
+        phonicDistractors: ['ㄋ']
+      },
+      {
+        name: '袋鼠', emoji: '🦘',
+        words: [
+          { char: '袋', phonics: ['ㄉ', 'ㄞ'], tone: 'ˋ' },
+          { char: '鼠', phonics: ['ㄕ', 'ㄨ'], tone: 'ˇ' }
+        ],
+        phonicDistractors: ['ㄙ']
+      },
+      {
+        name: '猴子', emoji: '🐵',
+        words: [
+          { char: '猴', phonics: ['ㄏ', 'ㄡ'], tone: 'ˊ' },
+          { char: '子', phonics: ['ㄗ'], tone: '˙' }
+        ],
+        phonicDistractors: ['ㄎ']
+      },
+      {
+        name: '狐狸', emoji: '🦊',
+        words: [
+          { char: '狐', phonics: ['ㄏ', 'ㄨ'], tone: 'ˊ' },
+          { char: '狸', phonics: ['ㄌ', 'ㄧ'], tone: 'ˊ' }
+        ],
+        phonicDistractors: ['ㄈ']
+      },
+      {
+        name: '螃蟹', emoji: '🦀',
+        words: [
+          { char: '螃', phonics: ['ㄆ', 'ㄤ'], tone: 'ˊ' },
+          { char: '蟹', phonics: ['ㄒ', 'ㄧ', 'ㄝ'], tone: 'ˋ' }
+        ],
+        phonicDistractors: ['ㄅ']
+      },
+      {
+        name: '青蛙', emoji: '🐸',
+        words: [
+          { char: '青', phonics: ['ㄑ', 'ㄧ', 'ㄥ'], tone: null },
+          { char: '蛙', phonics: ['ㄨ', 'ㄚ'], tone: null }
+        ],
+        phonicDistractors: ['ㄒ']
+      },
+      {
+        name: '蝴蝶', emoji: '🦋',
+        words: [
+          { char: '蝴', phonics: ['ㄏ', 'ㄨ'], tone: 'ˊ' },
+          { char: '蝶', phonics: ['ㄉ', 'ㄧ', 'ㄝ'], tone: 'ˊ' }
+        ],
+        phonicDistractors: ['ㄊ']
+      }
+    ];
+
+    const ALL_TONES = ['ˊ', 'ˇ', 'ˋ', '˙'];
+
+    // 遊戲參數
+    const MAX_QUESTIONS = 5;
+    let questionsPool = [];
+    let currentQIndex = 0;
+    let currentQ = null;
+    let stars = 0;
+    let gamePhase = 'start';
+    let whiteFade = 0;
+    let lastTime = 0;
+    let popupTexts = [];
+    let checkingAnswer = false;
+    let isSolved = false;
+    let revealScale = 1;
+    let showBigWrongX = 0;
+
+    // 排版與互動陣列
+    let wordBoxes = [];
+    let slots = [];
+    let tiles = [];
+    let activeDragTile = null;
+    let dragOffset = { x: 0, y: 0 };
+
+    // 背景圖片設定
+    let bgLoaded = false;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map7.webp';
+
+    function finishLoading() {
+  // 等待外部字型（Google Font）在平板上完全載入完畢
+  document.fonts.ready.then(() => {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'block';
+    document.getElementById('game-container').style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+    document.getElementById('start-screen').style.display = 'flex';
+    if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+    draw();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+  });
+}
+
+    bgImg.onload = () => {
+      canvas.width = bgImg.width || 900;
+      canvas.height = bgImg.height || 1200;
+      bgLoaded = true;
+      finishLoading();
+    };
+    bgImg.onerror = () => {
+      bgLoaded = false;
+      finishLoading();
+    };
+
+    function addPopup(text, x, y, color = '#fff', size = 55) {
+      popupTexts.push({
+        text: text, x: x, y: y, color: color, size: size,
+        startTime: performance.now(), duration: 1400
+      });
+    }
+
+    // --- 動態建立題目與直式注音插槽 ---
+    function generateRound() {
+      currentQ = questionsPool[currentQIndex];
+      isSolved = false;
+      checkingAnswer = false;
+      revealScale = 1;
+      showBigWrongX = 0;
+      slots = [];
+      tiles = [];
+      wordBoxes = [];
+
+      // 1. 上方雲彩區 (Y: 145~390) 建立國字與直式插槽
+      const boxCentersX = [265, 635];
+      const boxCenterY = 265;
+
+      currentQ.words.forEach((w, wIdx) => {
+        const cx = boxCentersX[wIdx];
+        const cy = boxCenterY;
+
+        wordBoxes.push({
+          char: w.char,
+          x: cx - 140,
+          y: cy - 115,
+          w: 280,
+          h: 230,
+          charX: cx - 52,
+          charY: cy + 5
+        });
+
+        const pCount = w.phonics.length;
+        const slotSize = 68;    // ★ 調大到 68（拉開格子空間）
+        const gap = 12;         // ★ 格子間隙
+        const totalH = pCount * slotSize + (pCount - 1) * gap;
+        const topOffset = (w.tone === '˙') ? 24 : 0;
+        const startY = cy - totalH / 2 + slotSize / 2 + topOffset;
+        const phonicColX = cx + 46;
+
+        w.phonics.forEach((pChar, pIdx) => {
+          slots.push({
+            x: phonicColX,
+            y: startY + pIdx * (slotSize + gap),
+            radius: 34,        // ★ 一般注音格半徑從 27 放大到 34（直徑變 68px）
+            expected: pChar,
+            isToneSlot: false,
+            occupiedTile: null
+          });
+        });
+
+        // 動態聲調格
+        if (w.tone === '˙') {
+          slots.push({
+            x: phonicColX,
+            y: startY - slotSize / 2 - 32,
+            radius: 28,        // ★ 輕聲格半徑從 23 放大到 28
+            expected: '˙',
+            isToneSlot: true,
+            occupiedTile: null
+          });
+        } else if (w.tone) {
+          const toneY = (pCount === 1)
+            ? startY
+            : startY + ((pCount - 1) * (slotSize + gap)) * 0.55;
+          slots.push({
+            x: phonicColX + 64, // ★ 水平間距微調到 64，避免大格子互撞
+            y: toneY,
+            radius: 30,        // ★ 聲調格半徑從 24 放大到 30
+            expected: w.tone,
+            isToneSlot: true,
+            occupiedTile: null
+          });
+        }
+      });
+
+      // 2. 候選區打散與混入 2 個聲調干擾項
+      const answerChars = slots.map(s => s.expected);
+      const usedTones = currentQ.words.map(w => w.tone).filter(Boolean);
+      const availableExtraTones = ALL_TONES.filter(t => !usedTones.includes(t));
+      availableExtraTones.sort(() => Math.random() - 0.5);
+      const extraTones = availableExtraTones.slice(0, 2);
+
+      const allTileChars = [
+        ...answerChars,
+        ...extraTones,
+        ...(currentQ.phonicDistractors || [])
+      ];
+      allTileChars.sort(() => Math.random() - 0.5);
+
+      const totalTiles = allTileChars.length;
+      const maxPerRow = Math.ceil(totalTiles / 2);
+      const rowY = [465, 555];
+
+      allTileChars.forEach((ch, idx) => {
+        const r = idx < maxPerRow ? 0 : 1;
+        const colIdx = r === 0 ? idx : idx - maxPerRow;
+        const countInThisRow = r === 0 ? maxPerRow : (totalTiles - maxPerRow);
+        const spacing = Math.min(115, 760 / Math.max(countInThisRow, 1));
+        const startX = (canvas.width - (countInThisRow - 1) * spacing) / 2;
+        const hx = startX + colIdx * spacing;
+        const hy = rowY[r];
+        const isTone = ALL_TONES.includes(ch);
+
+        tiles.push({
+          id: idx,
+          char: ch,
+          isTone: isTone,
+          homeX: hx,
+          homeY: hy,
+          x: hx,
+          y: hy,
+          radius: isTone ? 34 : 38,
+          slotIndex: null
+        });
+      });
+    }
+
+    function startGame() {
+      questionsPool = [...DB_ANIMALS].sort(() => Math.random() - 0.5).slice(0, MAX_QUESTIONS);
+      currentQIndex = 0;
+      stars = 0;
+      whiteFade = 0;
+      popupTexts = [];
+
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('coinDisplay').innerText = stars;
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+
+      gamePhase = 'playing';
+      generateRound();
+    }
+
+    function endGame() {
+      gamePhase = 'result';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+
+if (localStorage.getItem('sticker_smap7') !== 'true') {
+  localStorage.setItem('sticker_smap7', 'new');
+}
+
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+
+      if (gamePhase !== 'start') {
+        if (revealScale > 1) {
+          revealScale += (1 - revealScale) * 8 * dt;
+          if (Math.abs(revealScale - 1) < 0.01) revealScale = 1;
+        }
+        if (showBigWrongX > 0) {
+          showBigWrongX -= dt;
+        }
+        if (gamePhase === 'ending') {
+          whiteFade += dt * 1.4;
+          if (whiteFade >= 1) {
+            whiteFade = 1;
+            endGame();
+          }
+        }
+        draw();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function draw() {
+      const now = performance.now();
+
+      // 1. 背景繪製
+      if (bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        let grad = ctx.createRadialGradient(MAGIC_CENTER.x, MAGIC_CENTER.y, 50, MAGIC_CENTER.x, 500, 800);
+        grad.addColorStop(0, '#134e4a');
+        grad.addColorStop(0.5, '#0f292e');
+        grad.addColorStop(1, '#061014');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(MAGIC_CENTER.x, MAGIC_CENTER.y + 70);
+        ctx.scale(1, 0.42);
+        ctx.strokeStyle = isSolved ? '#ffe66d' : '#00e5ff';
+        ctx.shadowColor = isSolved ? '#ffe66d' : '#00e5ff';
+        ctx.shadowBlur = 25;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(0, 0, 270, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 220, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (!currentQ) return;
+
+      // 2. 頂部題數進度板
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 25, 35, 0.85)';
+      drawRoundRect(ctx, canvas.width / 2 - 180, 22, 360, 72, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.font = 'bold 34px "Microsoft JhengHei", sans-serif';
+      ctx.fillStyle = '#FFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`第 ${Math.min(currentQIndex + 1, MAX_QUESTIONS)} / ${MAX_QUESTIONS} 題`, canvas.width / 2, 58);
+      ctx.restore();
+      // 3. 上方雲彩拼字區：國字底板與文字
+      wordBoxes.forEach(box => {
+        ctx.save();
+        // ★ 底色：改成 85% 不透明度的質感淺灰（完全遮蔽背後白雲）
+        ctx.fillStyle = isSolved ? 'rgba(254, 249, 231, 0.95)' : 'rgba(238, 242, 246, 0.88)';
+        
+        // ★ 邊框：未過關為俐落淺灰藍邊框，過關變亮金色
+        ctx.strokeStyle = isSolved ? '#f1c40f' : 'rgba(148, 163, 184, 0.7)';
+        ctx.lineWidth = 4;
+        drawRoundRect(ctx, box.x, box.y, box.w, box.h, 26);
+        ctx.fill();
+        ctx.stroke();
+
+        // ★ 字體：未過關改為深墨藍黑（超清晰高對比），過關改為飽滿深金色
+        ctx.font = 'bold 125px "DFKai-SB", "BiauKai", "Microsoft JhengHei", serif';
+        ctx.fillStyle = isSolved ? '#d97706' : '#1e293b';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.15)'; // 柔和陰影增加層次
+        ctx.shadowBlur = 4;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(box.char, box.charX, box.charY);
+        ctx.restore();
+      });
+
+      // 4. 動態注音插槽 (Slots)
+      slots.forEach(s => {
+        ctx.save();
+        ctx.beginPath();
+        if (s.isToneSlot) {
+          ctx.translate(s.x, s.y);
+          ctx.rotate(Math.PI / 4);
+          const r = s.radius * 0.82;
+          drawRoundRect(ctx, -r, -r, r * 2, r * 2, 6);
+        } else {
+          ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = s.occupiedTile ? 'rgba(0, 229, 255, 0.25)' : 'rgba(0, 0, 0, 0.45)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = s.isToneSlot ? '#ff9ff3' : '#7bed9f';
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // 5. 中段候選區底座
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+      ctx.lineWidth = 2;
+      drawRoundRect(ctx, 55, 412, 790, 195, 24);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 6. 繪製下方魔法陣中心 (455, 763) 的動物剪影或解除封印彩圖
+ctx.save();
+let floatY = Math.sin(now / 350) * 8;
+ctx.translate(MAGIC_CENTER.x, MAGIC_CENTER.y + floatY);
+ctx.scale(revealScale, revealScale);
+
+if (!isSolved) {
+  // --- 建立暫存小畫布，100% 相容 iPad 轉為純黑剪影 ---
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = 400;
+  offCanvas.height = 400;
+  const offCtx = offCanvas.getContext('2d');
+
+  offCtx.font = '270px sans-serif';
+  offCtx.textAlign = 'center';
+  offCtx.textBaseline = 'middle';
+  offCtx.fillText(currentQ.emoji, 200, 200); // 在暫存畫布中央畫動物
+
+  // 將動物形狀壓成純黑剪影
+  offCtx.globalCompositeOperation = 'source-in';
+  offCtx.fillStyle = '#000000';
+  offCtx.fillRect(0, 0, 400, 400);
+
+  // 加上神秘青色光暈後，印回主畫面魔法陣上
+  ctx.shadowColor = '#00e5ff';
+  ctx.shadowBlur = 25;
+  ctx.drawImage(offCanvas, -200, -200);
+} else {
+  // 解鎖狀態：恢復彩色原圖 + 金色光芒
+  ctx.shadowColor = '#ffe66d';
+  ctx.shadowBlur = 35;
+  ctx.font = '270px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(currentQ.emoji, 0, 0);
+}
+
+ctx.restore();
+
+      // 7. 注音與聲調寶石 (Tiles)
+      tiles.forEach(t => {
+        ctx.save();
+        const isDragging = (t === activeDragTile);
+        const scale = isDragging ? 1.18 : (t.slotIndex !== null ? 0.92 : 1.0);
+
+        ctx.translate(t.x, t.y);
+        ctx.scale(scale, scale);
+
+        ctx.beginPath();
+        if (t.isTone) {
+          ctx.rotate(Math.PI / 4);
+          const r = t.radius * 0.85;
+          drawRoundRect(ctx, -r, -r, r * 2, r * 2, 8);
+          ctx.rotate(-Math.PI / 4);
+          ctx.fillStyle = isDragging ? '#ffeaa7' : (t.slotIndex !== null ? '#fd79a8' : '#e84393');
+        } else {
+          ctx.arc(0, 0, t.radius, 0, Math.PI * 2);
+          ctx.fillStyle = isDragging ? '#ffeaa7' : (t.slotIndex !== null ? '#00cec9' : '#0984e3');
+        }
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        const mainColor = isDragging ? '#2d3436' : '#ffffff';
+
+        if (t.isTone) {
+          // ★ 聲調改用向量繪製：粗細與形狀絕對精準、離線 100% 穩定
+          ctx.strokeStyle = mainColor;
+          ctx.fillStyle = mainColor;
+          ctx.lineWidth = 6;       // 線條粗細（小朋友看得清楚的粗度）
+          ctx.lineCap = 'round';   // 圓潤邊角
+          ctx.lineJoin = 'round';
+
+          ctx.beginPath();
+          if (t.char === 'ˊ') {
+            // 二聲：右上揚
+            ctx.moveTo(-11, 11);
+            ctx.lineTo(11, -11);
+            ctx.stroke();
+          } else if (t.char === 'ˇ') {
+            // 三聲：打勾轉折
+            ctx.moveTo(-15, -6);
+            ctx.lineTo(-4, 9);
+            ctx.lineTo(13, -8);
+            ctx.stroke();
+          } else if (t.char === 'ˋ') {
+            // 四聲：右下重音
+            ctx.moveTo(-11, -11);
+            ctx.lineTo(11, 11);
+            ctx.stroke();
+          } else if (t.char === '˙') {
+            // 輕聲：飽滿小圓點
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          // 一般注音（聲母/韻母）維持原本字型
+          ctx.fillStyle = mainColor;
+          ctx.font = 'bold 38px "Microsoft JhengHei", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(t.char, 0, 2);
+        }
+
+        ctx.restore();
+      });
+
+      // 8. 答錯中央大叉叉
+      if (showBigWrongX > 0) {
+        ctx.save();
+        ctx.font = 'bold 180px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 20;
+        ctx.fillText('❌', canvas.width / 2, 300);
+        ctx.restore();
+      }
+
+      // 9. 浮動特效文字
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        const popup = popupTexts[i];
+        const progress = (now - popup.startTime) / popup.duration;
+        if (progress >= 1) {
+          popupTexts.splice(i, 1);
+        } else {
+          ctx.save();
+          ctx.globalAlpha = 1 - Math.pow(progress, 3);
+          const py = popup.y - progress * 65;
+          ctx.font = `bold ${popup.size}px "Microsoft JhengHei", sans-serif`;
+          ctx.fillStyle = popup.color;
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 6;
+          ctx.textAlign = 'center';
+          ctx.strokeText(popup.text, popup.x, py);
+          ctx.fillText(popup.text, popup.x, py);
+          ctx.restore();
+        }
+      }
+
+      // 10. 過關白屏轉場
+      if ((gamePhase === 'ending' || gamePhase === 'result') && whiteFade > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${whiteFade})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // --- 拖拉互動邏輯 ---
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gamePhase !== 'playing' || checkingAnswer || isSolved) return;
+      const pos = getCanvasPos(e);
+
+      for (let i = tiles.length - 1; i >= 0; i--) {
+        const t = tiles[i];
+        const hitRadius = t.slotIndex !== null ? t.radius * 1.1 : t.radius + 25;
+        if (Math.hypot(pos.x - t.x, pos.y - t.y) <= hitRadius) {
+          activeDragTile = t;
+          dragOffset.x = pos.x - t.x;
+          dragOffset.y = pos.y - t.y;
+
+          if (t.slotIndex !== null) {
+            slots[t.slotIndex].occupiedTile = null;
+            t.slotIndex = null;
+          }
+
+          tiles.splice(i, 1);
+          tiles.push(t);
+          canvas.setPointerCapture(e.pointerId);
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activeDragTile || gamePhase !== 'playing') return;
+      const pos = getCanvasPos(e);
+      activeDragTile.x = pos.x - dragOffset.x;
+      activeDragTile.y = pos.y - dragOffset.y;
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (!activeDragTile || gamePhase !== 'playing') return;
+      canvas.releasePointerCapture(e.pointerId);
+
+      let bestSlotIdx = null;
+      let minDist = 100;
+
+      slots.forEach((s, idx) => {
+        const d = Math.hypot(activeDragTile.x - s.x, activeDragTile.y - s.y);
+        if (d < minDist) {
+          minDist = d;
+          bestSlotIdx = idx;
+        }
+      });
+
+      if (bestSlotIdx !== null) {
+        const targetSlot = slots[bestSlotIdx];
+        if (targetSlot.occupiedTile && targetSlot.occupiedTile !== activeDragTile) {
+          const oldTile = targetSlot.occupiedTile;
+          oldTile.slotIndex = null;
+          oldTile.x = oldTile.homeX;
+          oldTile.y = oldTile.homeY;
+        }
+        targetSlot.occupiedTile = activeDragTile;
+        activeDragTile.slotIndex = bestSlotIdx;
+        activeDragTile.x = targetSlot.x;
+        activeDragTile.y = targetSlot.y;
+      } else {
+        activeDragTile.slotIndex = null;
+        activeDragTile.x = activeDragTile.homeX;
+        activeDragTile.y = activeDragTile.homeY;
+      }
+
+      activeDragTile = null;
+      checkAllSlotsFilled();
+    });
+
+    // --- 驗證邏輯 ---
+    function checkAllSlotsFilled() {
+      if (slots.some(s => s.occupiedTile === null)) return;
+
+      checkingAnswer = true;
+      setTimeout(() => {
+        const allCorrect = slots.every(s => s.occupiedTile && s.occupiedTile.char === s.expected);
+
+        if (allCorrect) {
+          isSolved = true;
+          revealScale = 1.35;
+          stars += 2;
+          document.getElementById('coinDisplay').innerText = stars;
+          addPopup('⭐ +2', MAGIC_CENTER.x, MAGIC_CENTER.y - 120, '#FFD700', 110);
+
+          currentQIndex++;
+          if (currentQIndex >= MAX_QUESTIONS) {
+            setTimeout(() => {
+              gamePhase = 'ending';
+              whiteFade = 0;
+            }, 1800);
+          } else {
+            setTimeout(() => {
+              generateRound();
+            }, 1800);
+          }
+        } else {
+          showBigWrongX = 1.0;
+          addPopup('❌ 再試一次！', canvas.width / 2, 420, '#FF3B30', 64);
+
+          setTimeout(() => {
+            slots.forEach(s => {
+              if (s.occupiedTile) {
+                const t = s.occupiedTile;
+                t.slotIndex = null;
+                t.x = t.homeX;
+                t.y = t.homeY;
+                s.occupiedTile = null;
+              }
+            });
+            checkingAnswer = false;
+          }, 900);
+        }
+      }, 250);
+    }
+  </script>
+</body>
+</html>

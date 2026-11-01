@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡5 (拖拉排序挑戰)</title>
+  
+  <script src="bopomofo.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #4cd137;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #000;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    #question-board {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.95);
+      border: 4px solid #FFD700;
+      border-radius: 20px;
+      padding: 15px 35px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      width: 70%;
+      max-width: 950px;
+    }
+
+    #question-text {
+      margin: 0;
+      font-size: 38px;
+      color: #FFF;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+      line-height: 1.6;
+      white-space: nowrap;
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">地圖載入中 (0/1)...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <div id="question-board">
+      <div id="question-text" class="zh-text"></div>
+    </div>
+    
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>排<rt>ㄆㄞˊ</rt></ruby>
+          <ruby>序<rt>ㄒㄩˋ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>挑<rt>ㄊㄧㄠ</rt></ruby>
+          <ruby>戰<rt>ㄓㄢˋ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>看<rt>ㄎㄢˋ</rt></ruby>
+          <ruby>題<rt>ㄊㄧˊ</rt></ruby>
+          <ruby>目<rt>ㄇㄨˋ</rt></ruby>
+          <ruby>排<rt>ㄆㄞˊ</rt></ruby>
+          <ruby>順<rt>ㄕㄨㄣˋ</rt></ruby>
+          <ruby>序<rt>ㄒㄩˋ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <div id="result-screen" class="overlay" style="display: none;">
+      
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // --- 使用者提供的精確多邊形座標 ---
+    const REGIONS = {
+      tracks: [
+        [{ x: 140, y: 739 }, { x: 689, y: 744 }, { x: 691, y: 780 }, { x: 141, y: 778 }],
+        [{ x: 127, y: 848 }, { x: 707, y: 850 }, { x: 709, y: 888 }, { x: 128, y: 886 }],
+        [{ x: 128, y: 952 }, { x: 722, y: 954 }, { x: 726, y: 990 }, { x: 128, y: 989 }],
+        [{ x: 105, y: 1053 }, { x: 735, y: 1054 }, { x: 741, y: 1093 }, { x: 102, y: 1087 }],
+        [{ x: 95, y: 1147 }, { x: 751, y: 1147 }, { x: 755, y: 1184 }, { x: 96, y: 1181 }]
+      ],
+      slots: [
+        [{ x: 711, y: 714 }, { x: 772, y: 712 }, { x: 777, y: 784 }, { x: 718, y: 783 }],
+        [{ x: 728, y: 817 }, { x: 786, y: 813 }, { x: 796, y: 885 }, { x: 739, y: 885 }],
+        [{ x: 743, y: 917 }, { x: 799, y: 912 }, { x: 810, y: 984 }, { x: 751, y: 987 }],
+        [{ x: 753, y: 1012 }, { x: 817, y: 1011 }, { x: 826, y: 1087 }, { x: 764, y: 1085 }],
+        [{ x: 768, y: 1113 }, { x: 830, y: 1112 }, { x: 843, y: 1184 }, { x: 776, y: 1185 }]
+      ],
+      palette: [
+        { x: 156, y: 641 }, { x: 153, y: 713 }, { x: 692, y: 719 }, { x: 691, y: 644 }
+      ]
+    };
+
+    // --- 題庫清單 ---
+    const DB_QUESTIONS = [
+      {
+        type: 'distance', order: 'desc', // 由遠到近
+        html: "<ruby>依<rt>ㄧ</rt></ruby><ruby>照<rt>ㄓㄠˋ</rt></ruby><ruby>每<rt>ㄇㄟˇ</rt></ruby><ruby>個<rt>ㄍㄜ˙</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>丟<rt>ㄉㄧㄡ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>距<rt>ㄐㄩˋ</rt></ruby><ruby>離<rt>ㄌㄧˊ</rt></ruby>，<br><ruby>由<rt>ㄧㄡˊ</rt></ruby><ruby>遠<rt>ㄩㄢˇ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>近<rt>ㄐㄧㄣˋ</rt></ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>序<rt>ㄒㄩˋ</rt></ruby><ruby>填<rt>ㄊㄧㄢˊ</rt></ruby><ruby>入<rt>ㄖㄨˋ</rt></ruby> 1 ~ 5"
+      },
+      {
+        type: 'distance', order: 'asc', // 由近到遠
+        html: "<ruby>依<rt>ㄧ</rt></ruby><ruby>照<rt>ㄓㄠˋ</rt></ruby><ruby>每<rt>ㄇㄟˇ</rt></ruby><ruby>個<rt>ㄍㄜ˙</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>丟<rt>ㄉㄧㄡ</rt></ruby><ruby>球<rt>ㄑㄧㄡˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>距<rt>ㄐㄩˋ</rt></ruby><ruby>離<rt>ㄌㄧˊ</rt></ruby>，<br><ruby>由<rt>ㄧㄡˊ</rt></ruby><ruby>近<rt>ㄐㄧㄣˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>遠<rt>ㄩㄢˇ</rt></ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>序<rt>ㄒㄩˋ</rt></ruby><ruby>填<rt>ㄊㄧㄢˊ</rt></ruby><ruby>入<rt>ㄖㄨˋ</rt></ruby> 1 ~ 5"
+      },
+      {
+        type: 'length', order: 'desc', // 由長到短
+        html: "</ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>照<rt>ㄓㄠˋ</rt></ruby><ruby>每<rt>ㄇㄟˇ</rt></ruby><ruby>個<rt>ㄍㄜ˙</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>擁<rt>ㄩㄥˇ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>品<rt>ㄆㄧㄣˇ</rt></ruby><ruby>長<rt>ㄔㄤˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby>，<br><ruby>由<rt>ㄧㄡˊ</rt></ruby><ruby>長<rt>ㄔㄤˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>短<rt>ㄉㄨㄢˇ</rt></ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>序<rt>ㄒㄩˋ</rt></ruby><ruby>填<rt>ㄊㄧㄢˊ</rt></ruby><ruby>入<rt>ㄖㄨˋ</rt></ruby> 1 ~ 5"
+      },
+      {
+        type: 'length', order: 'asc', // 由短到長
+        html: "</ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>照<rt>ㄓㄠˋ</rt></ruby><ruby>每<rt>ㄇㄟˇ</rt></ruby><ruby>個<rt>ㄍㄜ˙</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>擁<rt>ㄩㄥˇ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>品<rt>ㄆㄧㄣˇ</rt></ruby><ruby>長<rt>ㄔㄤˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby>，<br><ruby>由<rt>ㄧㄡˊ</rt></ruby><ruby>短<rt>ㄉㄨㄢˇ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>長<rt>ㄔㄤˊ</rt></ruby><ruby>依<rt>ㄧ</rt></ruby><ruby>序<rt>ㄒㄩˋ</rt></ruby><ruby>填<rt>ㄊㄧㄢˊ</rt></ruby><ruby>入<rt>ㄖㄨˋ</rt></ruby> 1 ~ 5"
+      }
+    ];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 遊戲參數
+    const MAX_QUESTIONS = 4;
+    let questionsPool = [];
+    let currentQIndex = 0;
+    let stars = 0;
+    let gamePhase = 'start'; 
+    let whiteFade = 0;
+    let lastTime = 0; 
+    let popupTexts = []; 
+    let checkingAnswer = false;
+    
+    // 狀態管理
+    let currentQ = null;
+    let currentValues = []; // 每個跑道的距離/長度比例
+    let correctAnswers = []; // 對應每個插槽的正確解答數字
+    let draggableNumbers = []; // 五個可拖曳的數字方塊
+    let activeDragNum = null; // 當前拖拉中的物件
+
+    // 固定五個差異極大的比例，保證視覺辨識度高 (差距 15%)
+    const DISTINCT_PROPORTIONS = [0.25, 0.40, 0.55, 0.70, 0.85];
+
+    let totalAssets = 1; 
+    let loadedAssets = 0;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map5.webp'; 
+    bgImg.onload = () => {
+      canvas.width = bgImg.width;
+      canvas.height = bgImg.height;
+      document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
+      loadedAssets++;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        draw(); 
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    };
+
+    // 取得多邊形的基礎資訊
+    function getPolyBounds(poly) {
+      let minX = Math.min(...poly.map(p=>p.x)), maxX = Math.max(...poly.map(p=>p.x));
+      let minY = Math.min(...poly.map(p=>p.y)), maxY = Math.max(...poly.map(p=>p.y));
+      return { minX, maxX, width: maxX - minX, cy: (minY + maxY) / 2 };
+    }
+
+    // 檢查點是否在多邊形內 (Ray-casting)
+    function isPointInPolygon(pt, poly) {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        let xi = poly[i].x, yi = poly[i].y;
+        let xj = poly[j].x, yj = poly[j].y;
+        let intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // 動態文字特效
+    function addPopup(text, x, y, color = '#fff', size = 50) {
+        popupTexts.push({
+            text: text, x: x, y: y, color: color, size: size,
+            startTime: performance.now(), duration: 1500 
+        });
+    }
+
+    // 準備新題目
+    function generateRound() {
+      currentQ = questionsPool[currentQIndex];
+      document.getElementById('question-text').innerHTML = currentQ.html;
+      if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+      
+      // 隨機打亂 5 種明顯不同的比例分配給 5 個跑道
+      currentValues = [...DISTINCT_PROPORTIONS].sort(() => Math.random() - 0.5);
+      
+      // 計算每個跑道(插槽)對應的正確解答排名
+      let sortedValues = [...currentValues].sort((a, b) => b - a); 
+      if (currentQ.order === 'asc') sortedValues.reverse();
+      correctAnswers = currentValues.map(val => sortedValues.indexOf(val) + 1);
+
+      // 初始化區域 11 的五個拖拉物件
+      let pBounds = getPolyBounds(REGIONS.palette);
+      let interval = pBounds.width / 5;
+      draggableNumbers = [];
+      for (let i = 0; i < 5; i++) {
+        let hx = pBounds.minX + interval * 0.5 + i * interval;
+        draggableNumbers.push({
+          val: i + 1,
+          x: hx, y: pBounds.cy,
+          homeX: hx, homeY: pBounds.cy,
+          radius: 26, 
+          slotIndex: null
+        });
+      }
+      checkingAnswer = false;
+    }
+
+    function startGame() {
+      questionsPool = [...DB_QUESTIONS].sort(() => Math.random() - 0.5);
+      currentQIndex = 0;
+      stars = 0;
+      whiteFade = 0;
+      popupTexts = [];
+      
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('coinDisplay').innerText = stars;
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('question-board').style.display = 'block';
+      
+      gamePhase = 'playing';
+      generateRound();
+    }
+
+    function endGame() {
+      gamePhase = 'result';
+      document.getElementById('question-board').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins); 
+      if (localStorage.getItem('sticker_smap5') !== 'true') {
+  localStorage.setItem('sticker_smap5', 'new');
+}
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      document.getElementById('star-container').innerHTML = '⭐'.repeat(stars);
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start') {
+         if (gamePhase === 'ending') {
+            whiteFade += dt * 1.5; 
+            if (whiteFade >= 1) { whiteFade = 1; endGame(); }
+         }
+         draw();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 繪製棒球
+    function drawBaseball(cx, cy, radius) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#f5f6fa';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#2f3542';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx - radius*0.65, cy, radius*0.8, -Math.PI/2.5, Math.PI/2.5);
+      ctx.strokeStyle = '#e84118';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx + radius*0.65, cy, radius*0.8, Math.PI - Math.PI/2.5, Math.PI + Math.PI/2.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      const now = performance.now();
+
+      if (gamePhase === 'playing') {
+        // 畫出物件盤(區域11)高光提示
+        ctx.beginPath();
+        ctx.moveTo(REGIONS.palette[0].x, REGIONS.palette[0].y);
+        for(let j=1; j<4; j++) ctx.lineTo(REGIONS.palette[j].x, REGIONS.palette[j].y);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.setLineDash([8, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 繪製跑道與題目物件
+        for (let i = 0; i < 5; i++) {
+          let bounds = getPolyBounds(REGIONS.tracks[i]);
+          let targetX = bounds.minX + bounds.width * currentValues[i];
+          
+          if (currentQ.type === 'distance') {
+            // 距離題：丟球虛線與棒球
+            ctx.beginPath();
+            ctx.moveTo(bounds.minX, bounds.cy);
+            ctx.lineTo(targetX, bounds.cy);
+            ctx.lineWidth = 4;
+            ctx.setLineDash([12, 12]);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.stroke();
+            ctx.setLineDash([]); 
+            
+            drawBaseball(targetX, bounds.cy - 3, 16);
+          } else {
+            // 長度題：明顯不同顏色的實體長條
+            let colors = ['#ff6b81', '#1e90ff', '#2ed573', '#ffa502', '#9b59b6'];
+            ctx.beginPath();
+            ctx.roundRect(bounds.minX, bounds.cy - 12, bounds.width * currentValues[i], 24, 12);
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#2f3542';
+            ctx.stroke();
+            // 反光特效
+            ctx.beginPath();
+            ctx.moveTo(bounds.minX + 8, bounds.cy - 5);
+            ctx.lineTo(targetX - 8, bounds.cy - 5);
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.stroke();
+          }
+        }
+
+        // 繪製放置槽(區域6~10)導引外框
+        for (let i = 0; i < 5; i++) {
+           ctx.beginPath();
+           ctx.moveTo(REGIONS.slots[i][0].x, REGIONS.slots[i][0].y);
+           for(let j=1; j<4; j++) ctx.lineTo(REGIONS.slots[i][j].x, REGIONS.slots[i][j].y);
+           ctx.closePath();
+           ctx.lineWidth = 3;
+           ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+           ctx.setLineDash([6, 6]);
+           ctx.stroke();
+           ctx.setLineDash([]);
+        }
+
+        // 繪製拖曳數字方塊 (由底層往上畫，拖曳中的畫在最上層)
+        for (let num of draggableNumbers) {
+          ctx.beginPath();
+          ctx.arc(num.x, num.y, num.radius, 0, Math.PI * 2);
+          ctx.fillStyle = (num === activeDragNum) ? '#fbc531' : '#f1f2f6';
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#2f3542';
+          ctx.stroke();
+
+          ctx.fillStyle = '#2f3542';
+          ctx.font = 'bold 32px "Comic Sans MS", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(num.val, num.x, num.y + 2);
+        }
+      }
+
+      // 特效文字
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+          const popup = popupTexts[i];
+          const progress = (now - popup.startTime) / popup.duration;
+          if (progress >= 1) { popupTexts.splice(i, 1); } 
+          else {
+              ctx.save();
+              ctx.globalAlpha = 1 - Math.pow(progress, 3); 
+              const floatY = popup.y - (progress * 70); 
+              ctx.font = `bold ${popup.size}px sans-serif`;
+              ctx.fillStyle = popup.color;
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 6;
+              ctx.textAlign = 'center';
+              ctx.strokeText(popup.text, popup.x, floatY);
+              ctx.fillText(popup.text, popup.x, floatY);
+              ctx.restore();
+          }
+      }
+
+      
+    }
+
+    // --- 拖拉互動邏輯 ---
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gamePhase !== 'playing' || checkingAnswer) return;
+      let pos = getCanvasPos(e);
+      
+      // 反向迴圈讓位於最上層的方塊優先被選中
+      for (let i = draggableNumbers.length - 1; i >= 0; i--) {
+        let num = draggableNumbers[i];
+        if (Math.hypot(num.x - pos.x, num.y - pos.y) <= num.radius + 15) { // 增加容錯觸控範圍
+          activeDragNum = num;
+          // 將選中方塊移至陣列最後以確保繪製於最上層
+          draggableNumbers.splice(i, 1);
+          draggableNumbers.push(num);
+          
+          if (num.slotIndex !== null) num.slotIndex = null;
+          
+          num.x = pos.x;
+          num.y = pos.y;
+          canvas.setPointerCapture(e.pointerId);
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (activeDragNum && gamePhase === 'playing') {
+        let pos = getCanvasPos(e);
+        activeDragNum.x = pos.x;
+        activeDragNum.y = pos.y;
+      }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (!activeDragNum || gamePhase !== 'playing') return;
+      canvas.releasePointerCapture(e.pointerId);
+      
+      let pos = { x: activeDragNum.x, y: activeDragNum.y };
+      let dropSlot = null;
+      
+      // 檢查是否落在 5 個指定格子區域內
+      for (let i = 0; i < 5; i++) {
+        if (isPointInPolygon(pos, REGIONS.slots[i])) {
+          dropSlot = i; break;
+        }
+      }
+
+      if (dropSlot !== null) {
+        // 如果該格子已經有其它數字，把原本的數字踢回老家
+        let existing = draggableNumbers.find(n => n.slotIndex === dropSlot && n !== activeDragNum);
+        if (existing) {
+          existing.slotIndex = null;
+          existing.x = existing.homeX;
+          existing.y = existing.homeY;
+        }
+        activeDragNum.slotIndex = dropSlot;
+        let bounds = getPolyBounds(REGIONS.slots[dropSlot]);
+        activeDragNum.x = bounds.minX + bounds.width / 2;
+        activeDragNum.y = bounds.cy;
+      } else {
+        // 沒放準，彈回老家
+        activeDragNum.slotIndex = null;
+        activeDragNum.x = activeDragNum.homeX;
+        activeDragNum.y = activeDragNum.homeY;
+      }
+      
+      activeDragNum = null;
+      checkGameComplete();
+    });
+
+    // 檢查答案是否全對
+    function checkGameComplete() {
+      // 確認是否 5 個方塊都已經放入槽中
+      if (draggableNumbers.every(n => n.slotIndex !== null)) {
+        checkingAnswer = true;
+        
+        setTimeout(() => {
+          let isCorrect = true;
+          for (let num of draggableNumbers) {
+            if (num.val !== correctAnswers[num.slotIndex]) {
+              isCorrect = false;
+              break;
+            }
+          }
+          
+          if (isCorrect) {
+            stars += 2;
+            addPopup('⭐ +2', canvas.width/2, canvas.height/2, '#FFD700', 120);
+            document.getElementById('coinDisplay').innerText = stars;
+            currentQIndex++;
+            
+            if (currentQIndex >= MAX_QUESTIONS) {
+              setTimeout(() => { gamePhase = 'ending'; whiteFade = 0; }, 1500);
+            } else {
+              setTimeout(() => { generateRound(); }, 1500);
+            }
+          } else {
+            // 答錯不扣星，將所有方塊彈回重試
+            addPopup('❌ 答錯囉！再看一次', canvas.width/2, canvas.height/2, '#FF3B30', 70);
+            setTimeout(() => { 
+              for (let num of draggableNumbers) {
+                num.slotIndex = null;
+                num.x = num.homeX;
+                num.y = num.homeY;
+              }
+              checkingAnswer = false;
+            }, 1200);
+          }
+        }, 300);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡10 (空間邏輯・數積木)</title>
+  
+  <!-- 載入外部模組 -->
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  <script src="three.min.js" onerror="console.log('未載入外部 three.min.js')"></script>
+  <script src="OrbitControls.js" onerror="console.log('未載入外部 OrbitControls.js')"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #00e5ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #0b1d21;
+    }
+
+    /* 答錯時的畫面震動特效 */
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      10%, 30%, 50%, 70%, 90% { transform: translate(-10px, -4px); }
+      20%, 40%, 60%, 80% { transform: translate(10px, 4px); }
+    }
+    .shake-anim {
+      animation: shake 0.45s ease-in-out;
+    }
+
+    #gameCanvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      background-color: rgba(0, 0, 0, 0.82);
+      border: 2px solid rgba(0, 229, 255, 0.35);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #00b894;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 184, 148, 0.45);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn, #hud {
+      position: absolute;
+      top: 15px;
+      z-index: 101; 
+      display: none;
+    }
+    #back-btn { left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    #hud { right: 15px; color: #fff; font-size: 24px; font-weight: bold; background: rgba(0, 0, 0, 0.55); padding: 10px 20px; border-radius: 15px; backdrop-filter: blur(4px); pointer-events: none; }
+
+    #star-container { font-size: 28px; margin-top: 15px; width: 100%; text-align: center; line-height: 1.5; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
+    .math-box { background: rgba(43, 39, 39, 0.85); padding: 15px 25px; border-radius: 10px; margin: 15px 0; font-size: 28px; text-align: center; line-height: 1.8; }
+
+    #three-container {
+      position: absolute;
+      left: 7%;
+      top: 48%;
+      width: 86%;
+      height: 42%;
+      z-index: 10;
+    }
+    
+    #options-box {
+      position: absolute;
+      bottom: 2.5%;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 25;
+    }
+    
+    .btn-option {
+      width: clamp(62px, 15vw, 76px);
+      height: clamp(62px, 15vw, 76px);
+      border-radius: 18px;
+      border: 3px solid #38bdf8;
+      background: #ffffff;
+      color: #0369a1;
+      font-size: clamp(30px, 6vw, 38px);
+      font-weight: bold;
+      box-shadow: 0 6px 0 #0284c7, 0 10px 15px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+    }
+    .btn-option:active { transform: translateY(4px); box-shadow: 0 2px 0 #0284c7; }
+
+    #q-counter {
+      position: absolute;
+      top: 2%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(20px, 4.5vw, 30px);
+      font-weight: bold;
+      color: #fff;
+      background: rgba(15, 25, 35, 0.88);
+      padding: 10px 28px;
+      border-radius: 20px;
+      z-index: 20;
+      border: 2px solid #00e5ff;
+      white-space: nowrap;
+    }
+
+    #feedback-modal {
+      position: absolute;
+      top: 42%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.5);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 18px 32px;
+      border-radius: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      opacity: 0;
+      text-align: center;
+      z-index: 100;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #feedback-modal.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    #hand-hint {
+      position: absolute;
+      top: 60%;
+      left: 50%;
+      font-size: 80px;
+      z-index: 30;
+      pointer-events: none;
+      animation: swipeHand 2s infinite ease-in-out;
+      margin-top: -40px; margin-left: -40px;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));
+    }
+    @keyframes swipeHand {
+      0% { transform: translate(-70px, 0) rotate(-15deg); opacity: 0.2; }
+      20% { opacity: 1; }
+      50% { transform: translate(70px, 0) rotate(15deg); opacity: 1; }
+      80% { opacity: 1; }
+      100% { transform: translate(-70px, 0) rotate(-15deg); opacity: 0.2; }
+    }
+
+    /* ========================================= */
+    /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">關卡 10 載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 24px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>空<rt>ㄎㄨㄥ</rt></ruby>
+          <ruby>間<rt>ㄐㄧㄢ</rt></ruby>
+          <ruby>邏<rt>ㄌㄨㄛˊ</rt></ruby>
+          <ruby>輯<rt>ㄐㄧˊ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.6;">
+          <ruby>數<rt>ㄕㄨˇ</rt></ruby>
+          <ruby>數<rt>ㄕㄨˇ</rt></ruby>
+          <ruby>看<rt>ㄎㄢˋ</rt></ruby>
+          <ruby>平<rt>ㄆㄧㄥˊ</rt></ruby>
+          <ruby>台<rt>ㄊㄞˊ</rt></ruby>
+          <ruby>上<rt>ㄕㄤˋ</rt></ruby><br>
+          <ruby>有<rt>ㄧㄡˇ</rt></ruby>
+          <ruby>幾<rt>ㄐㄧˇ</rt></ruby>
+          <ruby>個<rt>˙ㄍㄜ</rt></ruby>
+          <ruby>積<rt>ㄐㄧ</rt></ruby>
+          <ruby>木<rt>ㄇㄨˋ</rt></ruby>
+          <span>?</span>
+        </p>
+      </div>
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 總結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>全<rt>ㄑㄩㄢˊ</rt></ruby>
+        <ruby>部<rt>ㄅㄨˋ</rt></ruby>
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <span>！</span>
+      </h1>
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 420px;">
+        
+        <button id="boss-btn" class="btn" style="width: 100%; font-size: 34px; padding: 16px 10px; margin: 0; background-color: #9c88ff; display: none;" onclick="startBoss()">
+          <ruby>我<rt>ㄨㄛˇ</rt></ruby>
+          <ruby>要<rt>ㄧㄠˋ</rt></ruby>
+          <ruby>挑<rt>ㄊㄧㄠˇ</rt></ruby>
+          <ruby>戰<rt>ㄓㄢˋ</rt></ruby>
+          <ruby>魔<rt>ㄇㄛˊ</rt></ruby>
+          <ruby>王<rt>ㄨㄤˊ</rt></ruby>
+          <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+          <ruby>卡<rt>ㄎㄚˇ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <!-- 遊戲互動層 -->
+    <div id="three-container" style="display: none;"></div>
+    <div id="q-counter" style="display: none;"></div>
+    <div id="options-box" style="display: none;"></div>
+    <div id="hand-hint" style="display: none;">👆</div>
+    <div id="feedback-modal"></div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 遊戲參數配置
+    // ==========================================
+    const NORMAL_QUESTIONS = 4;
+    let currentQ = 0;
+    let isBoss = false;
+    let stars = 0;
+    let currentAnswer = 0;
+    let checkingAnswer = false;
+
+    // 底圖載入 (map10.webp)
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 900;
+    canvas.height = 1200;
+
+    let bgLoaded = false;
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map10.webp';
+
+    function finishLoading() {
+      document.fonts.ready.then(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('game-container').style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+        drawBg();
+        initThree();
+      });
+    }
+
+    bgImg.onload = () => { bgLoaded = true; finishLoading(); };
+    bgImg.onerror = () => { bgLoaded = false; finishLoading(); };
+
+    function drawBg() {
+      if (bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = '#0b1d21';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // ==========================================
+    // Three.js 3D 渲染與視角控制
+    // ==========================================
+    let scene, camera, renderer, controls, blockGroup;
+    let raycaster, mouse;
+    let originalColors = new Map(); // 儲存積木原始顏色
+    let originalEdgeColors = new Map(); // 儲存邊線原始顏色
+
+    function initThree() {
+      const container = document.getElementById('three-container');
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 100);
+      
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.22;
+      controls.rotateSpeed = 0.55;
+      controls.enablePan = false;
+      controls.minPolarAngle = 0.1;
+      controls.maxPolarAngle = Math.PI / 2 + 0.05;
+      controls.minDistance = 3.5;
+      controls.maxDistance = 14;
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+      scene.add(ambientLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.75);
+      dirLight1.position.set(6, 12, 8);
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+      dirLight2.position.set(-6, 4, -6);
+      scene.add(dirLight2);
+
+      blockGroup = new THREE.Group();
+      scene.add(blockGroup);
+
+      // 初始化射線檢測，用於點擊變色
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      const resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width > 0 && height > 0 && camera && renderer) {
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+          }
+        }
+      });
+      resizeObserver.observe(container);
+
+      // 監聽點擊/觸控事件
+      let startPoint = { x: 0, y: 0 };
+      container.addEventListener('pointerdown', (event) => {
+        startPoint = { x: event.clientX, y: event.clientY };
+        const hint = document.getElementById('hand-hint');
+        if (hint) hint.style.display = 'none';
+      });
+
+      container.addEventListener('pointerup', (event) => {
+        // 如果滑動距離過大，判定為旋轉鏡頭，不觸發點擊變色
+        const dx = event.clientX - startPoint.x;
+        const dy = event.clientY - startPoint.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 10) return;
+
+        // 計算射線檢測座標
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(blockGroup.children, false);
+
+        if (intersects.length > 0 && !checkingAnswer) {
+          const clickedMesh = intersects[0].object;
+          toggleBlockColor(clickedMesh);
+        }
+      });
+
+      animate();
+    }
+
+    // 點擊切換方塊與邊線顏色
+    function toggleBlockColor(mesh) {
+      if (!mesh.userData.isMarked) {
+        mesh.userData.isMarked = true;
+        // 將原本的 0xfde047 改為亮橘色 0xf97316
+        mesh.material.color.setHex(0xf97316); 
+        if (mesh.children.length > 0) {
+            // 將邊框改為深橘色 0xc2410c
+            mesh.children[0].material.color.setHex(0xc2410c); 
+        }
+      } else {
+        mesh.userData.isMarked = false;
+        mesh.material.color.setHex(originalColors.get(mesh.uuid));
+        if (mesh.children.length > 0) {
+            mesh.children[0].material.color.setHex(originalEdgeColors.get(mesh.uuid));
+        }
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) controls.update();
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+
+    function generateRandomBlocks(count) {
+      const occupied = new Set();
+      const blocks = [];
+      const key = (x, y, z) => `${x},${y},${z}`;
+
+      blocks.push([0, 0, 0]);
+      occupied.add(key(0, 0, 0));
+
+      const maxRadius = isBoss ? 3 : 2;
+      const maxY = isBoss ? 5 : 3;
+
+      let attempts = 0;
+      while (blocks.length < count && attempts < 1000) {
+        attempts++;
+        const base = blocks[Math.floor(Math.random() * blocks.length)];
+        const directions = [[1,0,0], [-1,0,0], [0,0,1], [0,0,-1], [0,1,0]];
+        const dir = directions[Math.floor(Math.random() * directions.length)];
+        
+        const tx = base[0] + dir[0];
+        const ty = base[1] + dir[1];
+        const tz = base[2] + dir[2];
+
+        if (occupied.has(key(tx, ty, tz))) continue;
+        if (ty < 0 || ty > maxY) continue;
+        if (ty > 0 && !occupied.has(key(tx, ty - 1, tz))) continue;
+        if (Math.abs(tx) > maxRadius || Math.abs(tz) > maxRadius) continue;
+
+        blocks.push([tx, ty, tz]);
+        occupied.add(key(tx, ty, tz));
+      }
+      return blocks;
+    }
+
+    function buildBlocks(count) {
+      // 清理前一次的資料
+      while (blockGroup.children.length > 0) {
+        let child = blockGroup.children[0];
+        blockGroup.remove(child);
+        if(child.material) child.material.dispose();
+        if(child.geometry) child.geometry.dispose();
+      }
+      originalColors.clear();
+      originalEdgeColors.clear();
+
+      const THEME_COLORS = [
+        { fill: 0x38bdf8, edge: 0x0284c7 },
+        { fill: 0xf472b6, edge: 0xdb2777 },
+        { fill: 0x4ade80, edge: 0x16a34a },
+        { fill: 0xfb923c, edge: 0xea580c },
+        { fill: 0xa78bfa, edge: 0x7c3aed }
+      ];
+      const theme = { fill: 0xa78bfa, edge: 0x7c3aed };
+      const blockSize = 0.96;
+      const boxGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+      const edgeGeo = new THREE.EdgesGeometry(boxGeo);
+
+      const blocks = generateRandomBlocks(count);
+      
+      let sumX = 0, sumY = 0, sumZ = 0;
+      blocks.forEach(([x, y, z]) => { sumX += x; sumY += y; sumZ += z; });
+      const cX = sumX / count;
+      const cY = sumY / count;
+      const cZ = sumZ / count;
+
+      blocks.forEach(([x, y, z]) => {
+        // 每顆方塊建立獨立材質，以免變色時影響其他顆
+        const mat = new THREE.MeshLambertMaterial({ color: theme.fill });
+        const mesh = new THREE.Mesh(boxGeo, mat);
+        mesh.position.set(x, y, z);
+        mesh.userData.isMarked = false;
+
+        const eMat = new THREE.LineBasicMaterial({ color: theme.edge, linewidth: 2 });
+        const edgeLine = new THREE.LineSegments(edgeGeo, eMat);
+        mesh.add(edgeLine);
+        
+        blockGroup.add(mesh);
+        
+        originalColors.set(mesh.uuid, theme.fill);
+        originalEdgeColors.set(mesh.uuid, theme.edge);
+      });
+
+      blockGroup.position.set(-cX, -cY, -cZ);
+      
+      const camDist = isBoss ? 7.5 : 4.5;
+      camera.position.set(camDist * 0.7, camDist * 0.75, camDist);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    function showGameUI() {
+      document.getElementById('three-container').style.display = 'block';
+      document.getElementById('options-box').style.display = 'flex';
+      document.getElementById('q-counter').style.display = 'block';
+      document.getElementById('back-btn').style.display = 'block';
+    }
+
+    function hideGameUI() {
+      document.getElementById('three-container').style.display = 'none';
+      document.getElementById('options-box').style.display = 'none';
+      document.getElementById('q-counter').style.display = 'none';
+      document.getElementById('hand-hint').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+    }
+
+    function startGame() {
+      currentQ = 1;
+      stars = 0;
+      isBoss = false;
+      document.getElementById('coinDisplay').innerText = stars;
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      showGameUI();
+      document.getElementById('hand-hint').style.display = 'block';
+      generateNewLevel();
+    }
+
+    function startBoss() {
+      isBoss = true;
+      stars = 0;
+      document.getElementById('coinDisplay').innerText = stars;
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      showGameUI();
+      generateNewLevel(); // 修正：呼叫重新生成題目，確保積木出現
+    }
+
+    function generateNewLevel() {
+      let count = 0;
+      if (isBoss) {
+        count = Math.floor(Math.random() * 7) + 12; // 魔王關 12~18
+      } else {
+        if (currentQ === 1) count = Math.floor(Math.random() * 2) + 3;
+        else if (currentQ === 2) count = Math.floor(Math.random() * 3) + 4;
+        else if (currentQ === 3) count = Math.floor(Math.random() * 3) + 6;
+        else if (currentQ === 4) count = Math.floor(Math.random() * 3) + 8;
+      }
+      currentAnswer = count;
+      checkingAnswer = false; // 重置答題狀態
+      
+      buildBlocks(count);
+      createOptions(count);
+      
+      document.getElementById('q-counter').innerText = isBoss ? '魔王關卡' : `第 ${currentQ} / ${NORMAL_QUESTIONS} 題`;
+    }
+
+    function createOptions(answer) {
+      const optionsBox = document.getElementById('options-box');
+      optionsBox.innerHTML = '';
+
+      let startNum = answer - Math.floor(Math.random() * 5);
+      if (startNum < 1) startNum = 1;
+      
+      let options = [];
+      for (let i = 0; i < 5; i++) {
+        options.push(startNum + i);
+      }
+      
+      if (!options.includes(answer)) {
+        startNum = Math.max(1, answer - 4);
+        options = [startNum, startNum + 1, startNum + 2, startNum + 3, startNum + 4];
+      }
+
+      options.forEach(num => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-option';
+        btn.innerText = num;
+        btn.onclick = () => checkAnswer(num);
+        optionsBox.appendChild(btn);
+      });
+    }
+
+    function showStarFloat(amount) {
+      const floatEl = document.createElement('div');
+      floatEl.innerText = `+${amount} ⭐`;
+      floatEl.style.position = 'absolute';
+      floatEl.style.left = '50%';
+      floatEl.style.top = '45%';
+      floatEl.style.transform = 'translate(-50%, -50%)';
+      floatEl.style.color = '#FFD700';
+      floatEl.style.fontSize = '62px';
+      floatEl.style.fontWeight = 'bold';
+      floatEl.style.textShadow = '0 4px 12px rgba(0,0,0,0.85)';
+      floatEl.style.zIndex = '50';
+      floatEl.style.pointerEvents = 'none';
+      floatEl.style.transition = 'all 1.4s ease-out';
+      document.getElementById('game-container').appendChild(floatEl);
+
+      void floatEl.offsetWidth;
+      floatEl.style.top = '30%';
+      floatEl.style.opacity = '0';
+
+      setTimeout(() => floatEl.remove(), 1400);
+    }
+
+    function checkAnswer(selectedNumber) {
+      if (checkingAnswer) return;
+      checkingAnswer = true;
+
+      const modal = document.getElementById('feedback-modal');
+      
+      if (selectedNumber === currentAnswer) {
+        let addStar = isBoss ? 4 : 2;
+        stars += addStar;
+        document.getElementById('coinDisplay').innerText = stars;
+        
+        modal.innerHTML = '🎉 <span style="color: #16a34a;">答對了！太厲害了！</span>';
+        modal.classList.add('show');
+        showStarFloat(addStar);
+        
+        // 答對時將所有積木刷成金色
+        blockGroup.children.forEach(mesh => {
+            mesh.material.color.setHex(0xfbbf24); 
+            if(mesh.children.length > 0) mesh.children[0].material.color.setHex(0xd97706);
+        });
+
+        setTimeout(() => {
+          modal.classList.remove('show');
+          
+          if (!isBoss) {
+            if (currentQ < NORMAL_QUESTIONS) {
+              currentQ++;
+              generateNewLevel();
+            } else {
+              endGame();
+            }
+          } else {
+            endGame();
+          }
+        }, 1500);
+      } else {
+        modal.innerHTML = '💡 <span style="color: #ea580c;">差一點點～翻轉看背面喔！</span>';
+        modal.classList.add('show');
+        
+        const gc = document.getElementById('game-container');
+        gc.classList.remove('shake-anim');
+        void gc.offsetWidth;
+        gc.classList.add('shake-anim');
+
+        setTimeout(() => {
+          modal.classList.remove('show');
+          checkingAnswer = false;
+        }, 1200);
+      }
+    }
+
+    function endGame() {
+      hideGameUI();
+      document.getElementById('hud').style.display = 'none';
+
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+
+if (localStorage.getItem('sticker_smap10') !== 'true') {
+  localStorage.setItem('sticker_smap10', 'new');
+}
+
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+
+      let bossBtn = document.getElementById('boss-btn');
+      if (bossBtn) {
+        if (!isBoss) {
+            bossBtn.style.display = 'block';
+        } else {
+            bossBtn.style.display = 'none';
+        }
+      }
+
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>

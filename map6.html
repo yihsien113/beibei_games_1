@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 神秘階梯迷宮</title>
+  
+  <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ff4081;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #1a233a;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #ff4081;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 64, 129, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn, #skip-btn {
+      position: absolute;
+      top: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+    #back-btn {
+      left: 15px;
+      background-color: #333;
+    }
+    #skip-btn {
+      right: 15px;
+      background-color: #e17055;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button.btn { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">階梯載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <button id="skip-btn" class="btn" onclick="skipTutorial()">⏭️ 跳過教學</button>
+
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>神<rt>ㄕㄣˊ</rt></ruby>
+          <ruby>秘<rt>ㄇㄧˋ</rt></ruby>
+          <ruby>階<rt>ㄐㄧㄝ</rt></ruby>
+          <ruby>梯<rt>ㄊㄧ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%;">
+          <ruby>選<rt>ㄒㄩㄢˇ</rt></ruby>
+          <ruby>擇<rt>ㄗㄜˊ</rt></ruby>
+          <ruby>對<rt>ㄉㄨㄟˋ</rt></ruby>
+          <ruby>的<rt>˙ㄉㄜ</rt></ruby>
+          <ruby>路<rt>ㄌㄨˋ</rt></ruby>
+          <ruby>才<rt>ㄘㄞˊ</rt></ruby>
+          <ruby>能<rt>ㄋㄥˊ</rt></ruby>
+          <ruby>拿<rt>ㄋㄚˊ</rt></ruby>
+          <ruby>到<rt>ㄉㄠˋ</rt></ruby>
+          <ruby>皇<rt>ㄏㄨㄤˊ</rt></ruby>
+          <ruby>冠<rt>ㄍㄨㄢ</rt></ruby>
+          <span>!</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame(true)">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      
+      <h1 class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <!-- 結算後再玩一次會略過教學，直接開始 -->
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame(false)">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 對話框模組載入 -->
+  <script src="rpg-dialog-ui.js" onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
+
+  <script>
+    // --- 角色與畫布設定 ---
+    const CHARACTERS = {
+      'han1': { prefix: 'han1', size: 130 },
+      'han2': { prefix: 'han2', size: 140 },
+      'han3': { prefix: 'han3', size: 130 },
+      'han4': { prefix: 'han4', size: 135 },
+      'han5': { prefix: 'han5', size: 130 }
+    };
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 900;
+    canvas.height = 1200;
+
+    // --- 鬼腳圖參數設定 ---
+    const TOTAL_QUESTIONS = 4; 
+    let NUM_LINES = 3;         
+    let lineX = [];            
+    let ladderTopY = 230;      
+    let ladderBottomY = 980;   
+    let numRows = 6;           
+    
+    let rungs = [];            
+    let pathsData = [];        
+    let goalCol = 0;           
+    let entryButtons = [];     
+    
+    let activeWaypoints = [];  
+    let currentWpIndex = 0;    
+    let walkedTrail = [];      
+    let selectedEntryCol = -1; 
+
+    // 教學模式變數與步驟狀態
+    let isTutorial = false;
+    // tutorialStep 對應: 
+    // 0: 開頭字幕, 1: 等待點擊2號, 2: 走向第1個轉彎, 3: 在第1個轉彎暫停
+    // 4: 走向第2個轉彎, 5: 在第2個轉彎暫停, 6: 走到底, 7: 結束字幕
+    let tutorialStep = -1; 
+
+    // 遊戲計分與狀態
+    let currentQuestion = 0;
+    let stars = 0;
+    let gamePhase = 'start'; 
+    let pauseTimer = 0;
+    let whiteFade = 0;
+    let lastTime = 0; 
+    let popupTexts = []; 
+
+    const player = {
+      x: 450, y: 1100, size: charConfig.size, 
+      speedPxPerSec: 850, 
+      isFacingLeft: false, isMoving: false, walkCycle: 0,
+      fallSpeed: 0, spinAngle: 0
+    };
+
+    let totalAssets = 2; 
+    let loadedAssets = 0;
+    let bgLoaded = false;
+    let charLoaded = false;
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('game-container').style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+        document.getElementById('start-screen').style.display = 'flex';
+        initLadderLayout();
+        draw(); 
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map6.webp'; 
+    bgImg.onload = () => {
+      canvas.width = bgImg.width;
+      canvas.height = bgImg.height;
+      bgLoaded = true;
+      checkLoadProgress();
+    };
+    bgImg.onerror = () => { checkLoadProgress(); };
+
+    const charImg = new Image();
+    charImg.src = `assets/han/${charConfig.prefix}-1.webp`; 
+    charImg.onload = () => { charLoaded = true; checkLoadProgress(); };
+    charImg.onerror = () => { checkLoadProgress(); };
+
+    function initLadderLayout() {
+      ladderTopY = canvas.height * 0.22;
+      ladderBottomY = canvas.height * 0.80;
+      const marginX = canvas.width * (NUM_LINES >= 7 ? 0.08 : 0.14);
+      const usableW = canvas.width - marginX * 2;
+      lineX = [];
+      for (let i = 0; i < NUM_LINES; i++) {
+        lineX.push(marginX + i * (usableW / (NUM_LINES - 1)));
+      }
+    }
+
+    function generateLadderStage() {
+      if (isTutorial) {
+        // 🎯 教學專屬：固定 3 條直線與 2 條轉彎橫線，由 2 號出發必走 2 次轉彎
+        NUM_LINES = 3; 
+        initLadderLayout();
+        walkedTrail = [];
+        selectedEntryCol = -1;
+        
+        // 橫線配置: 連接 index 1 (2號) 與 index 2 (3號)
+        rungs = [
+          { col: 1, y: ladderBottomY - 200 }, 
+          { col: 1, y: ladderBottomY - 450 }  
+        ];
+
+        pathsData = [];
+        for (let i = 0; i < NUM_LINES; i++) {
+          pathsData.push(tracePathUp(i));
+        }
+
+        goalCol = 1; // 皇冠會出現在 index 1 (中間)
+        
+        let btnRadius = 48;
+        entryButtons = [];
+        for (let i = 0; i < NUM_LINES; i++) {
+          entryButtons.push({
+            col: i, x: lineX[i], y: ladderBottomY + 60, radius: btnRadius,
+            disabled: i !== 1 // 鎖定 1號 與 3號，只有 2號能點
+          });
+        }
+      } else {
+        // 一般隨機生成模式
+        if (currentQuestion === 0) { NUM_LINES = 3; numRows = 5; }
+        else if (currentQuestion === 1) { NUM_LINES = 4; numRows = 5; }
+        else if (currentQuestion === 2) { NUM_LINES = 4; numRows = 6; }
+        else if (currentQuestion === 3) { NUM_LINES = 4; numRows = 7; }
+
+        initLadderLayout();
+        walkedTrail = [];
+        selectedEntryCol = -1;
+
+        const topMargin = ladderTopY + 70;
+        const bottomMargin = ladderBottomY - 70;
+        const stepY = (bottomMargin - topMargin) / (numRows - 1);
+
+        rungs = [];
+        for (let r = 0; r < numRows; r++) {
+          let jitter = (Math.random() - 0.5) * (stepY * 0.35);
+          let y = Math.round(topMargin + r * stepY + jitter);
+          let col = Math.floor(Math.random() * (NUM_LINES - 1));
+          rungs.push({ col: col, y: y });
+        }
+
+        for (let c = 0; c < NUM_LINES - 1; c++) {
+          if (!rungs.some(r => r.col === c)) {
+            let randomRow = Math.floor(Math.random() * numRows);
+            rungs[randomRow].col = c;
+          }
+        }
+
+        pathsData = [];
+        for (let i = 0; i < NUM_LINES; i++) { pathsData.push(tracePathUp(i)); }
+
+        goalCol = Math.floor(Math.random() * NUM_LINES);
+        let btnRadius = NUM_LINES >= 7 ? 32 : 48;
+        entryButtons = [];
+        for (let i = 0; i < NUM_LINES; i++) {
+          entryButtons.push({ col: i, x: lineX[i], y: ladderBottomY + 60, radius: btnRadius, disabled: false });
+        }
+      }
+
+      player.x = canvas.width / 2;
+      player.y = canvas.height * 0.92;
+      player.isMoving = false;
+      player.spinAngle = 0;
+    }
+
+    function tracePathUp(startCol) {
+      let currentCol = startCol;
+      let sortedRungs = [...rungs].sort((a, b) => b.y - a.y);
+      
+      let waypoints = [ { x: lineX[currentCol], y: ladderBottomY } ];
+
+      for (let rung of sortedRungs) {
+        if (rung.col === currentCol) {
+          waypoints.push({ x: lineX[currentCol], y: rung.y });
+          currentCol = currentCol + 1;
+          waypoints.push({ x: lineX[currentCol], y: rung.y });
+        } else if (rung.col === currentCol - 1) {
+          waypoints.push({ x: lineX[currentCol], y: rung.y });
+          currentCol = currentCol - 1;
+          waypoints.push({ x: lineX[currentCol], y: rung.y });
+        }
+      }
+
+      waypoints.push({ x: lineX[currentCol], y: ladderTopY });
+
+      return { startCol: startCol, finalCol: currentCol, waypoints: waypoints };
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 40) {
+      popupTexts.push({ text: text, x: x, y: y, color: color, size: size, startTime: performance.now(), duration: 1000 });
+    }
+
+    function skipTutorial() {
+      if (window.RPGDialog) window.RPGDialog.hide();
+      isTutorial = false;
+      tutorialStep = -1;
+      document.getElementById('skip-btn').style.display = 'none';
+      startGame(false); 
+    }
+
+    function startGame(startAsTutorial = true) {
+      currentQuestion = 0;
+      stars = 0;
+      whiteFade = 0;
+      popupTexts = [];
+      
+      isTutorial = startAsTutorial;
+      
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('skip-btn').style.display = isTutorial ? 'block' : 'none';
+      updateHUD();
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      
+      gamePhase = 'playing';
+      
+      if (isTutorial) {
+        tutorialStep = 0;
+        generateLadderStage(); // 生成固定 2 號出發的迷宮
+        
+        // 觸發開頭教學語音
+        if (window.RPGDialog) {
+          window.RPGDialog.show(
+            `<ruby>只<rt>ㄓˇ</rt></ruby><ruby>能<rt>ㄋㄥˊ</rt></ruby><ruby>往<rt>ㄨㄤˇ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby><ruby>走<rt>ㄗㄡˇ</rt></ruby>，<br><ruby>遇<rt>ㄩˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>橫<rt>ㄏㄥˊ</rt></ruby><ruby>線<rt>ㄒㄧㄢˋ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>轉<rt>ㄓㄨㄢˇ</rt></ruby><ruby>彎<rt>ㄨㄢ</rt></ruby>`,
+            'assets/mp3/map6-1.mp3'
+          );
+        }
+      } else {
+        tutorialStep = -1;
+        generateLadderStage();
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('coinDisplay').innerText = stars;
+    }
+
+    function endGame() {
+      gamePhase = 'result';
+      document.getElementById('back-btn').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+      if (localStorage.getItem('sticker_smap6') !== 'true') {
+        localStorage.setItem('sticker_smap6', 'new');
+      }
+      
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let killsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        killsHtml += '⭐';
+        if (i % 5 === 0) killsHtml += '<br>'; 
+      }
+      document.getElementById('star-container').innerHTML = killsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    function gameLoop(currentTime) {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start') {
+        update(Math.min(dt, 0.1));
+        draw();
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (gamePhase === 'climbing') {
+        // 如果在教學模式，且目前狀態是暫停等待點擊，就停止移動
+        if (isTutorial && (tutorialStep === 3 || tutorialStep === 5 || tutorialStep === 7)) return;
+
+        if (currentWpIndex < activeWaypoints.length) {
+          let target = activeWaypoints[currentWpIndex];
+          let dx = target.x - player.x;
+          let dy = target.y - player.y;
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          let moveDist = player.speedPxPerSec * dt;
+
+          if (Math.abs(dx) > 1) player.isFacingLeft = dx < 0;
+
+          if (dist > moveDist) {
+            player.x += (dx / dist) * moveDist;
+            player.y += (dy / dist) * moveDist;
+            player.walkCycle += 25 * dt;
+          } else {
+            // 🎯 抵達航點交界處
+            player.x = target.x;
+            player.y = target.y;
+            walkedTrail.push({ x: target.x, y: target.y });
+            currentWpIndex++;
+
+            if (isTutorial) {
+              // currentWpIndex 2 = 剛抵達第一條橫線路口
+              if (currentWpIndex === 2 && tutorialStep === 2) {
+                tutorialStep = 3; // 狀態：暫停在第一個轉彎
+                if (window.RPGDialog) {
+                  window.RPGDialog.show(`<ruby>遇<rt>ㄩˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>橫<rt>ㄏㄥˊ</rt></ruby><ruby>線<rt>ㄒㄧㄢˋ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>轉<rt>ㄓㄨㄢˇ</rt></ruby><ruby>彎<rt>ㄨㄢ</rt></ruby>`, 'assets/mp3/map6-2.mp3');
+                }
+              } 
+              // currentWpIndex 4 = 剛抵達第二條橫線路口
+              else if (currentWpIndex === 4 && tutorialStep === 4) {
+                tutorialStep = 5; // 狀態：暫停在第二個轉彎
+                if (window.RPGDialog) {
+                  window.RPGDialog.show(`<ruby>遇<rt>ㄩˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>橫<rt>ㄏㄥˊ</rt></ruby><ruby>線<rt>ㄒㄧㄢˋ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>轉<rt>ㄓㄨㄢˇ</rt></ruby><ruby>彎<rt>ㄨㄢ</rt></ruby>`, 'assets/mp3/map6-2.mp3');
+                }
+              }
+            }
+          }
+        } else {
+          // 抵達梯子頂端
+          player.isMoving = false;
+          player.walkCycle = 0;
+          
+          const resultData = pathsData[selectedEntryCol];
+          if (resultData.finalCol === goalCol) {
+            if (isTutorial) {
+              tutorialStep = 7;
+              if (window.RPGDialog) {
+                window.RPGDialog.show(`<ruby>教<rt>ㄐㄧㄠ</rt></ruby><ruby>學<rt>ㄒㄩㄝˊ</rt></ruby><ruby>結<rt>ㄐㄧㄝˊ</rt></ruby><ruby>束<rt>ㄕㄨˋ</rt></ruby>`, 'assets/mp3/map6-3.mp3');
+              } else {
+                skipTutorial();
+              }
+            } else {
+              if (currentQuestion === TOTAL_QUESTIONS - 1) {
+                stars += 8; 
+                addPopup(`👑 +8 ⭐`, player.x, player.y - 60, '#FFD700', 55);
+              } else {
+                addPopup(`🚪 `, player.x, player.y - 60, '#60ff40', 45);
+              }
+              updateHUD();
+              gamePhase = 'pauseAfterClimb';
+              pauseTimer = 1.2; 
+            }
+          } else {
+            // 一般模式答錯跌落
+            entryButtons[selectedEntryCol].disabled = true;
+            addPopup('❌ ', player.x, player.y - 60, '#FF3B30', 48);
+            gamePhase = 'falling';
+            player.fallSpeed = -350; 
+            player.spinAngle = 0;
+            walkedTrail = []; 
+          }
+        }
+      } 
+      else if (gamePhase === 'falling') {
+        player.fallSpeed += 2500 * dt; 
+        player.y += player.fallSpeed * dt;
+        player.spinAngle += 20 * dt;   
+        
+        if (player.y >= canvas.height * 0.92 && player.fallSpeed > 0) {
+          player.y = canvas.height * 0.92;
+          player.x = canvas.width / 2;
+          player.spinAngle = 0;
+          player.isMoving = false;
+          gamePhase = 'playing'; 
+        }
+      }
+      else if (gamePhase === 'pauseAfterClimb') {
+        pauseTimer -= dt;
+        if (pauseTimer <= 0) {
+          currentQuestion++;
+          if (currentQuestion >= TOTAL_QUESTIONS) {
+            gamePhase = 'ending';
+          } else {
+            gamePhase = 'playing';
+            generateLadderStage();
+          }
+        }
+      }
+      else if (gamePhase === 'ending') {
+        whiteFade += dt * 1.2;
+        if (whiteFade >= 1) {
+          whiteFade = 1;
+          endGame();
+        }
+      }
+    }
+
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    function draw() {
+      if (bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#1e293b');
+        grad.addColorStop(1, '#0f172a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const now = performance.now();
+
+      // 繪製頂部進度面板
+      ctx.save();
+      ctx.fillStyle = 'rgba(20, 20, 40, 0.8)';
+      drawRoundRect(ctx, canvas.width / 2 - 220, 30, 440, 80, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.font = 'bold 42px sans-serif';
+      ctx.fillStyle = '#FFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (isTutorial) {
+        ctx.fillText(`👀 教學引導`, canvas.width / 2, 70);
+      } else {
+        ctx.fillText(`第 ${Math.min(currentQuestion + 1, TOTAL_QUESTIONS)} / ${TOTAL_QUESTIONS} 層階梯`, canvas.width / 2, 70);
+      }
+      ctx.restore();
+
+      // 繪製上層平台與門/寶箱
+      for (let i = 0; i < NUM_LINES; i++) {
+        ctx.save();
+        let px = lineX[i];
+        let py = ladderTopY - 45;
+
+        if (i === goalCol) {
+          let pulse = Math.sin(now / 200) * 6;
+          let isFinalLevel = (currentQuestion >= TOTAL_QUESTIONS - 1) || isTutorial;
+          
+          let showCrownOnHead = isFinalLevel && (gamePhase === 'pauseAfterClimb' || gamePhase === 'ending' || gamePhase === 'result');
+          let emoji = isFinalLevel ? '👑' : '🚪';
+          let glowColor = isFinalLevel ? '#FFD700' : '#40ff80';
+
+          ctx.shadowColor = glowColor;
+          ctx.shadowBlur = 20 + pulse;
+          ctx.fillStyle = glowColor;
+          
+          let pWidth = NUM_LINES >= 7 ? 70 : 120;
+          drawRoundRect(ctx, px - (pWidth / 2), ladderTopY - 22, pWidth, 22, 8);
+          ctx.fill();
+
+          ctx.font = `${NUM_LINES >= 7 ? 60 : 80}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          let drawY = showCrownOnHead ? (player.y - player.size * 0.55 + pulse * 0.3) : (py - 15 + pulse * 0.5);
+          let drawX = showCrownOnHead ? player.x : px;
+          ctx.fillText(emoji, drawX, drawY);
+        } else {
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          let pWidth = NUM_LINES >= 7 ? 50 : 80;
+          drawRoundRect(ctx, px - (pWidth / 2), ladderTopY - 12, pWidth, 12, 5);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 繪製梯子白線
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = '#F8FAFC';
+      
+      ctx.lineWidth = NUM_LINES >= 7 ? 6 : 10;
+      for (let i = 0; i < NUM_LINES; i++) {
+        ctx.beginPath();
+        ctx.moveTo(lineX[i], ladderTopY);
+        ctx.lineTo(lineX[i], ladderBottomY);
+        ctx.stroke();
+      }
+
+      ctx.lineWidth = NUM_LINES >= 7 ? 5 : 9;
+      for (let rung of rungs) {
+        ctx.beginPath();
+        ctx.moveTo(lineX[rung.col], rung.y);
+        ctx.lineTo(lineX[rung.col + 1], rung.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 發光軌跡
+      if (walkedTrail.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = NUM_LINES >= 7 ? 8 : 14;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = '#FF9500';
+        ctx.shadowBlur = 18;
+
+        ctx.beginPath();
+        ctx.moveTo(walkedTrail[0].x, walkedTrail[0].y);
+        for (let i = 1; i < walkedTrail.length; i++) {
+          ctx.lineTo(walkedTrail[i].x, walkedTrail[i].y);
+        }
+        ctx.lineTo(player.x, player.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 📌 教學轉彎發光指示與箭頭 (暫停於橫線處時出現)
+      if (isTutorial && (tutorialStep === 3 || tutorialStep === 5)) {
+        let targetX = activeWaypoints[currentWpIndex].x;
+        let targetY = activeWaypoints[currentWpIndex].y;
+        
+        ctx.save();
+        ctx.strokeStyle = '#40ff80';
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#40ff80';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(targetX, targetY);
+        ctx.stroke();
+        ctx.restore();
+
+        // 畫上👉 或 👈 引導
+        let bounce = Math.sin(now / 150) * 15;
+        ctx.font = '60px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        let arrowStr = targetX < player.x ? '👈' : '👉';
+        let drawX = (player.x + targetX) / 2;
+        ctx.fillText(arrowStr, drawX, targetY - 40 + bounce);
+      }
+
+      // 底部起點入口按鈕
+      for (let btn of entryButtons) {
+        ctx.save();
+        
+        // 🎯 教學模式：引導點擊 2號 (index 1)
+        if (isTutorial && tutorialStep === 1) {
+          if (btn.col === 1) {
+            ctx.fillStyle = '#1e3799';
+            ctx.strokeStyle = '#fff200';
+            ctx.shadowColor = '#fff200';
+            ctx.shadowBlur = 20;
+            
+            // 下彈手指引導
+            let bounce = Math.sin(now / 150) * 15;
+            ctx.font = '60px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('👇', btn.x, btn.y - 70 + bounce);
+          } else {
+            ctx.fillStyle = 'rgba(40, 40, 40, 0.5)';
+            ctx.strokeStyle = '#333';
+          }
+        } 
+        // 正常狀態樣式
+        else if (btn.disabled) {
+          ctx.fillStyle = 'rgba(80, 80, 80, 0.5)';
+          ctx.strokeStyle = '#555';
+        } else if (selectedEntryCol === btn.col && gamePhase !== 'playing') {
+          ctx.fillStyle = '#FF4081';
+          ctx.strokeStyle = '#FFF';
+          ctx.shadowColor = '#FF4081';
+          ctx.shadowBlur = 20;
+        } else {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+          ctx.strokeStyle = '#38BDF8';
+          ctx.shadowColor = '#38BDF8';
+          ctx.shadowBlur = 12;
+        }
+
+        ctx.beginPath();
+        ctx.arc(btn.x, btn.y, btn.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = NUM_LINES >= 7 ? 3 : 5;
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = btn.disabled ? '#888' : '#FFF';
+        ctx.font = `bold ${btn.radius * 0.8}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(btn.disabled ? '✕' : (btn.col + 1), btn.x, btn.y + 3);
+        ctx.restore();
+      }
+
+      // 人物與旋轉掉落特效
+      ctx.save(); 
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 5 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;   
+      
+      if (gamePhase === 'falling') {
+        rotationAngle = player.spinAngle;
+      }
+
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      
+      if (charLoaded) {
+        if (player.isFacingLeft && gamePhase !== 'falling') {
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(charImg, -player.size / 2, -player.size / 2, player.size, player.size);
+      } else {
+        ctx.font = '80px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👧🏻', 0, 0);
+      }
+      ctx.restore(); 
+
+      // 彈出文字
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        const popup = popupTexts[i];
+        const progress = (now - popup.startTime) / popup.duration;
+        
+        if (progress >= 1) {
+          popupTexts.splice(i, 1);
+        } else {
+          ctx.save();
+          ctx.globalAlpha = 1 - Math.pow(progress, 3); 
+          const floatY = popup.y - (progress * 50); 
+          ctx.font = `bold ${popup.size}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillStyle = popup.color;
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 5;
+          ctx.strokeText(popup.text, popup.x, floatY);
+          ctx.fillText(popup.text, popup.x, floatY);
+          ctx.restore();
+        }
+      }
+    }
+
+    // --- 🎮 事件監聽區 (滑鼠與對話框推進) ---
+    
+    // 獨立出「推進對話」的邏輯
+    function handleDialogClick() {
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (!window.RPGDialog.isLocked()) {
+          window.RPGDialog.hide();
+          if (isTutorial) {
+            if (tutorialStep === 0) {
+              tutorialStep = 1; // 關閉開頭語音後，進入「等待點擊 2號」
+            } else if (tutorialStep === 3) {
+              tutorialStep = 4; // 關閉第一個轉彎語音後，繼續走
+            } else if (tutorialStep === 5) {
+              tutorialStep = 6; // 關閉第二個轉彎語音後，繼續走
+            } else if (tutorialStep === 7) {
+              skipTutorial(); // 關閉「教學結束」，正式開始隨機關卡
+            }
+          }
+        }
+        return true; // 回傳 true 代表對話框有開啟，並且攔截了這次點擊
+      }
+      return false; // 對話框沒開啟
+    }
+
+    // 註冊對話框本身的點擊事件
+    window.onload = () => {
+      if (window.RPGDialog && window.RPGDialog.boxElement) {
+        window.RPGDialog.boxElement.addEventListener('pointerdown', (e) => {
+          handleDialogClick();
+        });
+      }
+    };
+
+    // 註冊整個遊戲畫布(全螢幕)的點擊事件
+    canvas.addEventListener('pointerdown', (e) => {
+      // 攔截 1：只要對話框還在畫面上，點擊「全螢幕畫布」任何地方都會推進對話，並停止其他動作
+      if (handleDialogClick()) {
+        return; 
+      }
+
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      
+      // 攔截 2：如果在教學模式中，只有 tutorialStep 1 (等待點擊 2 號) 的狀態才允許點擊起點
+      if (isTutorial && tutorialStep !== 1) return; 
+      if (gamePhase !== 'playing') return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let btn of entryButtons) {
+        if (btn.disabled) continue; // 1號與3號被設為 disabled，點了沒反應
+        
+        let dx = clickX - btn.x;
+        let dy = clickY - btn.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= btn.radius * 1.35) {
+          // 確保教學模式下只有點 2號 才會動
+          if (isTutorial && btn.col !== 1) return;
+
+          selectedEntryCol = btn.col;
+          activeWaypoints = pathsData[btn.col].waypoints;
+          currentWpIndex = 0;
+          
+          player.x = activeWaypoints[0].x;
+          player.y = activeWaypoints[0].y;
+          walkedTrail = [{ x: player.x, y: player.y }];
+          player.isMoving = true;
+          
+          if (isTutorial) tutorialStep = 2; // 狀態：走向第一個轉彎
+          
+          gamePhase = 'climbing';
+          break;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
