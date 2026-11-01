@@ -83,14 +83,17 @@
       -webkit-backface-visibility: hidden;
     }
     .silhouette { filter: brightness(0) opacity(0.8) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
-    .obtained { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+    /* 👇 明確指定 brightness(1) 雙重確保覆蓋黑影 */
+    .obtained { filter: brightness(1) opacity(1) drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 
     /* ====== 【基礎建設】三階段狀態與特效系統 ====== */
+    /* 👇 移除動畫內的 filter，改由純 transform 縮放，避免 Safari GPU 鎖死濾鏡紋理 */
     @keyframes claimable-pulse {
-      0%, 100% { filter: brightness(0) opacity(0.85) drop-shadow(0 0 6px rgba(251, 191, 36, 0.6)); transform: scale(1); }
-      50% { filter: brightness(0) opacity(0.95) drop-shadow(0 0 16px rgba(251, 191, 36, 1)); transform: scale(1.04); }
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
     }
     .claimable-glow {
+      filter: brightness(0) opacity(0.9) drop-shadow(0 0 12px rgba(251, 191, 36, 0.95));
       animation: claimable-pulse 1.5s infinite ease-in-out;
     }
 
@@ -439,7 +442,7 @@
       unlockingIds[id] = true;
 
       const item = stickersConfig.find(x => x.id === id);
-      const img = document.getElementById(`img-${id}`);
+      const oldImg = document.getElementById(`img-${id}`);
       const badge = document.getElementById(`badge-${id}`);
       const getFx = document.getElementById(`get-fx-${id}`);
       const permFx = document.getElementById(`perm-fx-${id}`);
@@ -448,21 +451,27 @@
       localStorage.setItem('sticker_' + id, 'true');
 
       if (badge) badge.classList.add('hidden');
-      if (img) {
-        // 👇 核心修復：關閉過渡動畫，避免 iOS Safari 濾鏡殘留
-        img.style.transition = 'none'; 
-        img.classList.remove('silhouette', 'claimable-glow');
+
+      let activeImg = oldImg;
+      if (oldImg) {
+        // 👇 核心修復：直接複製並替換為全新的 DOM 節點，徹底強制 iOS Safari 丟棄舊的黑色剪影 GPU 快取
+        const newImg = oldImg.cloneNode(true);
+        newImg.style.transition = 'none';
+        newImg.style.animation = 'none';
+        newImg.style.filter = 'none';
+        newImg.className = 'sticker-img obtained anim-pop-in';
         
-        // 👇 強制瀏覽器立刻重新計算樣式 (Reflow)，這是破解殘留 Bug 的關鍵
-        void img.offsetWidth; 
-        
-        // 加入已獲得狀態與彈出動畫
-        img.classList.add('obtained', 'anim-pop-in');
-        
-        // 👇 延遲一小段時間再恢復原本的過渡動畫設定
-        setTimeout(() => {
-          img.style.transition = '';
-        }, 50);
+        oldImg.parentNode.replaceChild(newImg, oldImg);
+        activeImg = newImg;
+
+        // 下一幀恢復 CSS 原生設定（保留 drop-shadow 與 transition）
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            activeImg.style.filter = '';
+            activeImg.style.animation = '';
+            activeImg.style.transition = '';
+          });
+        });
       }
 
       // 下方維持原有的特效判定邏輯
@@ -471,7 +480,7 @@
 
         setTimeout(() => {
           getFx.classList.remove(item.onGetEffect);
-          if (img) img.classList.remove('anim-pop-in');
+          if (activeImg) activeImg.classList.remove('anim-pop-in');
           if (item.effect && permFx) {
             permFx.classList.add(item.effect);
           }
@@ -482,12 +491,11 @@
           permFx.classList.add(item.effect);
         }
         setTimeout(() => {
-          if (img) img.classList.remove('anim-pop-in');
+          if (activeImg) activeImg.classList.remove('anim-pop-in');
           unlockingIds[id] = false;
         }, 450);
       }
     }
-
     function handleStickerTap(id) {
       if (unlockingIds[id]) return;
       if (obtainedState[id] === 'new') {

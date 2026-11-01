@@ -1,7 +1,7 @@
 
-//更新項目:修改貼紙系統bug.修改大廳傳送門
+//更新項目:修改貼紙系統bug
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v1.3';
+const CACHE_NAME = 'dollhouse-game-v1.4';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
