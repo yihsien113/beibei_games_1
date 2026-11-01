@@ -68,15 +68,21 @@
     .slot-3 { left: 15.0%; top: 47.5%; width: 28.5%; height: 21.5%; }
     .slot-4 { left: 56.5%; top: 47.5%; width: 28.5%; height: 21.5%; }
 
-    /* 貼紙共用屬性與特效 */
+    /* 貼紙共用屬性與特效 (修復 iOS 3D Z-fighting 穿圖問題) */
     .sticker-slot {
       position: absolute; display: flex; align-items: center; justify-content: center;
       transition: transform 0.15s ease-out; z-index: 10;
       pointer-events: none;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     .sticker-slot.is-hovered,
     .sticker-slot.is-pressed { transform: scale(1.06); }
-    .sticker-img { width: 72%; height: 72%; object-fit: contain; transition: filter 0.3s ease; position: relative; z-index: 10; }
+    .sticker-img { 
+      width: 72%; height: 72%; object-fit: contain; transition: filter 0.3s ease; position: relative; z-index: 10;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
     .silhouette { filter: brightness(0) opacity(0.8) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
     .obtained { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
 
@@ -109,6 +115,8 @@
       z-index: 30;
       letter-spacing: 1px;
       animation: badge-bounce 1s infinite ease-in-out;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     /* 獨立特效畫布層 (疊在貼紙上方，支援 ::before 與 ::after) */
@@ -117,6 +125,8 @@
       inset: 0;
       pointer-events: none;
       z-index: 25;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     /* ------------------ "獲得貼紙特效"放置區  ------------------ */
     
@@ -127,7 +137,12 @@
 
     /* ------------------ 翻書邏輯!!絕對不能動  ------------------ */
     .preserve-3d { transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
-    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .backface-hidden { 
+      backface-visibility: hidden; 
+      -webkit-backface-visibility: hidden; 
+      transform: translate3d(0, 0, 0); 
+      -webkit-transform: translate3d(0, 0, 0);
+    }
 
     @keyframes pop-in {
       0% { transform: scale(0.5); opacity: 0; }
@@ -179,8 +194,8 @@
     <!-- 多頁 3D 魔法書結構 -->
     <div id="book-wrapper" class="w-full h-full relative select-none" style="perspective: 2000px;">
       
-      <!-- 靜態最底層 -->
-      <div class="absolute inset-0 z-0 pointer-events-none">
+      <!-- 靜態最底層 (加入 translateZ(-5px) 避免與翻頁層發生 Z 軸碰撞) -->
+      <div class="absolute inset-0 z-0 pointer-events-none" style="transform: translateZ(-5px); -webkit-transform: translateZ(-5px);">
         <div class="absolute w-1/2 h-full left-0 overflow-hidden rounded-l-[12px] shadow-[-10px_20px_40px_rgba(0,0,0,0.6)]">
           <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
           <div id="canvas-base-left" class="absolute w-[200%] h-full left-0"></div>
@@ -562,12 +577,12 @@
         paper._zTimer = null;
 
         paper.innerHTML = `
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]">
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]" style="transform: translateZ(1px); -webkit-transform: translateZ(1px);">
             <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
             <div id="canvas-front-${i}" class="absolute w-[200%] h-full right-0"></div>
             <div class="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-20"></div>
           </div>
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg);">
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px);">
             <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
             <div id="canvas-back-${i}" class="absolute w-[200%] h-full left-0"></div>
             <div class="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black/40 to-transparent pointer-events-none z-20"></div>
