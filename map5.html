@@ -223,8 +223,20 @@
       
       #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
       #start-screen .intro-copy p { font-size: 24px !important; }
-      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
-      
+     /* --- 修正難度選擇按鈕在手機上的大小與排版 --- */
+#start-screen .grid-container { 
+  gap: 12px !important; 
+  padding: 0 10px !important; 
+}
+#start-screen .grid-container .btn { 
+  font-size: 26px !important; 
+  padding: 12px 5px !important; 
+}
+#start-screen .grid-container .btn-subtext { 
+  font-size: 16px !important; 
+  margin-top: 4px !important; 
+}
+/* ------------------------------------------ */
       #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
       .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
       #totalCoins { font-size: 26px !important; }

@@ -4,12 +4,12 @@
 //更新項目v2.2:修正衣櫥.貼紙系統.素材清單的人物檔案位置
 //更新項目v2.3:星正map13遊戲結束後產生的大廳卡死.map5題目字體縮小
 //更新項目v2.4:修正大廳卡死,增加大廳更新公告,增加版本號碼
-
+//更新項目v2.5:修正map13無圖片的問題.修正map5選擇難度排版問題
 
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.4';
+const CACHE_NAME = 'dollhouse-game-v2.5';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
