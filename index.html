@@ -677,7 +677,7 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
     bgImg.src = 'assets/lobby/lobby.webp';
 
     const playerImg = new Image();
-    playerImg.src = `assets/han/${equippedCharKey}-1.webp`;
+    playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
 
     const DEFAULT_PLAYER_X = 943;
     const DEFAULT_PLAYER_Y = 1051;
@@ -954,30 +954,51 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
             continue;
           }
 
+          // 1. 建立全域快取：把漸層畫在一張隱形的畫布上，遊戲開啟期間只計算一次
+          if (!window.portalGradCache) {
+            let off = document.createElement('canvas');
+            off.width = 400; // 傳送門對角線約 375，400 夠大
+            off.height = 400;
+            let oCtx = off.getContext('2d');
+            if (oCtx.createConicGradient) {
+              let grad = oCtx.createConicGradient(0, 200, 200);
+              grad.addColorStop(0, "#ff0000"); 
+              grad.addColorStop(0.15, "#ff7f00"); 
+              grad.addColorStop(0.33, "#ffff00"); 
+              grad.addColorStop(0.5, "#00ff00"); 
+              grad.addColorStop(0.66, "#0000ff"); 
+              grad.addColorStop(0.83, "#ff00ff"); 
+              grad.addColorStop(1, "#ff0000"); 
+              oCtx.fillStyle = grad;
+              oCtx.fillRect(0, 0, 400, 400);
+              window.portalGradCache = off; 
+            } else {
+              window.portalGradCache = 'fallback'; 
+            }
+          }
+
           ctx.save();
           let cx = z.x + z.w / 2; 
           let cy = z.y + z.h / 2; 
           let portalAngle = (time / 800) * Math.PI * 2; 
 
-          if (ctx.createConicGradient) {
-            let grad = ctx.createConicGradient(portalAngle, cx, cy);
-            grad.addColorStop(0, "#ff0000"); 
-            grad.addColorStop(0.15, "#ff7f00"); 
-            grad.addColorStop(0.33, "#ffff00"); 
-            grad.addColorStop(0.5, "#00ff00"); 
-            grad.addColorStop(0.66, "#0000ff"); 
-            grad.addColorStop(0.83, "#ff00ff"); 
-            grad.addColorStop(1, "#ff0000"); 
-            ctx.strokeStyle = grad;
-          } else {
-            ctx.strokeStyle = '#00ffff'; 
-          }
+          // 2. 利用 clip("evenodd") 製作「只有邊框」的中空遮罩
+          // 尺寸精確對齊原本 lineWidth=12 的範圍
+          ctx.beginPath();
+          ctx.rect(z.x - 12, z.y - 12, z.w + 24, z.h + 24); // 外側邊框範圍
+          ctx.rect(z.x, z.y, z.w, z.h);                     // 內側範圍 (會被挖空，露出後面的地圖)
+          ctx.clip("evenodd");
 
-          ctx.lineWidth = 12; 
-          ctx.lineJoin = 'round'; 
-          
-          ctx.strokeRect(z.x - 6, z.y - 6, z.w + 12, z.h + 12); 
-          ctx.restore();
+          // 3. 將座標原點移至中心點，旋轉畫布並貼上快取的漸層圖片
+          ctx.translate(cx, cy);
+          if (window.portalGradCache !== 'fallback') {
+            ctx.rotate(portalAngle);
+            ctx.drawImage(window.portalGradCache, -200, -200); 
+          } else {
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(-200, -200, 400, 400);
+          }
+          ctx.restore(); // 解除裁切與旋轉，不影響後續地圖圖片的繪製
 
           if (z.img && z.img.complete) {
             ctx.drawImage(z.img, z.x, z.y, z.w, z.h);

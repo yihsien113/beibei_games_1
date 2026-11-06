@@ -1,7 +1,8 @@
 
-//更新項目:重大更新!分離出人物攻擊特效模組
+//更新項目v2.0:重大更新!分離出人物攻擊特效模組
+//更新項目v2.1:更新大廳傳送門過多崩潰問題 &人物檔案位置設置錯誤
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.0';
+const CACHE_NAME = 'dollhouse-game-v2.1';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
