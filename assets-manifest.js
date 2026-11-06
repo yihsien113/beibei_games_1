@@ -1,7 +1,7 @@
 
-//更新項目:增加公主貼紙
+//更新項目:大廳飛龍貼紙錯誤修改
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v1.5';
+const CACHE_NAME = 'dollhouse-game-v1.6';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [

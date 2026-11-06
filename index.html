@@ -443,6 +443,55 @@
 
     const canvas = document.getElementById('lobbyCanvas');
     const ctx = canvas.getContext('2d');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    // 暫時的修復補丁：清除錯誤的飛龍貼紙紀錄
+if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getItem('sticker_s14') === 'new') {
+    localStorage.removeItem('blindbox_slobby2'); // 讓大廳星星重新出現
+    localStorage.removeItem('sticker_s14');      // 刪除貼紙簿裡的虛空貼紙紀錄
+}
+//下次更新刪除
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     // 🌟 === 大廳教學模式變數與邏輯 === 🌟
     let isTutorialMode = false;
@@ -694,7 +743,7 @@
       { id: 'map13', type: '關卡', x: 2263, y: 815, w: 225, h: 300, starX: 2391, starY: 985, targetUrl: 'map13.html', clearKey: 'map13_cleared', color: '#2196f3', imgSrc: 'assets/map/map13.webp' },
       
       { id: 'slobby1', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 1671, starY: 3318, stickerId: 'slobby1', stickerName: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', stickerSrc: 'assets/sticker/lobby1.webp' },
-      { id: 'slobby2', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 2344, starY: 2223, stickerId: 's14', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', stickerSrc: 'assets/bad/bad1-3.webp' },
+      { id: 'slobby2', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 2344, starY: 2223, stickerId: 'slobby2', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', stickerSrc: 'assets/sticker/lobby2.webp' },
       { id: 'slobby3', type: '貼紙', x: 1652, y: 3432, w: 225, h: 300, starX: 526, starY: 723, stickerId: 'slobby3', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>', stickerSrc: 'assets/sticker/lobby3.webp' },
 
       { id: 'star1', type: '金幣', x: 1110, y: 2850, w: 225, h: 300, starX: 1274, starY: 2480, rewardAmount: 5 },

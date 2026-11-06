@@ -181,6 +181,27 @@
       white-space: nowrap;
     }
 
+    /* 縮小按鈕預設樣式 (預設隱藏，平板與電腦看不見) */
+    #toggle-question-btn {
+      display: none; 
+      position: absolute;
+      bottom: -20px; /* 將按鈕移到題目板的底部，完美避開星星 */
+      left: 50%;     /* 保持水平置中 */
+      transform: translateX(-50%);
+      background-color: #ff4757;
+      color: white;
+      border: 3px solid #FFF;
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 95;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
     /* ========================================= */
     /* 專屬 iPhone 等手機螢幕的設定 (iPad 完全不受影響) */
     /* ========================================= */
@@ -205,6 +226,30 @@
       
       #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
       #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+
+      /* 手機版：顯示縮小按鈕 */
+      #toggle-question-btn {
+        display: block !important;
+      }
+      
+      /* 手機版：題目板縮小狀態的樣式 */
+      #question-board.minimized {
+        padding: 10px 20px !important;
+        width: auto !important;
+        max-width: 180px !important;
+      }
+      /* 縮小時隱藏原來的文字 */
+      #question-board.minimized #question-text {
+        display: none !important; 
+      }
+      /* 縮小時顯示提示文字 */
+      #question-board.minimized::after {
+        content: '📝 展開題目';
+        color: #FFD700;
+        font-size: 20px;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+      }
     }
   </style>
 </head>
@@ -220,6 +265,8 @@
     <div id="hud">⭐ <span id="coinDisplay">0</span></div>
 
     <div id="question-board">
+      <!-- 新增縮小按鈕 (預設會被 CSS 隱藏) -->
+      <button id="toggle-question-btn" onclick="toggleQuestion()">▲ 縮小</button>
       <div id="question-text" class="zh-text"></div>
     </div>
     
@@ -405,11 +452,37 @@
         });
     }
 
+    // --- 控制題目板縮小與展開 (僅手機版有效) ---
+    function toggleQuestion() {
+      const board = document.getElementById('question-board');
+      const btn = document.getElementById('toggle-question-btn');
+      
+      board.classList.toggle('minimized');
+      
+      if (board.classList.contains('minimized')) {
+        btn.innerHTML = '▼ 展開';
+        btn.style.backgroundColor = '#4cd137'; // 綠色
+      } else {
+        btn.innerHTML = '▲ 縮小';
+        btn.style.backgroundColor = '#ff4757'; // 紅色
+      }
+    }
+
     // 準備新題目
     function generateRound() {
       currentQ = questionsPool[currentQIndex];
       document.getElementById('question-text').innerHTML = currentQ.html;
       if (window.Bopomofo && window.Bopomofo.render) window.Bopomofo.render();
+      
+      // --- 新增：換題時自動恢復展開狀態 ---
+      const qBoard = document.getElementById('question-board');
+      const toggleBtn = document.getElementById('toggle-question-btn');
+      if (qBoard && toggleBtn) {
+        qBoard.classList.remove('minimized');
+        toggleBtn.innerHTML = '▲ 縮小';
+        toggleBtn.style.backgroundColor = '#ff4757';
+      }
+      // ---------------------------------
       
       // 隨機打亂 5 種明顯不同的比例分配給 5 個跑道
       currentValues = [...DISTINCT_PROPORTIONS].sort(() => Math.random() - 0.5);
@@ -461,14 +534,14 @@
       document.getElementById('hud').style.display = 'none';
       
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
-            // 加上這行來紀錄本關卡已通關
+      // 加上這行來紀錄本關卡已通關
       localStorage.setItem('map5_cleared', 'true');
 
       let newTotalCoins = currentCoins + stars;
       localStorage.setItem('playerCoins', newTotalCoins); 
       if (localStorage.getItem('sticker_smap5') !== 'true') {
-  localStorage.setItem('sticker_smap5', 'new');
-}
+        localStorage.setItem('sticker_smap5', 'new');
+      }
       document.getElementById('newCoins').innerText = "+" + stars;
       document.getElementById('totalCoins').innerText = newTotalCoins;
       document.getElementById('star-container').innerHTML = '⭐'.repeat(stars);

@@ -1,4 +1,4 @@
-//           Version:  1.5
+//           Version:  1.6
 //需要更新時修改版本數字↑↑↑↑
 // 引用素材清單
 importScripts('./assets-manifest.js');
