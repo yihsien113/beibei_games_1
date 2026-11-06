@@ -1,8 +1,9 @@
 
 //更新項目v2.0:重大更新!分離出人物攻擊特效模組
 //更新項目v2.1:更新大廳傳送門過多崩潰問題 &人物檔案位置設置錯誤
+//更新項目v2.2:修正衣櫥.貼紙系統.素材清單的人物檔案位置
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.1';
+const CACHE_NAME = 'dollhouse-game-v2.2';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
@@ -45,21 +46,21 @@ const GAME_ASSETS = [
   'assets/map/map11.webp',
   'assets/map/map12.webp',
   'assets/map/map13.webp',
-  'assets/han/han1-1.webp',
-  'assets/han/han1-2.webp',
-  'assets/han/han1-3.webp',
-  'assets/han/han2-1.webp',
-  'assets/han/han2-2.webp',
-  'assets/han/han2-3.webp',
-  'assets/han/han3-1.webp',
-  'assets/han/han3-2.webp',
-  'assets/han/han3-3.webp',
-  'assets/han/han4-1.webp',
-  'assets/han/han4-2.webp',
-  'assets/han/han4-3.webp',
-  'assets/han/han5-1.webp',
-  'assets/han/han5-2.webp',
-  'assets/han/han5-3.webp', 
+  'assets/player/han1-1.webp',
+  'assets/player/han1-2.webp',
+  'assets/player/han1-3.webp',
+  'assets/player/han2-1.webp',
+  'assets/player/han2-2.webp',
+  'assets/player/han2-3.webp',
+  'assets/player/han3-1.webp',
+  'assets/player/han3-2.webp',
+  'assets/player/han3-3.webp',
+  'assets/player/han4-1.webp',
+  'assets/player/han4-2.webp',
+  'assets/player/han4-3.webp',
+  'assets/player/han5-1.webp',
+  'assets/player/han5-2.webp',
+  'assets/player/han5-3.webp', 
   'assets/bad/bad1-1.webp',
   'assets/bad/bad1-2.webp',
   'assets/bad/bad1-3.webp',
