@@ -243,6 +243,108 @@
 
     #reward-modal .char-block { margin-right: 0.6em; margin-bottom: 6px; }
     #reward-modal .bopo { font-size: 0.4em; font-weight: 800; margin-left: 4px; letter-spacing: 0px; line-height: 1.15; color: #fcd34d; }
+
+    /* 🌟 版本號碼顯示樣式 🌟 */
+    #version-display {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-shadow: none;
+    }
+    
+    #version-display:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 🌟 更新公告彈窗樣式 🌟 */
+    #update-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    #update-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #update-modal-content {
+      background-color: #1e293b;
+      border-radius: 2rem;
+      padding: 2rem 1.8rem;
+      max-width: 500px;
+      width: 85%;
+      margin: 0 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border: 6px solid #64748b;
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #update-modal.active #update-modal-content {
+      transform: scale(1);
+    }
+
+    .update-title {
+      color: #38bdf8;
+      font-size: clamp(24px, 5vw, 32px);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px dashed #475569;
+      padding-bottom: 15px;
+    }
+
+    .update-log {
+      color: #fff;
+      font-size: 18px;
+      line-height: 1.8;
+      max-height: 40vh;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding-right: 10px;
+      text-align: left;
+    }
+
+    /* 滾動條美化 */
+    .update-log::-webkit-scrollbar { width: 6px; }
+    .update-log::-webkit-scrollbar-track { background: #334155; border-radius: 3px; }
+    .update-log::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+    #btn-close-update {
+      background-color: #3b82f6;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 22px;
+      padding: 12px;
+      border-radius: 1rem;
+      border: 3px solid #93c5fd;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+    #btn-close-update:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
@@ -273,7 +375,11 @@
   <div id="dom-tutorial-finger" style="position:fixed; font-size:60px; z-index:9002; display:none; pointer-events:none; animation: finger-bounce-y 1s infinite; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">👆</div>
 
   <div id="top-bar">
-    <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
+      <!-- 🌟 點擊觸發顯示公告的按鈕 -->
+      <div id="version-display" onclick="showUpdateNotice()"></div>
+    </div>
     
     <div id="quick-menu">
       <div id="btn-wardrobe" class="btn-floating" onclick="goToWardrobe()">👗</div>
@@ -295,6 +401,21 @@
       <button id="btn-claim-reward" onclick="claimCurrentReward()">
         <span>🎁</span>
         <span class="zh-text"><ruby>收<rt>ㄕㄡ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 🌟 更新公告彈窗 🌟 -->
+  <div id="update-modal">
+    <div id="update-modal-content">
+      <div class="update-title zh-text">
+        <ruby>遊<rt>ㄧㄡˊ</rt></ruby><ruby>戲<rt>ㄒㄧˋ</rt></ruby><ruby>更<rt>ㄍㄥ</rt></ruby><ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby>
+      </div>
+      <div id="update-log-content" class="update-log zh-text">
+        <!-- 內容由 JS 動態填入 -->
+      </div>
+      <button id="btn-close-update" onclick="closeUpdateNotice()">
+        <span class="zh-text"><ruby>我<rt>ㄨㄛˇ</rt></ruby><ruby>知<rt>ㄓ</rt></ruby><ruby>道<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby></span>
       </button>
     </div>
   </div>
@@ -356,10 +477,10 @@
           preloader.style.opacity = '0';
           setTimeout(() => {
             preloader.remove();
-            checkLobbyTutorial(); 
+            checkUpdateAndTutorial(); // 🌟 修改：呼叫新寫的版本與教學檢查
           }, 500);
         } else {
-          checkLobbyTutorial();
+          checkUpdateAndTutorial(); // 🌟 修改：呼叫新寫的版本與教學檢查
         }
       }, 200);
     }
@@ -444,64 +565,76 @@
     const canvas = document.getElementById('lobbyCanvas');
     const ctx = canvas.getContext('2d');
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     // 暫時的修復補丁：清除錯誤的飛龍貼紙紀錄
-if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getItem('sticker_s14') === 'new') {
-    localStorage.removeItem('blindbox_slobby2'); // 讓大廳星星重新出現
-    localStorage.removeItem('sticker_s14');      // 刪除貼紙簿裡的虛空貼紙紀錄
-}
-//下次更新刪除
+    if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getItem('sticker_s14') === 'new') {
+        localStorage.removeItem('blindbox_slobby2'); // 讓大廳星星重新出現
+        localStorage.removeItem('sticker_s14');      // 刪除貼紙簿裡的虛空貼紙紀錄
+    }
+    //下次更新刪除
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // ==========================================
+    // 🌟 遊戲版本與更新公告設定 🌟
+    // ==========================================
     
+    // 👇 1. 每次更新時請修改這個版本號碼
+    const GAME_VERSION = "v2.4"; 
+    
+    // 👇 2. 【這是公告開關】
+    // 設為 true：更新後玩家進入大廳會自動彈出公告
+    // 設為 false：不會自動彈出，適合微調或例行維護（玩家可自行點擊左上角版本號查看）
+    const AUTO_SHOW_NOTICE = true; 
+    
+    // 👇 3. 【這是公告內容】
+    // 在此輸入注音內容，支援 bopomofo.js 的 <ruby> 標籤
+    const UPDATE_LOG = `
+      <p>✨ <b><ruby>增<rt>ㄗㄥ</rt></ruby><ruby>加<rt>ㄐㄧㄚ</rt></ruby><ruby>版<rt>ㄅㄢˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>號<rt>ㄏㄠˋ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>及<rt>ㄐㄧˊ</rt></ruby><ruby>版<rt>ㄅㄢˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby></b></p>
+    `;
+
+    // 顯示更新公告
+    function showUpdateNotice() {
+      const contentDiv = document.getElementById('update-log-content');
+      contentDiv.innerHTML = UPDATE_LOG;
+      if (window.Bopomofo) window.Bopomofo.render();
+      document.getElementById('update-modal').classList.add('active');
+    }
+
+    // 關閉更新公告
+    function closeUpdateNotice() {
+      document.getElementById('update-modal').classList.remove('active');
+    }
+
+    // 檢查是否需要自動跳出更新公告與新手教學
+    function checkUpdateAndTutorial() {
+      // 顯示當前版本號
+      document.getElementById('version-display').innerText = GAME_VERSION;
+      
+      const savedVersion = localStorage.getItem('game_version');
+      const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
+
+      if (!isTutorialDone) {
+        // 新手：不打擾教學，直接儲存當前版本號，並開啟教學
+        localStorage.setItem('game_version', GAME_VERSION);
+        document.getElementById('tutorial-start-screen').style.display = 'flex';
+      } else {
+        // 老玩家：偵測到版本號不同
+        if (savedVersion !== GAME_VERSION) {
+          // 根據你的開關決定要不要自動跳出
+          if (AUTO_SHOW_NOTICE) {
+            showUpdateNotice();
+          }
+          // 更新存檔紀錄
+          localStorage.setItem('game_version', GAME_VERSION);
+        }
+      }
+    }
+    // ==========================================
+
+
     // 🌟 === 大廳教學模式變數與邏輯 === 🌟
     let isTutorialMode = false;
     let lobbyTutorialStep = -1;
 
-    function checkLobbyTutorial() {
-      if (localStorage.getItem('lobby_tutorial_done') !== 'true') {
-        document.getElementById('tutorial-start-screen').style.display = 'flex';
-      }
-    }
+    // ⚠️ 舊的 checkLobbyTutorial() 已經刪除了，功能整合進上面的 checkUpdateAndTutorial()
 
     function startLobbyTutorial() {
       document.getElementById('tutorial-start-screen').style.display = 'none';
@@ -935,7 +1068,8 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
       ctx.scale(scale, scale);
       ctx.translate(-cameraX, -cameraY);
 
-      if (bgImg.complete) {
+      // 修改1：背景圖片的安全檢查
+      if (bgImg.complete && bgImg.naturalWidth > 0) {
         ctx.drawImage(bgImg, 0, 0, MAP_WIDTH, MAP_HEIGHT);
       } else {
         ctx.fillStyle = '#222';
@@ -1002,7 +1136,8 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
           }
           ctx.restore(); // 解除裁切與旋轉，不影響後續地圖圖片的繪製
 
-          if (z.img && z.img.complete) {
+          // 修改2：修改關卡傳送門圖片的安全檢查
+          if (z.img && z.img.complete && z.img.naturalWidth > 0) {
             ctx.drawImage(z.img, z.x, z.y, z.w, z.h);
           } else {
             ctx.fillStyle = z.color || '#2196f3'; 
@@ -1037,7 +1172,8 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
       ctx.rotate(rotationAngle);
       if (player.isFacingLeft) ctx.scale(-1, 1);
       
-      if (playerImg.complete) {
+      // 修改3：修改人物圖片的安全檢查
+      if (playerImg.complete && playerImg.naturalWidth > 0) {
         ctx.drawImage(playerImg, -player.size/2, -player.size/2, player.size, player.size);
       } else {
         ctx.fillStyle = 'pink';
