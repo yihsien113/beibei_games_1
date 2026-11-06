@@ -507,13 +507,13 @@ body {
   </div>
 
   <div id="game-container">
-    <button id="back-btn" class="btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <button id="back-btn" class="btn" onclick="releaseMemoryAndExit()">🔙 EXIT</button>
     <div class="phase-banner" id="phaseBanner">準備開始</div>
     <div id="hud">🎨 <span id="roundDisplay">1/4</span> | ⭐ <span id="coinDisplay">0</span></div>
 
     <!-- 開始畫面 -->
     <div id="start-screen" class="overlay" style="display: none;">
-      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="releaseMemoryAndExit()">🔙 EXIT</button>
       
       <div class="intro-copy">
         <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
@@ -576,7 +576,7 @@ body {
           <ruby>次<rt>ㄘˋ</rt></ruby>
         </button>
 
-        <button class="btn" style="width: 100%; font-size: 30px; padding: 15px 0; margin: 0; background-color: #2196F3;" onclick="window.location.href='index.html'">
+        <button class="btn" style="width: 100%; font-size: 30px; padding: 15px 0; margin: 0; background-color: #2196F3;" onclick="releaseMemoryAndExit()">
           <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
           <ruby>大<rt>ㄉㄚˋ</rt></ruby>
           <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
@@ -641,6 +641,17 @@ body {
   </div>
 
   <script>
+    function releaseMemoryAndExit() {
+      const cvs = document.getElementById('drawCanvas');
+      if (cvs) {
+        // 將畫布尺寸歸零，強迫 iOS 立即回收記憶體
+        cvs.width = 0;
+        cvs.height = 0; 
+      }
+      // 釋放完成後再跳轉回大廳
+      window.location.href = 'index.html';
+    }
+
     const WORD_BANK = [
       { word: '太陽', emoji: '☀️', ruby: '<ruby>太<rt>ㄊㄞˋ</rt></ruby><ruby>陽<rt>ㄧㄤˊ</rt></ruby>' },
       { word: '蘋果', emoji: '🍎', ruby: '<ruby>蘋<rt>ㄆㄧㄥˊ</rt></ruby><ruby>果<rt>ㄍㄨㄛˇ</rt></ruby>' },

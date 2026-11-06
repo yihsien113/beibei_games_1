@@ -624,12 +624,14 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
     starCache.width = starSize;
     starCache.height = starSize;
     const sCtx = starCache.getContext('2d');
-    sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-    sCtx.textAlign = 'center';
-    sCtx.textBaseline = 'middle';
-    sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
-    sCtx.shadowBlur = 25; 
-    sCtx.fillText('🌟', starSize / 2, starSize / 2);
+    if (sCtx) { // 加入這行安全檢查
+  sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  sCtx.textAlign = 'center';
+  sCtx.textBaseline = 'middle';
+  sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
+  sCtx.shadowBlur = 25; 
+  sCtx.fillText('🌟', starSize / 2, starSize / 2);
+}
 
     const MAP_WIDTH = 3000;
     const MAP_HEIGHT = 4000;
@@ -960,7 +962,7 @@ if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getIt
             off.width = 400; // 傳送門對角線約 375，400 夠大
             off.height = 400;
             let oCtx = off.getContext('2d');
-            if (oCtx.createConicGradient) {
+            if (oCtx && oCtx.createConicGradient) {
               let grad = oCtx.createConicGradient(0, 200, 200);
               grad.addColorStop(0, "#ff0000"); 
               grad.addColorStop(0.15, "#ff7f00"); 
