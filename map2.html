@@ -7,7 +7,8 @@
   
   <!-- 引入外部注音模組 -->
   <script src="bopomofo.js"></script>
-
+  <!-- 引入角色模組 -->
+  <script src="player.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -288,191 +289,7 @@
     const ROACH_SPEED = 170;
     const DROP_RATE = 0.65;
 
-    const CHARACTERS = {
-       'han1': {
-        name: '揮劍女孩', prefix: 'han1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
-        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
-          ctx.save(); 
-          ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; 
-          ctx.shadowColor = '#00bfff'; 
-          ctx.shadowBlur = 15; 
-          ctx.lineWidth = 12 * (1 - p);
-          ctx.beginPath(); 
-          
-          // 【修復】判斷攻擊方向：如果目標在左邊，就畫左半圓；在右邊則畫右半圓
-          if (targetX < startX) {
-            ctx.arc(targetX, targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5); // 左半圓
-          } else {
-            ctx.arc(targetX, targetY, 30 + p * 40, -Math.PI / 2, Math.PI / 2);  // 右半圓
-          }
-          
-          ctx.stroke(); 
-          ctx.restore();
-        }
-      },
-      'han2': {
-        name: '弓箭公主', prefix: 'han2', size: 170, hitboxOffsetX: 130, hitboxOffsetY: 0, hitboxRadius: 50,
-        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
-          ctx.save(); ctx.strokeStyle = `rgba(255, 105, 180, ${1 - p})`; ctx.shadowColor = '#ff1493'; ctx.shadowBlur = 20; ctx.lineWidth = 8 * (1 - p);
-          ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(targetX, targetY); ctx.stroke();
-          ctx.font = `${30 + p * 30}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = 1 - p; ctx.fillText('💖', targetX, targetY - p * 20); ctx.restore();
-        }
-      },
-      'han3': {
-        name: '魔法仙子', prefix: 'han3', size: 160, hitboxOffsetX: 110, hitboxOffsetY: 0, hitboxRadius: 60,
-        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
-          ctx.save();
-          const dropY = targetY - 200 * (1 - p); 
-          ctx.translate(targetX, dropY);
-          ctx.rotate(p * Math.PI * 4); 
-          ctx.shadowColor = '#FFD700';
-          ctx.shadowBlur = 15 + p * 15;
-          ctx.globalAlpha = Math.min(1, p * 2.5); 
-          ctx.font = `${60 + Math.sin(p * Math.PI) * 20}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('🌙', 0, 0);
-          
-          if (p > 0.7) {
-            const burstP = (p - 0.7) / 0.3; 
-            ctx.rotate(-p * Math.PI * 4); 
-            for (let i = 0; i < 6; i++) {
-              const angle = (i * Math.PI * 2) / 6;
-              const dist = burstP * 80;
-              ctx.globalAlpha = 1 - burstP;
-              ctx.font = `${25 * (1 - burstP * 0.5)}px sans-serif`;
-              ctx.fillText('✨', Math.cos(angle) * dist, Math.sin(angle) * dist);
-            }
-          }
-          ctx.restore();
-        }
-      },
-      'han4': {
-        name: '漩渦公主',
-        prefix: 'han4',
-        size: 165,
-        hitboxOffsetX: 120,
-        hitboxOffsetY: 0,
-        hitboxRadius: 55,
-        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
-          ctx.save(); // 【第 1 次 save：保存畫布全域狀態】
-          ctx.translate(targetX, targetY);
-
-          // 1. 紫色吸力旋渦
-          ctx.rotate(-p * Math.PI * 8);
-          ctx.lineWidth = 6 * (1 - p);
-          for (let r = 25; r <= 95; r += 22) {
-            ctx.strokeStyle = `rgba(186, 104, 200, ${1 - p})`;
-            ctx.shadowColor = '#e1bee7';
-            ctx.shadowBlur = 12 * (1 - p);
-            ctx.beginPath();
-            ctx.arc(0, 0, r * (1 - p * 0.4), 0, Math.PI * 1.4);
-            ctx.stroke();
-          }
-
-          // 2. 吸入雜物 (襪子、積木、小熊、亮粉、氣流)
-          const items = ['🧦', '🧱', '🧸', '✨', '💨'];
-          items.forEach((item, idx) => {
-            const angle = (idx * Math.PI * 2) / items.length + p * Math.PI * 4;
-            const dist = (1 - p) * 115;
-            const itemScale = Math.max(0.2, 1 - p * 0.8);
-            ctx.save();
-            ctx.font = `${26 * itemScale}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.globalAlpha = Math.max(0, 1 - p * 0.5);
-            ctx.fillText(item, Math.cos(angle) * dist, Math.sin(angle) * dist);
-            ctx.restore();
-          });
-
-          // 3. 收尾特效：冒出煙霧 💨 與四散星星 ✨（不另外 save/restore）
-          if (p > 0.65) {
-            const popP = (p - 0.65) / 0.35;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.globalAlpha = Math.max(0, 1 - popP);
-
-            const cloudScale = 40 + popP * 30;
-            ctx.font = `${cloudScale}px sans-serif`;
-            ctx.fillText('💨', 0, 0);
-
-            const starCount = 5;
-            const starDist = popP * 60;
-            ctx.font = `${22 * (1 - popP * 0.3)}px sans-serif`;
-            for (let i = 0; i < starCount; i++) {
-              const a = (i * Math.PI * 2) / starCount + popP * 2;
-              ctx.fillText('✨', Math.cos(a) * starDist, Math.sin(a) * starDist);
-            }
-          }
-
-          ctx.restore(); // 【第 1 次 restore：一次還原所有坐標與屬性】
-        }
-      },
-      'han5': {
-        name: '愛心公主', 
-        prefix: 'han5', 
-        size: 165, 
-        hitboxOffsetX: 120, 
-        hitboxOffsetY: 0, 
-        hitboxRadius: 55,
-        drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
-          ctx.save();
-          
-          // 1. 完全直線衝刺 (無拋物線)
-          const currentX = startX + (targetX - startX) * p;
-          const currentY = startY + (targetY - startY) * p;
-
-          // 2. 乾淨的直線殘影 (降低寬度與亮度，不干擾主體)
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(currentX, currentY);
-          ctx.strokeStyle = `rgba(255, 182, 193, ${0.4 * (1 - p)})`;
-          ctx.lineWidth = 3; 
-          ctx.stroke();
-
-          // 3. 畫出飛翔中的「大愛心」本體
-          ctx.translate(currentX, currentY);
-          
-          let heartScale = 1;
-          if (p < 0.2) heartScale = p / 0.2; 
-          else if (p > 0.8) heartScale = 1 - (p - 0.8); 
-          
-          // 大幅降低旋轉角度，確保高速移動時肉眼能辨識形狀
-          ctx.rotate(Math.sin(p * Math.PI * 2) * 0.05); 
-          ctx.scale(heartScale, heartScale);
-
-          // 縮小至 65px 讓輪廓更銳利，並移除耗能的發光陰影
-          ctx.font = '65px sans-serif'; 
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.shadowColor = 'transparent'; 
-          ctx.shadowBlur = 0;
-          
-          ctx.globalAlpha = p > 0.85 ? 1 - ((p - 0.85) / 0.15) : 1;
-          ctx.fillText('💖', 0, 0);
-          ctx.restore();
-
-          // 4. 擊中目標點的爆開特效 (極簡爆破光圈，無星芒)
-          if (p > 0.8) {
-            ctx.save();
-            // 將最後 20% 的時間當作爆破動畫
-            const burstP = (p - 0.8) / 0.2; 
-            ctx.translate(targetX, targetY);
-            ctx.globalAlpha = 1 - burstP;
-
-            // 俐落的粉紅衝擊光圈
-            ctx.beginPath();
-            ctx.arc(0, 0, burstP * 65, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255, 20, 147, ${1 - burstP})`;
-            ctx.lineWidth = 5 * (1 - burstP);
-            ctx.stroke();
-
-            ctx.restore();
-          }
-        }
-      }
-    };
-
+    
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
@@ -487,7 +304,7 @@
     let popupTexts = []; 
 
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
-    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
 
     const player = {
       x: 0, y: 0, size: charConfig.size, speedPxPerSec: 900, targetX: 0, targetY: 0, frame: 0, 
@@ -650,7 +467,7 @@
     const playerImages = [];
     [1, 2, 3].forEach((num, idx) => {
       const img = new Image();
-      img.src = `assets/han/${charConfig.prefix}-${num}.webp`; 
+      img.src = `assets/player/${charConfig.prefix}-${num}.webp`; 
       img.onload = () => checkLoadProgress();
       playerImages[idx] = img;
     });

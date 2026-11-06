@@ -6,6 +6,8 @@
   <title>粢涵尋寶去 - 帆船重量平衡</title>
   
   <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  <!-- 引入角色模組 -->
+  <script src="player.js"></script>
   
   <style>
     * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: none; }
@@ -209,15 +211,8 @@
     const WATER_SURFACE_Y = 583;
     const SHIP_X = 450;
 
-    const CHARACTERS = {
-      'han1': { prefix: 'han1', size: 160 },
-      'han2': { prefix: 'han2', size: 170 },
-      'han3': { prefix: 'han3', size: 160 },
-      'han4': { prefix: 'han4', size: 165 },
-      'han5': { prefix: 'han5', size: 160 }
-    };
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
-    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
 
     const playerConfig = { size: charConfig.size, hitboxOffsetX: 80, hitboxOffsetY: 10, speedPxPerSec: 2200 };
     
@@ -238,7 +233,7 @@
 
     [1, 2, 3].forEach((num, idx) => {
       const img = new Image(); 
-      img.src = `assets/han/${charConfig.prefix}-${num}.webp`;
+      img.src = `assets/player/${charConfig.prefix}-${num}.webp`;
       img.onload = checkLoad; img.onerror = checkLoad;
       playerImages[idx] = img;
     });

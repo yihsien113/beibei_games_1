@@ -7,7 +7,8 @@
   
   <!-- 引入外部注音模組 -->
   <script src="bopomofo.js"></script>
-
+<!-- 引入角色模組 -->
+  <script src="player.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -459,15 +460,9 @@
 
     // ----------------------------------------------
 
-    const CHARACTERS = {
-      'han1': { prefix: 'han1', size: 160 },
-      'han2': { prefix: 'han2', size: 170 },
-      'han3': { prefix: 'han3', size: 160 },
-      'han4': { prefix: 'han4', size: 165 },
-      'han5': { prefix: 'han5', size: 165 }
-    };
+  
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
-    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -528,7 +523,7 @@
 
     const playerImages = [];
     const charImg = new Image();
-    charImg.src = `assets/han/${charConfig.prefix}-1.webp`; 
+    charImg.src = `assets/player/${charConfig.prefix}-1.webp`; 
     charImg.onload = () => checkLoadProgress();
     playerImages[0] = charImg;
 

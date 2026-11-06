@@ -6,6 +6,8 @@
   <title>粢涵尋寶去 - 神秘階梯迷宮</title>
   
   <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
+  <!-- 引入角色模組 -->
+  <script src="player.js"></script>
 
   <style>
     * {
@@ -280,16 +282,8 @@
   <script src="rpg-dialog-ui.js" onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
 
   <script>
-    // --- 角色與畫布設定 ---
-    const CHARACTERS = {
-      'han1': { prefix: 'han1', size: 130 },
-      'han2': { prefix: 'han2', size: 140 },
-      'han3': { prefix: 'han3', size: 130 },
-      'han4': { prefix: 'han4', size: 135 },
-      'han5': { prefix: 'han5', size: 130 }
-    };
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
-    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -368,7 +362,7 @@
     bgImg.onerror = () => { checkLoadProgress(); };
 
     const charImg = new Image();
-    charImg.src = `assets/han/${charConfig.prefix}-1.webp`; 
+    charImg.src = `assets/player/${charConfig.prefix}-1.webp`; 
     charImg.onload = () => { charLoaded = true; checkLoadProgress(); };
     charImg.onerror = () => { checkLoadProgress(); };
 

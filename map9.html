@@ -8,7 +8,8 @@
   <script src="bopomofo.js" onerror="console.log('未載入外部 bopomofo.js')"></script>
   <!-- 加入 defer 確保 HTML body 完全解析後才載入模組，避免 DOM 找不到報錯 -->
   <script src="rpg-dialog-ui.js" defer onerror="console.log('未載入外部 rpg-dialog-ui.js')"></script>
-  
+  <!-- 引入角色模組 -->
+  <script src="player.js"></script>
   <style>
     * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: none; }
     body {
@@ -211,18 +212,9 @@
 
     const PLAY_AREA = { x: 190, y: 260, w: 520, h: 670 };
 
-    // --- 角色動態載入設定 ---
-    const CHARACTERS = {
-      'han1': { prefix: 'han1', size: 160 },
-      'han2': { prefix: 'han2', size: 170 },
-      'han3': { prefix: 'han3', size: 160 },
-      'han4': { prefix: 'han4', size: 165 },
-      'han5': { prefix: 'han5', size: 160 }
-    };
     
-    // 讀取玩家選用的角色（如果沒有預設選用 han1）
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
-    let charConfig = CHARACTERS[equippedCharKey] || CHARACTERS['han1'];
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
 
     const playerConfig = {
       size: charConfig.size, hitboxOffsetX: 90, hitboxOffsetY: -20, speedPxPerSec: 2200
@@ -248,7 +240,7 @@
     // 動態載入對應角色的圖片
     [1, 2, 3].forEach((num, idx) => {
       const img = new Image(); 
-      img.src = `assets/han/${charConfig.prefix}-${num}.webp`;
+      img.src = `assets/player/${charConfig.prefix}-${num}.webp`;
       img.onload = checkLoad; img.onerror = checkLoad;
       playerImages[idx] = img;
     });
