@@ -377,10 +377,14 @@
       bCtx.font = "96px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
       bCtx.textAlign = "center";
       bCtx.textBaseline = "middle";
-      bCtx.shadowColor = "rgba(0, 0, 0, 0.35)";
-      bCtx.shadowBlur = 10;
-      bCtx.shadowOffsetX = 4;
-      bCtx.shadowOffsetY = 6;
+      
+      // 【修復 iOS 黑影問題】
+      bCtx.fillStyle = "#000000";       // 重置為純色，避免繼承上方的光暈漸層
+      bCtx.shadowColor = "transparent"; // 取消原生陰影，防止 Emoji 變成黑塊
+      bCtx.shadowBlur = 0;
+      bCtx.shadowOffsetX = 0;
+      bCtx.shadowOffsetY = 0;
+      
       bCtx.fillText("🕊️", 0, 0);
 
       // 2. 預先建立飛機機身漸層（避免每幀 new 物件觸發垃圾回收）
