@@ -9,7 +9,7 @@
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.6';
+const CACHE_NAME = 'dollhouse-game-v2.6.1';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
