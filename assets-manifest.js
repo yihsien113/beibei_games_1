@@ -7,10 +7,11 @@
 //更新項目v2.5:修正map13無圖片的問題.修正map5選擇難度排版問題
 //更新項目v2.6:增加人物-小志1.小志2,增加關卡14以及相關素材
 //更新項目v2.6.2:修改飛車男孩說明文字錯誤
+//更新項目v2.7.0:
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.6.2';
+const CACHE_NAME = 'dollhouse-game-v2.7.0';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
