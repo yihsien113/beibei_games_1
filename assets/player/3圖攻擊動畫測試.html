@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>角色動作純淨測試沙盒 (無特效版)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+    body {
+      margin: 0;
+      padding: 15px;
+      background: #14151f;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .toolbar {
+      background: #1f2233;
+      padding: 10px 16px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      max-width: 650px;
+      width: 100%;
+    }
+    .toolbar label {
+      font-size: 13px;
+      color: #ffd1dc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar input, .toolbar select {
+      background: #2b2f48;
+      border: 1px solid #5a5e80;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .toolbar button {
+      background: #ff4081;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .toolbar button:hover {
+      background: #e0356f;
+    }
+    .file-btn {
+      background: #4a4e69;
+      border: 1px dashed #ff77a9;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .file-btn input { display: none; }
+
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 650px;
+      height: 380px;
+      background: #232535;
+      border: 3px solid #ff77a9;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(255, 119, 169, 0.2);
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+    .info {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #ffd1dc;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制列 1：自動換檔名載入 -->
+  <div class="toolbar">
+    <label>
+      前綴:
+      <input type="text" id="prefixInput" value="han3" style="width: 70px;">
+    </label>
+    <label>
+      副檔名:
+      <select id="extSelect">
+        <option value=".webp">.webp</option>
+        <option value=".png">.png</option>
+      </select>
+    </label>
+    <button onclick="reloadImages()">路徑讀取</button>
+    
+    <label style="margin-left: auto;">
+      尺寸:
+      <input type="range" id="sizeRange" min="100" max="260" value="160" style="width: 80px;" oninput="updateSize(this.value)">
+      <span id="sizeVal">160px</span>
+    </label>
+  </div>
+
+  <!-- 控制列 2：本機防阻擋手動選圖 -->
+  <div class="toolbar" style="padding: 6px 16px;">
+    <span style="font-size: 12px; color: #ffd1dc;">防阻擋選圖：</span>
+    <label class="file-btn">選 1 幀<input type="file" accept="image/*" onchange="pickManualFile(event, 0)"></label>
+    <label class="file-btn">選 2 幀<input type="file" accept="image/*" onchange="pickManualFile(event, 1)"></label>
+    <label class="file-btn">選 3 幀<input type="file" accept="image/*" onchange="pickManualFile(event, 2)"></label>
+    <span id="statusText" style="font-size: 12px; color: #4caf50; margin-left: auto;"></span>
+  </div>
+
+  <!-- 畫布 -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas" width="650" height="380"></canvas>
+  </div>
+
+  <div class="info">
+    👉 <b>點擊畫面任意處</b>：走過去並觸發 3 幀攻擊動畫（已移除特效，專注觀察人偶動作）！
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let playerImages = [new Image(), new Image(), new Image()];
+    let imgLoaded = [false, false, false];
+
+    function reloadImages() {
+      const prefix = document.getElementById('prefixInput').value.trim();
+      const ext = document.getElementById('extSelect').value;
+      const status = document.getElementById('statusText');
+      status.innerText = '讀取中...';
+
+      [1, 2, 3].forEach((num, idx) => {
+        const img = new Image();
+        imgLoaded[idx] = false;
+        img.src = `${prefix}-${num}${ext}?t=${Date.now()}`;
+        img.onload = () => { 
+          imgLoaded[idx] = true; 
+          checkAllLoaded();
+        };
+        img.onerror = () => { 
+          imgLoaded[idx] = false; 
+          checkAllLoaded();
+        };
+        playerImages[idx] = img;
+      });
+    }
+
+    function pickManualFile(e, idx) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          playerImages[idx] = img;
+          imgLoaded[idx] = true;
+          checkAllLoaded();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function checkAllLoaded() {
+      const count = imgLoaded.filter(Boolean).length;
+      const status = document.getElementById('statusText');
+      if (count === 3) {
+        status.style.color = '#4caf50';
+        status.innerText = '✅ 3 幀圖片已就緒！';
+      } else {
+        status.style.color = '#ff9800';
+        status.innerText = `已載入 ${count}/3 張圖`;
+      }
+    }
+
+    function updateSize(val) {
+      player.size = parseInt(val);
+      document.getElementById('sizeVal').innerText = val + 'px';
+    }
+
+    // 角色設定：同步 map1.html 規格[cite: 1]
+    const player = {
+      x: 180,
+      y: 200,
+      size: 160,
+      speedPxPerSec: 650,
+      targetX: 180,
+      targetY: 200,
+      frame: 0,            // 0: 待機/走路, 1: 蓄力, 2: 揮擊[cite: 1]
+      isAttacking: false,
+      isFacingLeft: false,
+      isMoving: false,
+      walkCycle: 0,
+      hitboxOffsetX: 100,  // 站立點與目標的距離偏移[cite: 1]
+      hitboxOffsetY: 0
+    };
+
+    let lastTime = performance.now();
+
+    // 攻擊序列：純切換影格（完全不產生特效）[cite: 1]
+    function playSlash() {
+      if (player.isAttacking) return;
+      player.isAttacking = true;
+      const frameSpeed = 100; // 每幀持續 100ms[cite: 1]
+
+      // 影格 0（起手）[cite: 1]
+      player.frame = 0; 
+      setTimeout(() => {
+        // 影格 1（蓄力）[cite: 1]
+        player.frame = 1; 
+
+        setTimeout(() => {
+          // 影格 2（出招）[cite: 1]
+          player.frame = 2; 
+          setTimeout(() => {
+            // 結束攻擊，切回影格 0 待機[cite: 1]
+            player.frame = 0; 
+            player.isAttacking = false;
+          }, frameSpeed);
+        }, frameSpeed);
+      }, frameSpeed);
+    }
+
+    // 移動與邏輯更新：完全同步 map1.html[cite: 1]
+    function update(dt) {
+      if (!player.isAttacking) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speedPxPerSec * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.isMoving = true;
+          player.walkCycle += 25 * dt; // map1 專屬跳步頻率[cite: 1]
+        } else {
+          if (player.isMoving) {
+            player.x = player.targetX;
+            player.y = player.targetY;
+            player.isMoving = false;
+            player.walkCycle = 0;
+            playSlash(); // 走到定位自動觸發揮擊[cite: 1]
+          }
+        }
+      }
+    }
+
+    // 畫面繪製：僅繪製角色本體與目標點
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 移動目標點提示
+      if (player.isMoving) {
+        ctx.strokeStyle = 'rgba(255, 119, 169, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(player.targetX, player.targetY, 15, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.save(); 
+      // map1.html 走路搖擺公式[cite: 1]
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;         
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.20 : 0;   
+
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      
+      const currentImg = playerImages[player.frame];
+      const isLoaded = imgLoaded[player.frame];
+
+      if (isLoaded && currentImg && currentImg.naturalWidth > 0) {
+        // 面朝左時水平鏡向[cite: 1]
+        if (player.isFacingLeft) {
+          ctx.scale(-1, 1);
+          ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+        } else {
+          ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+        }
+      } else {
+        // 圖片未載入時的提示色塊
+        ctx.strokeStyle = '#ff77a9';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-player.size / 2, -player.size / 2, player.size, player.size);
+        ctx.fillStyle = '#ffd1dc';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Frame ${player.frame + 1}`, 0, 5);
+      }
+      ctx.restore(); 
+    }
+
+    function gameLoop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 點擊事件：同步 map1.html 觸發邏輯[cite: 1]
+    canvas.addEventListener('pointerdown', (e) => {
+      if (player.isAttacking) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      player.isFacingLeft = clickX < player.x;
+      player.targetX = player.isFacingLeft ? clickX + player.hitboxOffsetX : clickX - player.hitboxOffsetX;
+      player.targetY = clickY - player.hitboxOffsetY;
+
+      // 身旁點擊原地出招[cite: 1]
+      if (Math.sqrt(Math.pow(player.targetX - player.x, 2) + Math.pow(player.targetY - player.y, 2)) <= 15) {
+        playSlash();
+      } else {
+        player.isMoving = true;
+      }
+    });
+
+    reloadImages();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

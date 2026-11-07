@@ -264,7 +264,7 @@
       background: rgba(255, 255, 255, 0.2);
     }
 
-    /* 🌟 更新公告彈窗樣式 🌟 */
+  
     #update-modal {
       position: fixed;
       inset: 0;
@@ -405,11 +405,11 @@
     </div>
   </div>
 
-  <!-- 🌟 更新公告彈窗 🌟 -->
+
   <div id="update-modal">
     <div id="update-modal-content">
       <div class="update-title zh-text">
-        <ruby>遊<rt>ㄧㄡˊ</rt></ruby><ruby>戲<rt>ㄒㄧˋ</rt></ruby><ruby>更<rt>ㄍㄥ</rt></ruby><ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby>
+        <ruby>更<rt>ㄍㄥ</rt></ruby><ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby>
       </div>
       <div id="update-log-content" class="update-log zh-text">
         <!-- 內容由 JS 動態填入 -->
@@ -440,6 +440,7 @@
         .catch((err) => console.warn('Service Worker 註冊失敗:', err));
     }
 
+    // 🌟 優化 1：預載器改為分批載入 (每次最多 5 個檔案)，避免瞬間塞爆手機記憶體
     async function runPreloader() {
       const bar = document.getElementById('progress-bar');
       const text = document.getElementById('progress-text');
@@ -452,23 +453,27 @@
         const cache = await caches.open(cacheName);
         let loadedCount = 0;
         const total = assetsList.length;
+        const batchSize = 5; // 每次最多同時處理 5 個請求
 
-        await Promise.all(assetsList.map(async (url) => {
-          try {
-            const match = await cache.match(url);
-            if (!match) {
-              const res = await fetch(url, { cache: 'reload' });
-              if (res.ok) await cache.put(url, res);
+        for (let i = 0; i < total; i += batchSize) {
+          const batch = assetsList.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (url) => {
+            try {
+              const match = await cache.match(url);
+              if (!match) {
+                const res = await fetch(url, { cache: 'reload' });
+                if (res.ok) await cache.put(url, res);
+              }
+            } catch (err) {
+              console.warn('預載失敗:', url);
+            } finally {
+              loadedCount++;
+              const percent = Math.round((loadedCount / total) * 100);
+              if (bar) bar.style.width = percent + '%';
+              if (text) text.innerText = `${percent}% (${loadedCount} / ${total})`;
             }
-          } catch (err) {
-            console.warn('預載失敗:', url);
-          } finally {
-            loadedCount++;
-            const percent = Math.round((loadedCount / total) * 100);
-            if (bar) bar.style.width = percent + '%';
-            if (text) text.innerText = percent + '%';
-          }
-        }));
+          }));
+        }
       }
 
       setTimeout(() => {
@@ -477,10 +482,10 @@
           preloader.style.opacity = '0';
           setTimeout(() => {
             preloader.remove();
-            checkUpdateAndTutorial(); // 🌟 修改：呼叫新寫的版本與教學檢查
+            checkUpdateAndTutorial(); 
           }, 500);
         } else {
-          checkUpdateAndTutorial(); // 🌟 修改：呼叫新寫的版本與教學檢查
+          checkUpdateAndTutorial(); 
         }
       }, 200);
     }
@@ -565,6 +570,10 @@
     const canvas = document.getElementById('lobbyCanvas');
     const ctx = canvas.getContext('2d');
 
+    // 🌟 追蹤大廳動畫迴圈與狀態，用於安全釋放記憶體
+    let lobbyAnimId = null;
+    let isExitingLobby = false;
+
     // 暫時的修復補丁：清除錯誤的飛龍貼紙紀錄
     if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getItem('sticker_s14') === 'new') {
         localStorage.removeItem('blindbox_slobby2'); // 讓大廳星星重新出現
@@ -577,20 +586,28 @@
     // ==========================================
     
     // 👇 1. 每次更新時請修改這個版本號碼
-    const GAME_VERSION = "v2.5"; 
+    const GAME_VERSION = "v2.6"; 
     
     // 👇 2. 【這是公告開關】
-    // 設為 true：更新後玩家進入大廳會自動彈出公告
-    // 設為 false：不會自動彈出，適合微調或例行維護（玩家可自行點擊左上角版本號查看）
     const AUTO_SHOW_NOTICE = true; 
     
     // 👇 3. 【這是公告內容】
-    // 在此輸入注音內容，支援 bopomofo.js 的 <ruby> 標籤
     const UPDATE_LOG = `
-      <p>✨ <b><ruby>增<rt>ㄗㄥ</rt></ruby><ruby>加<rt>ㄐㄧㄚ</rt></ruby><ruby>版<rt>ㄅㄢˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>號<rt>ㄏㄠˋ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>及<rt>ㄐㄧˊ</rt></ruby><ruby>版<rt>ㄅㄢˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby></b></p>
-    `;
+      <p>✨ <b>
+        <ruby>增<rt>ㄗㄥ</rt></ruby>
+        <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
+        <ruby>小<rt>ㄒㄧㄠˇ</rt></ruby>
+        <ruby>志<rt>ㄓˋ</rt></ruby>
+        <ruby>人<rt>ㄖㄣˊ</rt></ruby>
+        <ruby>偶<rt>ㄡˇ</rt></ruby>
+        <br>
+        ✨
+        <ruby>增<rt>ㄗㄥ</rt></ruby>
+        <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>卡<rt>ㄎㄚˇ</rt></ruby></b></p>
+        `;
 
-    // 顯示更新公告
     function showUpdateNotice() {
       const contentDiv = document.getElementById('update-log-content');
       contentDiv.innerHTML = UPDATE_LOG;
@@ -598,31 +615,24 @@
       document.getElementById('update-modal').classList.add('active');
     }
 
-    // 關閉更新公告
     function closeUpdateNotice() {
       document.getElementById('update-modal').classList.remove('active');
     }
 
-    // 檢查是否需要自動跳出更新公告與新手教學
     function checkUpdateAndTutorial() {
-      // 顯示當前版本號
       document.getElementById('version-display').innerText = GAME_VERSION;
       
       const savedVersion = localStorage.getItem('game_version');
       const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
 
       if (!isTutorialDone) {
-        // 新手：不打擾教學，直接儲存當前版本號，並開啟教學
         localStorage.setItem('game_version', GAME_VERSION);
         document.getElementById('tutorial-start-screen').style.display = 'flex';
       } else {
-        // 老玩家：偵測到版本號不同
         if (savedVersion !== GAME_VERSION) {
-          // 根據你的開關決定要不要自動跳出
           if (AUTO_SHOW_NOTICE) {
             showUpdateNotice();
           }
-          // 更新存檔紀錄
           localStorage.setItem('game_version', GAME_VERSION);
         }
       }
@@ -633,8 +643,6 @@
     // 🌟 === 大廳教學模式變數與邏輯 === 🌟
     let isTutorialMode = false;
     let lobbyTutorialStep = -1;
-
-    // ⚠️ 舊的 checkLobbyTutorial() 已經刪除了，功能整合進上面的 checkUpdateAndTutorial()
 
     function startLobbyTutorial() {
       document.getElementById('tutorial-start-screen').style.display = 'none';
@@ -687,14 +695,10 @@
       } 
     }
 
-    // 🌟 控制 UI 高光與變暗效果
     function highlightDOM(elementId) {
       document.getElementById('dom-tutorial-overlay').style.display = 'block';
-      
-      // 將頂部列提上來到遮罩上方
       document.getElementById('top-bar').style.zIndex = '9001'; 
       
-      // 清除先前的特效
       document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
       document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
       
@@ -702,7 +706,6 @@
       if (target) {
         target.classList.add('tutorial-highlight');
         
-        // 將「沒被指到」的元素變暗
         if (elementId === 'hud') {
           document.getElementById('quick-menu').classList.add('dimmed');
         } else if (elementId === 'btn-wardrobe') {
@@ -717,9 +720,8 @@
         let finger = document.getElementById('dom-tutorial-finger');
         finger.style.display = 'block';
         
-        // 手指定位：置中於元素，並位於元素下方往上指
         finger.innerHTML = '👆';
-        finger.style.left = (rect.left + rect.width / 2 - 30) + 'px'; // 30 是字體大小 60 的一半
+        finger.style.left = (rect.left + rect.width / 2 - 30) + 'px'; 
         finger.style.top = (rect.bottom + 15) + 'px'; 
       }
     }
@@ -730,7 +732,6 @@
       document.getElementById('dom-tutorial-overlay').style.display = 'none';
       document.getElementById('dom-tutorial-finger').style.display = 'none';
       
-      // 復原原本的樣式
       document.getElementById('top-bar').style.zIndex = ''; 
       document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
       document.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
@@ -757,14 +758,14 @@
     starCache.width = starSize;
     starCache.height = starSize;
     const sCtx = starCache.getContext('2d');
-    if (sCtx) { // 加入這行安全檢查
-  sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-  sCtx.textAlign = 'center';
-  sCtx.textBaseline = 'middle';
-  sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
-  sCtx.shadowBlur = 25; 
-  sCtx.fillText('🌟', starSize / 2, starSize / 2);
-}
+    if (sCtx) { 
+      sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      sCtx.textAlign = 'center';
+      sCtx.textBaseline = 'middle';
+      sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
+      sCtx.shadowBlur = 25; 
+      sCtx.fillText('🌟', starSize / 2, starSize / 2);
+    }
 
     const MAP_WIDTH = 3000;
     const MAP_HEIGHT = 4000;
@@ -792,6 +793,7 @@
     }
 
     function resize() {
+      if (isExitingLobby) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
@@ -829,16 +831,74 @@
       localStorage.setItem('lobbyPlayerY', Math.round(player.y));
     }
 
+    // 🌟 優化 2：離開大廳前往其他頁面時，徹底釋放所有大廳圖片與畫布記憶體
+    function cleanupLobbyMemory() {
+      if (isExitingLobby) return;
+      isExitingLobby = true;
+
+      // 1. 停止動畫迴圈
+      if (lobbyAnimId) {
+        cancelAnimationFrame(lobbyAnimId);
+        lobbyAnimId = null;
+      }
+
+      // 2. 釋放超大背景圖、人物圖與關卡預覽圖
+      if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (playerImg) { playerImg.onload = null; playerImg.onerror = null; playerImg.src = ''; }
+      if (typeof zones !== 'undefined') {
+        for (let z of zones) {
+          if (z.img) {
+            z.img.onload = null;
+            z.img.onerror = null;
+            z.img.src = '';
+            z.img = null;
+          }
+        }
+      }
+
+      // 3. 釋放離屏畫布快取 (starCache & portalGradCache)
+      if (starCache) {
+        if (sCtx) sCtx.clearRect(0, 0, starCache.width, starCache.height);
+        starCache.width = 1;
+        starCache.height = 1;
+      }
+      if (window.portalGradCache && window.portalGradCache !== 'fallback') {
+        let pCtx = window.portalGradCache.getContext('2d');
+        if (pCtx) pCtx.clearRect(0, 0, window.portalGradCache.width, window.portalGradCache.height);
+        window.portalGradCache.width = 1;
+        window.portalGradCache.height = 1;
+        window.portalGradCache = null;
+      }
+
+      // 4. 釋放主畫布 GPU 記憶體
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function cleanupLobbyAndGo(targetUrl) {
+      savePlayerPosition();
+      cleanupLobbyMemory();
+      window.location.href = targetUrl;
+    }
+
+    // 🌟 優化 3：若手機瀏覽器從 BFCache 快取喚醒此頁面（而圖片已被我們清空），自動重整以確保乾淨狀態
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted || isExitingLobby) {
+        window.location.reload();
+      }
+    });
+
     function goToWardrobe() {
       if (isTutorialMode) return; 
-      savePlayerPosition();
-      window.location.href = 'wardrobe.html';
+      cleanupLobbyAndGo('wardrobe.html');
     }
 
     function goToStickerBook() {
       if (isTutorialMode) return; 
-      savePlayerPosition();
-      window.location.href = 'sticker.html';
+      cleanupLobbyAndGo('sticker.html');
     }
 
     const player = {
@@ -853,7 +913,10 @@
       walkCycle: 0
     };
 
-    window.addEventListener('pagehide', savePlayerPosition);
+    window.addEventListener('pagehide', () => {
+      savePlayerPosition();
+      cleanupLobbyMemory();
+    });
     window.addEventListener('beforeunload', savePlayerPosition);
 
     resize();
@@ -876,7 +939,8 @@
       { id: 'map11', type: '關卡', x: 2458, y: 2523, w: 225, h: 300, starX: 2570, starY: 2673, targetUrl: 'map11.html', clearKey: 'map11_cleared', color: '#2196f3', imgSrc: 'assets/map/map11.webp' },
       { id: 'map12', type: '關卡', x: 300, y: 2710, w: 225, h: 300, starX: 599, starY: 2948, targetUrl: 'map12.html', clearKey: 'map12_cleared', color: '#2196f3', imgSrc: 'assets/map/map12.webp' },
       { id: 'map13', type: '關卡', x: 2263, y: 815, w: 225, h: 300, starX: 2391, starY: 985, targetUrl: 'map13.html', clearKey: 'map13_cleared', color: '#2196f3', imgSrc: 'assets/map/map13.webp' },
-      
+      { id: 'map14', type: '關卡', x: 931, y: 650, w: 225, h: 300, starX: 996, starY: 730, targetUrl: 'map14.html', clearKey: 'map14_cleared', color: '#2196f3', imgSrc: 'assets/map/map14.webp' },
+
       { id: 'slobby1', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 1671, starY: 3318, stickerId: 'slobby1', stickerName: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', stickerSrc: 'assets/sticker/lobby1.webp' },
       { id: 'slobby2', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 2344, starY: 2223, stickerId: 'slobby2', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', stickerSrc: 'assets/sticker/lobby2.webp' },
       { id: 'slobby3', type: '貼紙', x: 1652, y: 3432, w: 225, h: 300, starX: 526, starY: 723, stickerId: 'slobby3', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>', stickerSrc: 'assets/sticker/lobby3.webp' },
@@ -895,8 +959,9 @@
       { id: 'star12', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 2519, starY: 3908, rewardAmount: 5 }
     ];
 
+    // 🌟 小優化：只預載「已經破關」的關卡預覽圖，還沒破關的只顯示星星，不浪費記憶體載入圖片
     for (let z of zones) {
-      if (z.imgSrc) {
+      if (z.imgSrc && isLevelCleared(z)) {
         z.img = new Image();
         z.img.src = z.imgSrc;
       }
@@ -979,11 +1044,12 @@
 
     let lastTime = performance.now();
     function gameLoop(currentTime) {
+      if (isExitingLobby) return;
       const dt = (currentTime - lastTime) / 1000;
       lastTime = currentTime;
       update(Math.min(dt, 0.1));
       draw(currentTime); 
-      requestAnimationFrame(gameLoop);
+      lobbyAnimId = requestAnimationFrame(gameLoop);
     }
 
     function update(dt) {
@@ -1026,8 +1092,8 @@
       }
     }
 
-   function checkZones() {
-      if (isModalOpen) return;
+    function checkZones() {
+      if (isModalOpen || isExitingLobby) return;
 
       for (let z of zones) {
         let isPortal = (z.type === '關卡' && isLevelCleared(z));
@@ -1047,8 +1113,8 @@
 
         if (isHit) {
           if (z.type === '關卡') {
-            savePlayerPosition();
-            window.location.href = z.targetUrl || (z.id + '.html');
+            // 🌟 踩進關卡傳送門時，先釋放整個大廳的記憶體再跳轉
+            cleanupLobbyAndGo(z.targetUrl || (z.id + '.html'));
             return;
           } 
           else if (z.type === '貼紙' || z.type === '金幣') {
@@ -1062,13 +1128,13 @@
     }
 
     function draw(time) {
+      if (isExitingLobby) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
       ctx.scale(scale, scale);
       ctx.translate(-cameraX, -cameraY);
 
-      // 修改1：背景圖片的安全檢查
       if (bgImg.complete && bgImg.naturalWidth > 0) {
         ctx.drawImage(bgImg, 0, 0, MAP_WIDTH, MAP_HEIGHT);
       } else {
@@ -1090,10 +1156,9 @@
             continue;
           }
 
-          // 1. 建立全域快取：把漸層畫在一張隱形的畫布上，遊戲開啟期間只計算一次
           if (!window.portalGradCache) {
             let off = document.createElement('canvas');
-            off.width = 400; // 傳送門對角線約 375，400 夠大
+            off.width = 400; 
             off.height = 400;
             let oCtx = off.getContext('2d');
             if (oCtx && oCtx.createConicGradient) {
@@ -1118,14 +1183,11 @@
           let cy = z.y + z.h / 2; 
           let portalAngle = (time / 800) * Math.PI * 2; 
 
-          // 2. 利用 clip("evenodd") 製作「只有邊框」的中空遮罩
-          // 尺寸精確對齊原本 lineWidth=12 的範圍
           ctx.beginPath();
-          ctx.rect(z.x - 12, z.y - 12, z.w + 24, z.h + 24); // 外側邊框範圍
-          ctx.rect(z.x, z.y, z.w, z.h);                     // 內側範圍 (會被挖空，露出後面的地圖)
+          ctx.rect(z.x - 12, z.y - 12, z.w + 24, z.h + 24); 
+          ctx.rect(z.x, z.y, z.w, z.h);                     
           ctx.clip("evenodd");
 
-          // 3. 將座標原點移至中心點，旋轉畫布並貼上快取的漸層圖片
           ctx.translate(cx, cy);
           if (window.portalGradCache !== 'fallback') {
             ctx.rotate(portalAngle);
@@ -1134,9 +1196,8 @@
             ctx.fillStyle = '#00ffff';
             ctx.fillRect(-200, -200, 400, 400);
           }
-          ctx.restore(); // 解除裁切與旋轉，不影響後續地圖圖片的繪製
+          ctx.restore(); 
 
-          // 修改2：修改關卡傳送門圖片的安全檢查
           if (z.img && z.img.complete && z.img.naturalWidth > 0) {
             ctx.drawImage(z.img, z.x, z.y, z.w, z.h);
           } else {
@@ -1172,7 +1233,6 @@
       ctx.rotate(rotationAngle);
       if (player.isFacingLeft) ctx.scale(-1, 1);
       
-      // 修改3：修改人物圖片的安全檢查
       if (playerImg.complete && playerImg.naturalWidth > 0) {
         ctx.drawImage(playerImg, -player.size/2, -player.size/2, player.size, player.size);
       } else {
@@ -1413,7 +1473,7 @@
     }, { passive: false });
 
     if (window.Bopomofo) window.Bopomofo.render();
-    requestAnimationFrame(gameLoop);
+    lobbyAnimId = requestAnimationFrame(gameLoop);
   </script>
   
   <script src="rpg-dialog-ui.js"></script>

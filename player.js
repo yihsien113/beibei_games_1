@@ -177,5 +177,95 @@ const PLAYER_CHARACTERS = {
         ctx.restore();
       }
     }
-  }
+  },
+  'chih1': {
+    name: '揮劍里長', prefix: 'chih1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
+    drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      ctx.save(); 
+      ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; 
+      ctx.shadowColor = '#00bfff'; 
+      ctx.shadowBlur = 15; 
+      ctx.lineWidth = 12 * (1 - p);
+      ctx.beginPath(); 
+      
+      if (targetX < startX) {
+        ctx.arc(targetX, targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5);
+      } else {
+        ctx.arc(targetX, targetY, 30 + p * 40, -Math.PI / 2, Math.PI / 2); 
+      }
+      
+      ctx.stroke(); 
+      ctx.restore();
+    }
+  },
+  'chih2': {
+    name: '飛車男孩', prefix: 'chih2', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
+    drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      ctx.save();
+      
+      // 判斷攻擊方向：targetX 大於 startX 代表向右邊攻擊
+      const isFacingRight = targetX > startX;
+
+      // 直線衝刺軌跡
+      const currentX = startX + (targetX - startX) * p;
+      const currentY = startY + (targetY - startY) * p;
+
+      // 1. 召喚放大效果
+      let scale = p < 0.15 ? p / 0.15 : 1;
+      
+      // 2. 畫出後方速度線
+      if (p > 0.15 && p < 0.9) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(200, 200, 200, ${1 - p})`;
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        // 根據方向決定速度線要在車子的左邊還是右邊
+        const offset = isFacingRight ? -80 : 80; 
+        
+        ctx.moveTo(currentX + offset, currentY - 20);
+        ctx.lineTo(currentX + offset * 1.5, currentY - 20);
+        ctx.moveTo(currentX + offset * 0.8, currentY + 25);
+        ctx.lineTo(currentX + offset * 1.8, currentY + 25);
+        
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. 繪製汽車本體
+      ctx.translate(currentX, currentY);
+      
+      // 【關鍵修正】預設車頭向左，如果向右攻擊，則把 X 軸縮放設為負數(-scale)來達成水平翻轉
+      ctx.scale(isFacingRight ? -scale : scale, scale);
+
+      ctx.font = '110px sans-serif'; 
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🚗', 0, 0); 
+      
+      ctx.restore();
+
+      // 4. 擊中目標的爆炸與撞擊特效
+      if (p > 0.8) {
+        ctx.save();
+        const burstP = (p - 0.8) / 0.2; 
+        ctx.translate(targetX, targetY);
+        ctx.globalAlpha = 1 - burstP; 
+        
+        // 爆炸符號
+        ctx.font = `${80 + burstP * 50}px sans-serif`; 
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💥', 0, 0);
+        
+        // 【關鍵修正】煙霧 💨 預設也是向左，向右攻擊時同樣水平翻轉，確保風切方向一致
+        ctx.scale(isFacingRight ? -1 : 1, 1);
+        
+        ctx.font = `${40 + burstP * 30}px sans-serif`; 
+        ctx.fillText('💨', 40, 30);
+        ctx.fillText('💨', -30, -20);
+        ctx.restore();
+      }
+    }
+  },
 };

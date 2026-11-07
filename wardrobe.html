@@ -27,7 +27,6 @@
       overflow: hidden;
     }
 
-    /* 與 map1/map2 一模一樣的容器架構 */
     #game-container {
       position: relative;
       width: 95vw;
@@ -46,7 +45,6 @@
       touch-action: none;
     }
 
-    /* 頂部 HUD (EXIT 按鈕與星星) */
     .top-bar {
       position: absolute;
       top: 15px;
@@ -82,7 +80,6 @@
       backdrop-filter: blur(4px);
     }
 
-    /* 衣櫥滑動卡片 UI (疊加於畫布上方) */
     .wardrobe-wrapper {
       position: absolute;
       top: 75px;
@@ -101,9 +98,10 @@
       color: #ffeb3b;
       text-shadow: 0 2px 10px rgba(0,0,0,0.9);
       z-index: 90;
-      opacity: 0;
+      opacity: 1; /* 保持顯示 */
       transition: opacity 0.3s ease;
-      pointer-events: none;
+      pointer-events: auto; /* 允許點擊 */
+      cursor: pointer;
     }
     .left-arrow { left: 5px; animation: bounce-left 1.2s infinite; }
     .right-arrow { right: 5px; animation: bounce-right 1.2s infinite; }
@@ -124,8 +122,8 @@
       padding: 10px 15px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch; /* 開啟 iOS 慣性滾動 */
-      touch-action: pan-x;               /* 允許水平滑動 */
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
     }
     .scroll-container * {
       touch-action: pan-x;
@@ -177,7 +175,6 @@
     .btn-buy { background-color: #e94560; }
     .btn:active { transform: scale(0.95); }
 
-    /* ====== 超大注音彈出視窗 ====== */
     .custom-modal-overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -238,50 +235,62 @@
 <body>
 
   <div id="game-container">
-    <!-- 頂部列 -->
     <div class="top-bar">
       <button class="btn-back" onclick="location.href='index.html'">🔙 EXIT</button>
       <div class="coin-display"><span id="myCoins">0</span> ⭐</div>
     </div>
 
-    <!-- 櫥窗選擇清單 -->
     <div class="wardrobe-wrapper" id="wardrobeWrapper">
       <div class="scroll-arrow left-arrow" id="leftArrow">◀</div>
 
       <div class="scroll-container" id="scrollContainer">
         <!-- 角色 1 -->
-        <div class="char-card" id="card-han1">
+        <div class="char-card" data-char="han1">
           <img src="assets/player/han1-1.webp" alt="揮劍女孩">
           <div class="char-name"><ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>女<rt>ㄋㄩˇ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby></div>
-          <button class="btn btn-equip" id="btn-han1" onclick="equipChar('han1')"></button>
+          <button class="btn btn-equip" data-btn="han1" onclick="equipChar('han1')"></button>
         </div>
 
         <!-- 角色 2 -->
-        <div class="char-card" id="card-han2">
+        <div class="char-card" data-char="han2">
           <img src="assets/player/han2-1.webp" alt="弓箭公主">
           <div class="char-name"><ruby>弓<rt>ㄍㄨㄥ</rt></ruby><ruby>箭<rt>ㄐㄧㄢˋ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
-          <button class="btn btn-buy" id="btn-han2" onclick="buyOrEquip('han2', 80)"></button>
+          <button class="btn btn-buy" data-btn="han2" onclick="buyOrEquip('han2', 40)"></button>
         </div>
         
         <!-- 角色 3 -->
-        <div class="char-card" id="card-han3">
+        <div class="char-card" data-char="han3">
           <img src="assets/player/han3-1.webp" alt="魔法仙子">
           <div class="char-name"><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>仙<rt>ㄒㄧㄢ</rt></ruby><ruby>子<rt>ㄗ˙</rt></ruby></div>
-          <button class="btn btn-buy" id="btn-han3" onclick="buyOrEquip('han3', 80)"></button>
+          <button class="btn btn-buy" data-btn="han3" onclick="buyOrEquip('han3', 40)"></button>
         </div>
 
         <!-- 角色 4：漩渦公主 -->
-        <div class="char-card" id="card-han4">
+        <div class="char-card" data-char="han4">
           <img src="assets/player/han4-1.webp" alt="漩渦公主">
           <div class="char-name"><ruby>漩<rt>ㄒㄩㄢˊ</rt></ruby><ruby>渦<rt>ㄨㄛ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
-          <button class="btn btn-buy" id="btn-han4" onclick="buyOrEquip('han4', 80)"></button>
+          <button class="btn btn-buy" data-btn="han4" onclick="buyOrEquip('han4', 40)"></button>
         </div>
 
         <!-- 角色 5：愛心公主 -->
-        <div class="char-card" id="card-han5">
+        <div class="char-card" data-char="han5">
           <img src="assets/player/han5-1.webp" alt="愛心公主">
           <div class="char-name"><ruby>愛<rt>ㄞˋ</rt></ruby><ruby>心<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
-          <button class="btn btn-buy" id="btn-han5" onclick="buyOrEquip('han5', 80)"></button>
+          <button class="btn btn-buy" data-btn="han5" onclick="buyOrEquip('han5', 40)"></button>
+        </div>
+
+        <!-- 角色 6：揮劍男孩 -->
+        <div class="char-card" data-char="chih1">
+          <img src="assets/player/chih1-1.webp" alt="揮劍男孩">
+          <div class="char-name"><ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>里<rt>ㄌㄧˇ</rt></ruby><ruby>長<rt>ㄓㄤˇ</rt></ruby></div>
+          <button class="btn btn-buy" data-btn="chih1" onclick="buyOrEquip('chih1', 5)"></button>
+        </div>
+
+        <!-- 角色 7：弓箭男孩 -->
+        <div class="char-card" data-char="chih2">
+          <img src="assets/player/chih2-1.webp" alt="弓箭男孩">
+          <div class="char-name"><ruby>弓<rt>ㄍㄨㄥ</rt></ruby><ruby>箭<rt>ㄐㄧㄢˋ</rt></ruby><ruby>男<rt>ㄋㄢˊ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby></div>
+          <button class="btn btn-buy" data-btn="chih2" onclick="buyOrEquip('chih2', 40)"></button>
         </div>
       </div>
 
@@ -298,7 +307,6 @@
       </div>
     </div>
 
-    <!-- 核心渲染畫布（背景與點擊走動角色） -->
     <canvas id="gameCanvas"></canvas>
   </div>
 
@@ -313,10 +321,10 @@
     let ownsHan3 = localStorage.getItem('owns_han3') === 'true';
     let ownsHan4 = localStorage.getItem('owns_han4') === 'true';
     let ownsHan5 = localStorage.getItem('owns_han5') === 'true';
+    let ownsChih1 = localStorage.getItem('owns_chih1') === 'true';
+    let ownsChih2 = localStorage.getItem('owns_chih2') === 'true';
 
-    // 👇 新增：確保玩家一開始就擁有「揮劍公主(shan1)」的貼紙
     if (!localStorage.getItem('sticker_shan1')) {
-      // 設為 'new'，讓玩家第一次進貼紙簿時可以點擊拆開；若不想有 NEW 特效也可直接設為 'true'
       localStorage.setItem('sticker_shan1', 'new');
     }
 
@@ -324,61 +332,48 @@
 
     const TEXT_EQUIPPED = '<ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby> ✔️';
     const TEXT_EQUIP = '<ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby>';
-    const TEXT_BUY_80 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (80⭐)';
+    const TEXT_BUY_5 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (5⭐)';
+    const TEXT_BUY_40 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (40⭐)';
 
-    // 角色設定（固定 Y: 988，初始 X: 449，邊界: 265 ~ 640）
     const player = {
-      x: 449,
-      y: 988,
-      targetX: 449,
-      size: 400,
-      minX: 265,
-      maxX: 640,
-      speedPxPerSec: 600,
-      isMoving: false,
-      isFacingLeft: false,
-      walkCycle: 0
+      x: 449, y: 988, targetX: 449, size: 400,
+      minX: 265, maxX: 640, speedPxPerSec: 600,
+      isMoving: false, isFacingLeft: false, walkCycle: 0
     };
 
-    // 圖片載入系統
     const bgImg = new Image();
     bgImg.src = 'assets/system/wardrobe.webp';
 
     const charImages = {
-      han1: new Image(),
-      han2: new Image(),
-      han3: new Image(),
-      han4: new Image(),
-      han5: new Image()
+      han1: new Image(), han2: new Image(), han3: new Image(),
+      han4: new Image(), han5: new Image(), chih1: new Image(), chih2: new Image()
     };
     charImages.han1.src = 'assets/player/han1-1.webp';
     charImages.han2.src = 'assets/player/han2-1.webp';
     charImages.han3.src = 'assets/player/han3-1.webp';
     charImages.han4.src = 'assets/player/han4-1.webp';
     charImages.han5.src = 'assets/player/han5-1.webp';
+    charImages.chih1.src = 'assets/player/chih1-1.webp';
+    charImages.chih2.src = 'assets/player/chih2-1.webp';
 
     let lastTime = performance.now();
 
     bgImg.onload = () => {
-      canvas.width = bgImg.width;   // 900
-      canvas.height = bgImg.height; // 1200
+      canvas.width = bgImg.width;   
+      canvas.height = bgImg.height; 
       document.getElementById('game-container').style.aspectRatio = `${bgImg.width} / ${bgImg.height}`;
       lastTime = performance.now();
       requestAnimationFrame(gameLoop);
     };
 
-    // 遊戲主循環
     function gameLoop(currentTime) {
       const dt = (currentTime - lastTime) / 1000;
       lastTime = currentTime;
-
       update(Math.min(dt, 0.1));
       draw();
-
       requestAnimationFrame(gameLoop);
     }
 
-    // 更新角色走動邏輯（只橫向移動 X）
     function update(dt) {
       if (player.isMoving) {
         let dx = player.targetX - player.x;
@@ -396,71 +391,44 @@
       }
     }
 
-    // 繪製函數（包含走路微晃動、左右鏡像翻轉）
     function draw() {
       if (!canvas.width || !canvas.height) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // 1. 繪製背景 (900x1200)
       if (bgImg.complete) {
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
       }
 
-      // 2. 繪製走動角色
       const currentImg = charImages[equipped] || charImages.han1;
       if (currentImg && currentImg.complete) {
         ctx.save();
-        
         let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;
         let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;
-
         ctx.translate(player.x, player.y + offsetY);
         ctx.rotate(rotationAngle);
-
-        if (player.isFacingLeft) {
-          ctx.scale(-1, 1);
-        }
-
+        if (player.isFacingLeft) ctx.scale(-1, 1);
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 8;
-
-        ctx.drawImage(
-          currentImg,
-          -player.size / 2,
-          -player.size / 2,
-          player.size,
-          player.size
-        );
+        ctx.shadowBlur = 12; ctx.shadowOffsetY = 8;
+        ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
         ctx.restore();
       }
     }
 
-    // 點擊畫布走動互動
     canvas.addEventListener('pointerdown', (e) => {
       const rect = canvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
       const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-
       if (clickY >= 750) {
         const clampedTargetX = Math.max(player.minX, Math.min(player.maxX, clickX));
-        
         player.targetX = clampedTargetX;
         player.isFacingLeft = player.targetX < player.x;
         player.isMoving = true;
       }
     });
 
-    // UI 換裝與彈窗邏輯
     function showBopoAlert(htmlWithRuby) {
       const modal = document.getElementById('customModal');
-      const msgBox = document.getElementById('modalMessage');
-      msgBox.innerHTML = htmlWithRuby;
-
-      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
-        window.Bopomofo.render();
-      }
-
+      document.getElementById('modalMessage').innerHTML = htmlWithRuby;
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') window.Bopomofo.render();
       modal.classList.add('active');
     }
 
@@ -468,66 +436,34 @@
       document.getElementById('customModal').classList.remove('active');
     }
 
+    function updateCardState(charKey, isEquipped, isOwned, costText) {
+      const cards = document.querySelectorAll(`.char-card[data-char="${charKey}"]`);
+      const btns = document.querySelectorAll(`button[data-btn="${charKey}"]`);
+      
+      cards.forEach(card => card.className = isEquipped ? 'char-card equipped' : 'char-card');
+      
+      btns.forEach(btn => {
+        if (isOwned || charKey === 'han1') {
+          btn.innerHTML = isEquipped ? TEXT_EQUIPPED : TEXT_EQUIP;
+          btn.className = 'btn btn-equip';
+          btn.style.backgroundColor = isEquipped ? '#4caf50' : '#2196f3';
+        } else {
+          btn.innerHTML = costText;
+          btn.className = 'btn btn-buy';
+          btn.style.backgroundColor = ''; 
+        }
+      });
+    }
+
     function updateUI() {
-      document.getElementById('card-han1').className = equipped === 'han1' ? 'char-card equipped' : 'char-card';
-      document.getElementById('btn-han1').innerHTML = equipped === 'han1' ? TEXT_EQUIPPED : TEXT_EQUIP;
-      document.getElementById('btn-han1').style.backgroundColor = equipped === 'han1' ? '#4caf50' : '#2196f3';
-
-      const card2 = document.getElementById('card-han2');
-      const btn2 = document.getElementById('btn-han2');
-      if (ownsHan2) {
-        card2.className = equipped === 'han2' ? 'char-card equipped' : 'char-card';
-        btn2.innerHTML = equipped === 'han2' ? TEXT_EQUIPPED : TEXT_EQUIP;
-        btn2.className = 'btn btn-equip';
-        btn2.style.backgroundColor = equipped === 'han2' ? '#4caf50' : '#2196f3';
-      } else {
-        card2.className = 'char-card';
-        btn2.innerHTML = TEXT_BUY_80;
-        btn2.className = 'btn btn-buy';
-      }
-
-      const card3 = document.getElementById('card-han3');
-      const btn3 = document.getElementById('btn-han3');
-      if (ownsHan3) {
-        card3.className = equipped === 'han3' ? 'char-card equipped' : 'char-card';
-        btn3.innerHTML = equipped === 'han3' ? TEXT_EQUIPPED : TEXT_EQUIP;
-        btn3.className = 'btn btn-equip';
-        btn3.style.backgroundColor = equipped === 'han3' ? '#4caf50' : '#2196f3';
-      } else {
-        card3.className = 'char-card';
-        btn3.innerHTML = TEXT_BUY_80;
-        btn3.className = 'btn btn-buy';
-      }
-
-      const card4 = document.getElementById('card-han4');
-      const btn4 = document.getElementById('btn-han4');
-      if (ownsHan4) {
-        card4.className = equipped === 'han4' ? 'char-card equipped' : 'char-card';
-        btn4.innerHTML = equipped === 'han4' ? TEXT_EQUIPPED : TEXT_EQUIP;
-        btn4.className = 'btn btn-equip';
-        btn4.style.backgroundColor = equipped === 'han4' ? '#4caf50' : '#2196f3';
-      } else {
-        card4.className = 'char-card';
-        btn4.innerHTML = TEXT_BUY_80;
-        btn4.className = 'btn btn-buy';
-      }
-
-      const card5 = document.getElementById('card-han5');
-      const btn5 = document.getElementById('btn-han5');
-      if (ownsHan5) {
-        card5.className = equipped === 'han5' ? 'char-card equipped' : 'char-card';
-        btn5.innerHTML = equipped === 'han5' ? TEXT_EQUIPPED : TEXT_EQUIP;
-        btn5.className = 'btn btn-equip';
-        btn5.style.backgroundColor = equipped === 'han5' ? '#4caf50' : '#2196f3';
-      } else {
-        card5.className = 'char-card';
-        btn5.innerHTML = TEXT_BUY_80;
-        btn5.className = 'btn btn-buy';
-      }
-
-      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
-        window.Bopomofo.render();
-      }
+      updateCardState('han1', equipped === 'han1', true, '');
+      updateCardState('han2', equipped === 'han2', ownsHan2, TEXT_BUY_40);
+      updateCardState('han3', equipped === 'han3', ownsHan3, TEXT_BUY_40);
+      updateCardState('han4', equipped === 'han4', ownsHan4, TEXT_BUY_40);
+      updateCardState('han5', equipped === 'han5', ownsHan5, TEXT_BUY_40);
+      updateCardState('chih1', equipped === 'chih1', ownsChih1, TEXT_BUY_5);
+      updateCardState('chih2', equipped === 'chih2', ownsChih2, TEXT_BUY_40);
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') window.Bopomofo.render();
     }
 
     function equipChar(charKey) {
@@ -547,20 +483,17 @@
           coins -= cost;
           localStorage.setItem('playerCoins', coins);
           localStorage.setItem(ownsProp, 'true');
-          
-          // 👇 新增：獲得對應的公主貼紙
-          let stickerId = charKey.replace('han', 'shan'); // 將 han2 轉換成 shan2
-          localStorage.setItem('sticker_' + stickerId, 'new'); // 存入 localStorage 觸發貼紙簿的 NEW 特效
+          localStorage.setItem('sticker_s' + charKey, 'new'); 
 
           if (charKey === 'han2') ownsHan2 = true;
           if (charKey === 'han3') ownsHan3 = true;
           if (charKey === 'han4') ownsHan4 = true;
           if (charKey === 'han5') ownsHan5 = true;
+          if (charKey === 'chih1') ownsChih1 = true;
+          if (charKey === 'chih2') ownsChih2 = true;
 
           document.getElementById('myCoins').innerText = coins;
           equipChar(charKey);
-
-          // 可選：你也可以在提示訊息中告訴玩家獲得了貼紙
           showBopoAlert('<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby><ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby>🎉🎉🎉<br><span style="font-size: 24px; color: #facc15;">(獲得新貼紙！)</span>');
         } else {
           showBopoAlert('⭐ <ruby>不<rt>ㄅㄨˊ</rt></ruby><ruby>夠<rt>ㄍㄡˋ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby>');
@@ -568,21 +501,107 @@
       }
     }
 
-    updateUI();
-
-    // 控制箭頭滾動提示
+    // ==========================================
+    // 真・無限迴圈 (Infinite Wheel) 核心邏輯
+    // ==========================================
     const scrollContainer = document.getElementById('scrollContainer');
-    const leftArrow = document.getElementById('leftArrow');
-    const rightArrow = document.getElementById('rightArrow');
+    let originalCardCount = 0;
+    let cardWidthWithGap = 0;
+    const SETS_TO_CLONE = 15; // 若未來增加角色,這邊可以改小一點
 
-    function checkArrows() {
-      const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
-      leftArrow.style.opacity = scrollContainer.scrollLeft > 5 ? '1' : '0';
-      rightArrow.style.opacity = scrollContainer.scrollLeft < maxScroll - 5 ? '1' : '0';
+    function initInfiniteScroll() {
+      const originalCards = Array.from(scrollContainer.children);
+      originalCardCount = originalCards.length;
+      if (originalCardCount === 0) return;
+
+      const fragmentBefore = document.createDocumentFragment();
+      const fragmentAfter = document.createDocumentFragment();
+
+      // 1. 產生大量複製卡片
+      for(let i = 0; i < SETS_TO_CLONE; i++) {
+        originalCards.forEach(card => fragmentBefore.appendChild(card.cloneNode(true)));
+        originalCards.forEach(card => fragmentAfter.appendChild(card.cloneNode(true)));
+      }
+
+      scrollContainer.insertBefore(fragmentBefore, scrollContainer.firstChild);
+      scrollContainer.appendChild(fragmentAfter);
+
+      updateUI();
+
+      // 2. 算好距離並把畫面直接「置中」到最中間那一組本尊
+      requestAnimationFrame(() => {
+        const allCards = Array.from(scrollContainer.children);
+        cardWidthWithGap = allCards[1].offsetLeft - allCards[0].offsetLeft;
+        
+        const centerStartIndex = SETS_TO_CLONE * originalCardCount;
+        const centerFirstCard = allCards[centerStartIndex];
+        
+        const containerCenter = scrollContainer.clientWidth / 2;
+        const cardCenter = centerFirstCard.offsetLeft + (centerFirstCard.offsetWidth / 2);
+        
+        scrollContainer.style.scrollSnapType = 'none';
+        scrollContainer.scrollLeft = cardCenter - containerCenter;
+        
+        void scrollContainer.offsetHeight; // 強制重繪
+        scrollContainer.style.scrollSnapType = 'x mandatory';
+      });
     }
 
-    scrollContainer.addEventListener('scroll', checkArrows);
-    setTimeout(checkArrows, 150);
+    // 3. 當滾動「完全停止」時（慣性結束），偷偷把畫面置中回最中間的那一組
+    let scrollTimeout;
+    scrollContainer.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        recenterSilently();
+      }, 250); // 停止滑動 250 毫秒後觸發
+    });
+
+    function recenterSilently() {
+      const allCards = Array.from(scrollContainer.children);
+      const containerCenter = scrollContainer.scrollLeft + (scrollContainer.clientWidth / 2);
+      
+      let closestIndex = 0;
+      let minDiff = Infinity;
+      
+      // 找出目前畫面上對齊的是哪一張卡
+      allCards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+        const diff = Math.abs(containerCenter - cardCenter);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIndex = index;
+        }
+      });
+
+      // 算出對應的是 1~7 的哪一個角色 (0~6)
+      const charIndex = closestIndex % originalCardCount;
+      // 算出最中間那組對應的卡片 index
+      const targetIndex = (SETS_TO_CLONE * originalCardCount) + charIndex;
+      
+      // 如果目前偏離了最中間的那一組，就瞬間無縫跳轉過去
+      if (closestIndex !== targetIndex) {
+        const targetCard = allCards[targetIndex];
+        const targetCardCenter = targetCard.offsetLeft + (targetCard.offsetWidth / 2);
+        
+        scrollContainer.style.scrollSnapType = 'none';
+        scrollContainer.scrollLeft = targetCardCenter - (scrollContainer.clientWidth / 2);
+        
+        void scrollContainer.offsetHeight;
+        scrollContainer.style.scrollSnapType = 'x mandatory';
+      }
+    }
+
+    // 將按鈕綁定真正的寬度距離
+    document.getElementById('leftArrow').addEventListener('click', () => {
+       if (cardWidthWithGap) scrollContainer.scrollBy({ left: -cardWidthWithGap, behavior: 'smooth' });
+    });
+    
+    document.getElementById('rightArrow').addEventListener('click', () => {
+       if (cardWidthWithGap) scrollContainer.scrollBy({ left: cardWidthWithGap, behavior: 'smooth' });
+    });
+
+    window.addEventListener('load', initInfiniteScroll);
+
   </script>
 </body>
 </html>

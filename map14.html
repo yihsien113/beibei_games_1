@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡14 (小飛機挑戰)</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+  <script src="player.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #4cd137;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4; 
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #70c5ce; 
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* 頂部時間面板 */
+    #timer-board {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.88);
+      border: 4px solid #38BDF8;
+      border-radius: 20px;
+      padding: 10px 30px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      min-width: 300px;
+    }
+
+    #timer-board h2 {
+      margin: 0;
+      font-size: 50px;
+      color: #FFF;
+      text-shadow: 0 0 10px #38BDF8;
+      letter-spacing: 2px;
+      white-space: nowrap;
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+      
+      #timer-board h2 { font-size: 36px !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">關卡載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 頂部計時板 -->
+    <div id="timer-board">
+      <h2 id="time-display">0.0 秒</h2>
+    </div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="exitToLobby()">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>小<rt>ㄒㄧㄠˇ</rt></ruby>
+          <ruby>飛<rt>ㄈㄟ</rt></ruby>
+          <ruby>機<rt>ㄐㄧ</rt></ruby>
+          <ruby>挑<rt>ㄊㄧㄠ</rt></ruby>
+          <ruby>戰<rt>ㄓㄢˋ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>螢<rt>ㄧㄥˊ</rt></ruby><ruby>幕<rt>ㄇㄨˋ</rt></ruby><br>
+          <ruby>不<rt>ㄅㄨˋ</rt></ruby><ruby>要<rt>ㄧㄠˋ</rt></ruby><ruby>撞<rt>ㄓㄨㄤˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby> 🕊️<br>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      
+      <h1 id="result-title" class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>試<rt>ㄕˋ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="exitToLobby()">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
+
+    const canvas = document.getElementById('gameCanvas');
+    // alpha: false 可讓瀏覽器省去畫布底層與網頁背景的透明混合計算，提升效能
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const timeDisplayEl = document.getElementById('time-display');
+    
+    // 遊戲參數
+    const WIN_TIME = 20.0; // 撐過 20 秒獲勝
+    let gameTime = 0;
+    let lastDisplayedTenths = -1; // 用來避免每幀重複修改 DOM
+    let stars = 0;
+    let gamePhase = 'start'; 
+    let whiteFade = 0;
+    let lastTime = 0; 
+    let propAngle = 0; // 螺旋槳旋轉角度
+    let animationFrameId = null; // 追蹤動畫迴圈 ID，方便釋放記憶體
+    let endTimeoutId = null;     // 追蹤計時器 ID
+
+    // 飛機(玩家)物理參數
+    const GRAVITY = 1500;
+    const JUMP_VELOCITY = -650;
+    
+    const player = {
+      x: 225, y: 0, 
+      size: charConfig.size,
+      vy: 0, 
+      rotation: 0
+    };
+
+    // 障礙物(小鳥)、特效與終點參數
+    let obstacles = [];
+    let obstacleTimer = 0;
+    let bgScrollX = 0;
+    let groundScrollX = 0;
+    let puffs = [];       // 點擊時的噴氣雲朵
+    let confetti = [];    // 終點慶祝彩帶
+
+    // 終點線物件
+    const finishLine = {
+      x: 9999,
+      spawned: false
+    };
+
+    // 🌟 效能優化：預渲染快取畫布與漸層物件
+    let birdCacheCanvas = null;
+    let planeBodyGrad = null;
+    let skyFallbackGrad = null;
+
+    function initRenderCaches() {
+      // 1. 預先把「小鳥 Emoji + 陰影模糊 + 背後光暈」畫在離屏畫布上（只算這一次！）
+      birdCacheCanvas = document.createElement('canvas');
+      birdCacheCanvas.width = 140;
+      birdCacheCanvas.height = 140;
+      const bCtx = birdCacheCanvas.getContext('2d');
+      bCtx.translate(70, 70);
+
+      // 繪製光暈
+      let grad = bCtx.createRadialGradient(0, 0, 10, 0, 0, 62);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
+      grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.25)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      bCtx.fillStyle = grad;
+      bCtx.beginPath();
+      bCtx.arc(0, 0, 62, 0, Math.PI * 2);
+      bCtx.fill();
+
+      // 繪製小鳥 Emoji 與陰影
+      bCtx.font = "96px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+      bCtx.textAlign = "center";
+      bCtx.textBaseline = "middle";
+      bCtx.shadowColor = "rgba(0, 0, 0, 0.35)";
+      bCtx.shadowBlur = 10;
+      bCtx.shadowOffsetX = 4;
+      bCtx.shadowOffsetY = 6;
+      bCtx.fillText("🕊️", 0, 0);
+
+      // 2. 預先建立飛機機身漸層（避免每幀 new 物件觸發垃圾回收）
+      planeBodyGrad = ctx.createLinearGradient(0, 0, 0, 52);
+      planeBodyGrad.addColorStop(0, '#ff6b81');
+      planeBodyGrad.addColorStop(0.5, '#ff4757');
+      planeBodyGrad.addColorStop(1, '#c23616');
+
+      // 3. 預先建立備用天空背景漸層
+      skyFallbackGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      skyFallbackGrad.addColorStop(0, '#74b9ff');
+      skyFallbackGrad.addColorStop(1, '#0984e3');
+    }
+
+    let totalAssets = 2; 
+    let loadedAssets = 0;
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `資源載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        // 固定內部畫布解析度為 900x1200
+        canvas.width = 900;
+        canvas.height = 1200;
+        
+        // 初始化離屏快取
+        initRenderCaches();
+        
+        draw(); 
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map14.webp'; 
+    bgImg.onload = () => { checkLoadProgress(); };
+    bgImg.onerror = () => { checkLoadProgress(); }; 
+
+    const charImg = new Image();
+    charImg.src = `assets/player/${charConfig.prefix}-1.webp`; 
+    charImg.onload = () => checkLoadProgress();
+    charImg.onerror = () => checkLoadProgress(); 
+
+    // 🌟 安全清理記憶體並返回大廳 (防止手機/平板顯存累積造成閃退)
+    function cleanupMemory() {
+      gamePhase = 'exiting';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      // 清空陣列
+      obstacles.length = 0;
+      puffs.length = 0;
+      confetti.length = 0;
+
+      // 釋放圖片資源紋理
+      if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (charImg) { charImg.onload = null; charImg.onerror = null; charImg.src = ''; }
+
+      // 釋放離屏快取畫布
+      if (birdCacheCanvas) {
+        birdCacheCanvas.width = 1;
+        birdCacheCanvas.height = 1;
+        birdCacheCanvas = null;
+      }
+
+      // 釋放 Canvas GPU 畫布記憶體 (將尺寸縮為 1x1 強制瀏覽器立刻回收 VRAM)
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      cleanupMemory();
+      window.location.href = 'index.html';
+    }
+
+    // 若使用者按瀏覽器自帶的上一頁離開，同樣觸發記憶體釋放
+    window.addEventListener('pagehide', cleanupMemory);
+
+    function startGame() {
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      gameTime = 0;
+      lastDisplayedTenths = -1;
+      stars = 0;
+      whiteFade = 0;
+      obstacles = [];
+      puffs = [];
+      confetti = [];
+      obstacleTimer = 0;
+      bgScrollX = 0;
+      groundScrollX = 0;
+      
+      finishLine.spawned = false;
+      finishLine.x = 9999;
+
+      document.getElementById('back-btn').style.display = 'block';
+      updateHUD(true);
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'none'; 
+      document.getElementById('timer-board').style.display = 'block';
+      
+      player.x = 225;
+      player.y = canvas.height * 0.4;
+      player.vy = 0;
+      player.rotation = 0;
+      
+      gamePhase = 'playing';
+    }
+
+    // 🌟 效能優化：只有當 0.1 秒數值改變時才觸發 DOM 更新，避免每幀重繪文字
+    function updateHUD(force = false) {
+      let currentTenths = Math.floor(gameTime * 10);
+      if (force || currentTenths !== lastDisplayedTenths) {
+        lastDisplayedTenths = currentTenths;
+        timeDisplayEl.textContent = (currentTenths / 10).toFixed(1) + " 秒";
+      }
+    }
+
+    function endGame(isWin) {
+      if (gamePhase === 'exiting') return;
+      gamePhase = 'result';
+      document.getElementById('timer-board').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      
+      // 計算星星 (最多20顆)
+      stars = Math.min(20, Math.floor(gameTime));
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      
+      // 不管輸贏，只要玩了就解鎖關卡和給貼紙
+      localStorage.setItem('map14_cleared', 'true');
+      if (localStorage.getItem('sticker_smap14') !== 'true') {
+          localStorage.setItem('sticker_smap14', 'new');
+      }
+
+      // 輸贏只用來改變結算畫面的標題
+      if (isWin) {
+          document.getElementById('result-title').innerHTML = `<ruby>抵<rt>ㄉㄧˇ</rt></ruby><ruby>達<rt>ㄉㄚˊ</rt></ruby><ruby>終<rt>ㄓㄨㄥ</rt></ruby><ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><span>！</span>`;
+      } else {
+          document.getElementById('result-title').innerHTML = `<ruby>墜<rt>ㄓㄨㄟˋ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
+      }
+
+      // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
+      if (window.Bopomofo && window.Bopomofo.render) {
+          window.Bopomofo.render();
+      }
+
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins); 
+      
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let killsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        killsHtml += '⭐';
+        if (i % 5 === 0) killsHtml += '<br>'; 
+      }
+      if (stars === 0) killsHtml = '💨 再加油喔！';
+      
+      document.getElementById('star-container').innerHTML = killsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    // 生成上下開口兩端的小鳥 🕊️
+    function spawnObstacle(difficulty) {
+        let gapSize = difficulty === 'hard' ? 420 : 540; 
+        let minPipeHeight = 140;
+        let maxTopHeight = canvas.height - gapSize - minPipeHeight - 80; 
+        
+        let topHeight = minPipeHeight + Math.random() * (maxTopHeight - minPipeHeight);
+        
+        obstacles.push({
+            x: canvas.width + 60,
+            topBirdY: topHeight,
+            botBirdY: topHeight + gapSize,
+            birdRadius: 48, // 小鳥碰撞半徑
+            flapPhase: Math.random() * Math.PI * 2,
+            passed: false
+        });
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff6b81', '#eccc68'];
+      for (let i = 0; i < 60; i++) {
+        confetti.push({
+          x: finishLine.x + (Math.random() - 0.5) * 200,
+          y: Math.random() * (canvas.height - 200),
+          vx: (Math.random() - 0.3) * 400,
+          vy: (Math.random() - 0.5) * 400 - 100,
+          size: 12 + Math.random() * 12,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 10
+        });
+      }
+    }
+
+    function gameLoop(currentTime) {
+      if (gamePhase === 'exiting') return;
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start') {
+         update(Math.min(dt, 0.1)); 
+         draw();
+      }
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      propAngle += dt * 45; // 螺旋槳持續轉動
+
+      // 更新噴氣雲朵特效
+      for (let i = puffs.length - 1; i >= 0; i--) {
+          let p = puffs[i];
+          p.x -= 220 * dt;
+          p.y += p.vy * dt;
+          p.r += 25 * dt;
+          p.alpha -= 1.8 * dt;
+          if (p.alpha <= 0) puffs.splice(i, 1);
+      }
+
+      // 抵達終點後的慶祝動畫階段
+      if (gamePhase === 'ending') {
+          let scrollSpeed = 250;
+          bgScrollX -= (scrollSpeed * 0.2) * dt;
+          groundScrollX = (groundScrollX - scrollSpeed * dt) % 60;
+          if (bgScrollX <= -canvas.width) bgScrollX += canvas.width;
+
+          if (finishLine.x > 180) {
+              finishLine.x -= scrollSpeed * dt;
+          }
+
+          // 飛機自動平穩巡航向終點右側飛出
+          player.x += 320 * dt;
+          let targetY = canvas.height * 0.42;
+          player.y += (targetY - player.y) * 3 * dt;
+          player.rotation += (0 - player.rotation) * 6 * dt;
+
+          // 定期噴出慶祝尾氣
+          if (Math.random() < 0.4) {
+              puffs.push({ x: player.x - 85, y: player.y + 15, vy: (Math.random() - 0.5) * 40, r: 14, alpha: 0.8 });
+          }
+
+          // 更新慶祝彩帶
+          for (let c of confetti) {
+              c.vy += 300 * dt;
+              c.x += c.vx * dt;
+              c.y += c.vy * dt;
+              c.rot += c.vRot * dt;
+          }
+
+          // 飛機飛過畫面中後段時開始白光淡出
+          if (player.x > canvas.width * 0.65) {
+              whiteFade += dt * 1.2; 
+              if (whiteFade >= 1) {
+                whiteFade = 1;
+                endGame(true);
+              }
+          }
+          return;
+      }
+
+      if (gamePhase === 'playing') {
+          gameTime += dt;
+          updateHUD();
+
+          let difficulty = gameTime > 10 ? 'hard' : 'easy';
+          let scrollSpeed = difficulty === 'hard' ? 550 : 350;
+          let spawnInterval = difficulty === 'hard' ? 1.25 : 1.8;
+
+          // 在 18.2 秒時生成終點線，讓它在第 20 秒時剛好抵達玩家位置
+          if (gameTime >= 18.2 && !finishLine.spawned) {
+              finishLine.spawned = true;
+              finishLine.x = player.x + scrollSpeed * Math.max(0.5, (WIN_TIME - gameTime));
+          }
+
+          if (finishLine.spawned) {
+              finishLine.x -= scrollSpeed * dt;
+          }
+
+          // 滿 20 秒正式衝線過關！
+          if (gameTime >= WIN_TIME) {
+              gameTime = WIN_TIME;
+              updateHUD(true);
+              gamePhase = 'ending';
+              spawnConfetti();
+              return;
+          }
+
+          player.vy += GRAVITY * dt;
+          player.y += player.vy * dt;
+          
+          player.rotation = Math.min(Math.PI / 5, Math.max(-Math.PI / 5, (player.vy * 0.0008)));
+
+          bgScrollX -= (scrollSpeed * 0.2) * dt;
+          groundScrollX = (groundScrollX - scrollSpeed * dt) % 60;
+          if (bgScrollX <= -canvas.width) bgScrollX += canvas.width;
+
+          // 17.5 秒後停止產生新小鳥，把天空淨空迎接終點拱門
+          obstacleTimer += dt;
+          if (obstacleTimer >= spawnInterval && gameTime < 17.5) {
+              spawnObstacle(difficulty);
+              obstacleTimer = 0;
+          }
+
+          let hitRadius = player.size * 0.32; 
+          let floorY = canvas.height - 60;
+          
+          if (player.y - hitRadius < 0 || player.y + hitRadius > floorY) {
+              gamePhase = 'dead';
+              endTimeoutId = setTimeout(() => endGame(false), 800);
+          }
+
+          for (let i = obstacles.length - 1; i >= 0; i--) {
+              let obs = obstacles[i];
+              obs.x -= scrollSpeed * dt;
+              obs.flapPhase += dt * 7;
+
+              // 小鳥上下微幅拍翅浮動
+              let topBob = Math.sin(obs.flapPhase) * 14;
+              let botBob = Math.cos(obs.flapPhase) * 14;
+
+              let topY = obs.topBirdY + topBob;
+              let botY = obs.botBirdY + botBob;
+
+              // 計算玩家與上下兩隻小鳥的圓形碰撞距離
+              let distTop = Math.hypot(player.x - obs.x, player.y - topY);
+              let distBot = Math.hypot(player.x - obs.x, player.y - botY);
+
+              if (distTop < (hitRadius + obs.birdRadius) || distBot < (hitRadius + obs.birdRadius)) {
+                  gamePhase = 'dead';
+                  endTimeoutId = setTimeout(() => endGame(false), 800);
+              }
+
+              if (obs.x + 120 < 0) {
+                  obstacles.splice(i, 1);
+              }
+          }
+      } 
+      else if (gamePhase === 'dead') {
+          player.vy += GRAVITY * dt;
+          player.y += player.vy * dt;
+          player.rotation += 5 * dt; 
+      }
+    }
+
+    // 🌟 效能優化：繪製小鳥直接貼上預先算好的離屏快取圖，不重複算 shadowBlur 與 Emoji 字型
+    function drawBird(x, y, phase) {
+      if (!birdCacheCanvas) return;
+      ctx.save();
+      ctx.translate(x, y);
+      
+      let wingScaleY = 1 + Math.sin(phase * 1.8) * 0.12;
+      let tilt = Math.sin(phase) * 0.08;
+      ctx.rotate(tilt);
+      ctx.scale(1, wingScaleY);
+
+      ctx.drawImage(birdCacheCanvas, -70, -70);
+
+      ctx.restore();
+    }
+
+    // 繪製 20 秒終點拱門與熱氣球
+    function drawFinishLine(fx) {
+      let floorY = canvas.height - 60;
+      ctx.save();
+
+      // 1. 終點背景大彩虹
+      let rainbowColors = [
+        'rgba(255, 71, 87, 0.35)',
+        'rgba(255, 165, 2, 0.35)',
+        'rgba(255, 235, 59, 0.35)',
+        'rgba(46, 213, 115, 0.35)',
+        'rgba(30, 144, 255, 0.35)',
+        'rgba(156, 136, 255, 0.35)'
+      ];
+      for (let i = 0; i < rainbowColors.length; i++) {
+        ctx.strokeStyle = rainbowColors[i];
+        ctx.lineWidth = 22;
+        ctx.beginPath();
+        ctx.arc(fx + 60, floorY, 520 - i * 22, Math.PI, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 2. 紅白相間終點立柱
+      let poleW = 28;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#2f3542';
+      let stripeH = 45;
+      for (let y = 130; y < floorY; y += stripeH) {
+        let h = Math.min(stripeH, floorY - y);
+        ctx.fillStyle = (Math.floor((y - 130) / stripeH) % 2 === 0) ? '#ff4757' : '#ffffff';
+        ctx.fillRect(fx - poleW / 2, y, poleW, h);
+        ctx.strokeRect(fx - poleW / 2, y, poleW, h);
+      }
+
+      // 3. 垂直黑白方格旗幟帶
+      let sq = 26;
+      for (let y = 160; y < floorY; y += sq) {
+        for (let col = 0; col < 2; col++) {
+          ctx.fillStyle = ((Math.floor(y / sq) + col) % 2 === 0) ? 'rgba(255,255,255,0.88)' : 'rgba(30,30,30,0.88)';
+          ctx.fillRect(fx + poleW / 2 + col * sq, y, sq, Math.min(sq, floorY - y));
+        }
+      }
+
+      // 4. 頂部飄揚的大熱氣球與橫幅「🏁 終點 🏁」
+      let bobY = Math.sin(gameTime * 4) * 10;
+      ctx.translate(fx + 20, 115 + bobY);
+
+      ctx.strokeStyle = '#57606f';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-130, -25); ctx.lineTo(-110, 20);
+      ctx.moveTo(130, -25); ctx.lineTo(110, 20);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath(); ctx.ellipse(-135, -65, 38, 48, -0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#ffa502';
+      ctx.beginPath(); ctx.ellipse(135, -65, 38, 48, 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = '#ffd32a';
+      ctx.strokeStyle = '#ff3f34';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(-155, -30, 310, 82, 22);
+      } else {
+        ctx.rect(-155, -30, 310, 82);
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#d63031';
+      ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("🏁 終點 🏁", 0, 12);
+
+      ctx.restore();
+    }
+
+    // 🌟 繪製敞篷單翼小飛機 (移除上方機翼與支架，不擋住寶寶角色)
+    function drawAirplane() {
+      ctx.save(); 
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.rotation);
+      
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      // 1. 機尾垂直方向舵 (Tail Fin)
+      ctx.fillStyle = '#ff4757';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-48, 16);
+      ctx.lineTo(-82, -26);
+      ctx.quadraticCurveTo(-65, -29, -52, -20);
+      ctx.lineTo(-28, 16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 方向舵白色裝飾條
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-68, -8);
+      ctx.lineTo(-56, -12);
+      ctx.lineTo(-42, 10);
+      ctx.lineTo(-54, 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // 2. 座位內部軟墊靠背 (在角色背後，增加坐在裡面的立體感)
+      ctx.fillStyle = '#57606f';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(-5, 10, 36, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. 角色本體 (坐在敞篷機艙內，上方完全無遮擋)
+      if (charImg.complete && charImg.naturalHeight > 0) {
+          ctx.drawImage(charImg, -player.size / 2, -player.size / 2 - 22, player.size, player.size);
+      }
+
+      // 4. 機艙透明小擋風玻璃 (Cockpit Windshield)
+      ctx.fillStyle = 'rgba(112, 161, 255, 0.65)';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(22, 6);
+      ctx.quadraticCurveTo(36, -16, 48, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 5. 流線型主機身 (Main Fuselage) - 使用快取好的漸層
+      ctx.fillStyle = planeBodyGrad || '#ff4757';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-72, 16);
+      ctx.quadraticCurveTo(-45, 6, -32, 10);
+      // 敞篷座艙下凹弧度，讓角色身體自然露出來
+      ctx.quadraticCurveTo(-2, 18, 28, 6);
+      ctx.quadraticCurveTo(75, 8, 75, 26);
+      ctx.quadraticCurveTo(75, 46, 45, 48);
+      ctx.quadraticCurveTo(-15, 52, -68, 28);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 機身白色流線塗裝
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-64, 22);
+      ctx.quadraticCurveTo(-10, 20, 56, 21);
+      ctx.lineTo(54, 32);
+      ctx.quadraticCurveTo(-10, 30, -62, 27);
+      ctx.closePath();
+      ctx.fill();
+
+      // 機身側面閃亮星徽
+      ctx.fillStyle = '#ffd32a';
+      ctx.beginPath();
+      ctx.arc(-22, 25, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // 6. 機腹主機翼 (Lower Wing)
+      ctx.fillStyle = '#ffa502';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(8, 36, 42, 13, 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffeb3b';
+      ctx.beginPath();
+      ctx.ellipse(10, 34, 28, 6, 0.08, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 7. 機頭金屬整流罩與高速旋轉螺旋槳 (Nose Cone & Spinning Propeller)
+      ctx.fillStyle = '#dfe4ea';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(64, 7);
+      ctx.lineTo(64, 43);
+      ctx.quadraticCurveTo(82, 40, 82, 25);
+      ctx.quadraticCurveTo(82, 10, 64, 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 螺旋槳動態模糊殘影
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(84, 25, 6, 46, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 旋轉中的槳葉
+      let bladeLen = Math.sin(propAngle) * 44;
+      ctx.fillStyle = '#57606f';
+      ctx.strokeStyle = '#2f3542';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(84, 25, 5, Math.abs(bladeLen) + 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 螺旋槳紅色中心軸帽 (Spinner Hub)
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath();
+      ctx.arc(85, 25, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore(); 
+    }
+
+    function draw() {
+      if (gamePhase === 'exiting') return;
+
+      // 1. 繪製捲動背景
+      if (bgImg.complete && bgImg.naturalHeight > 0) {
+          let bx = Math.floor(bgScrollX);
+          ctx.drawImage(bgImg, bx, 0, canvas.width, canvas.height);
+          ctx.drawImage(bgImg, bx + canvas.width, 0, canvas.width, canvas.height);
+      } else {
+          ctx.fillStyle = skyFallbackGrad || '#74b9ff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // 2. 繪製 20 秒終點拱門
+      if (finishLine.spawned) {
+          drawFinishLine(finishLine.x);
+      }
+
+      // 3. 繪製天空中的小鳥障礙物 🕊️
+      for (let obs of obstacles) {
+          let topBob = Math.sin(obs.flapPhase) * 14;
+          let botBob = Math.cos(obs.flapPhase) * 14;
+          drawBird(obs.x, obs.topBirdY + topBob, obs.flapPhase);
+          drawBird(obs.x, obs.botBirdY + botBob, obs.flapPhase + Math.PI);
+      }
+
+      // 4. 繪製底部草地 (只畫螢幕可視範圍內的條紋，減少一半以上的繪圖次數)
+      ctx.fillStyle = '#badc58';
+      ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+      ctx.fillStyle = '#6ab04c';
+      for (let x = groundScrollX; x < canvas.width; x += 60) {
+          ctx.fillRect(x, canvas.height - 60, 30, 60);
+      }
+      ctx.strokeStyle = '#535c68';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height - 60);
+      ctx.lineTo(canvas.width, canvas.height - 60);
+      ctx.stroke();
+
+      // 5. 繪製噴氣白雲特效
+      for (let p of puffs) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, p.alpha)})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+      }
+
+      // 6. 繪製敞篷小飛機與玩家
+      drawAirplane();
+
+      // 7. 繪製終點慶祝彩帶
+      for (let c of confetti) {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle = c.color;
+          ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+          ctx.restore();
+      }
+
+      // 8. 過關白光轉場
+      if (whiteFade > 0) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${whiteFade})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (gamePhase === 'playing') {
+          player.vy = JUMP_VELOCITY;
+          
+          // 點擊時機尾噴出一團可愛推進白煙
+          puffs.push({
+              x: player.x - 75,
+              y: player.y + 22,
+              vy: (Math.random() - 0.5) * 30,
+              r: 16,
+              alpha: 0.85
+          });
+      }
+    });
+  </script>
+</body>
+</html>

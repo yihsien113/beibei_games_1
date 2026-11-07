@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>漸進式王國建造特效測試</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+    body {
+      margin: 0;
+      padding: 15px;
+      background: #14151f;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .toolbar {
+      background: #1f2233;
+      padding: 12px 18px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      max-width: 650px;
+      width: 100%;
+    }
+    .toolbar label {
+      font-size: 13px;
+      color: #ffd1dc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar input, .toolbar select {
+      background: #2b2f48;
+      border: 1px solid #5a5e80;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .btn {
+      background: #ff4081;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-upgrade {
+      background: #4caf50;
+      font-size: 16px;
+      padding: 8px 20px;
+    }
+    .btn-upgrade:hover { background: #43a047; }
+    .btn-reset { background: #555; }
+
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 650px;
+      /* 依照 3:4 直式比例 (例如生成的空島圖) 設置 */
+      aspect-ratio: 3 / 4;
+      background: #232535;
+      border: 3px solid #ff77a9;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(255, 119, 169, 0.25);
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .info {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #ffd1dc;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .stage-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      margin: 2px;
+      border-radius: 6px;
+      background: #34374c;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .stage-badge.active {
+      background: #ff4081;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制面板 -->
+  <div class="toolbar">
+    <label>
+      檔名前綴:
+      <input type="text" id="prefixInput" value="win1" style="width: 70px;">
+    </label>
+    <label>
+      副檔名:
+      <select id="extSelect">
+        <option value=".webp">.webp</option>
+        <option value=".jpg">.jpg</option>
+        <option value=".png">.png</option>
+      </select>
+    </label>
+    <button class="btn" onclick="reloadImages()">重新讀取</button>
+    <button class="btn btn-reset" onclick="resetStage()" style="margin-left: auto;">重設為階段 1</button>
+  </div>
+
+  <!-- 升級與切換按鈕 -->
+  <div class="toolbar" style="padding: 10px 18px; justify-content: space-between;">
+    <button class="btn btn-upgrade" onclick="nextStage()">✨ 升級！建造下一階段</button>
+    <div>
+      <span id="badge-1" class="stage-badge active">1.空地</span>
+      <span id="badge-2" class="stage-badge">2.房屋</span>
+      <span id="badge-3" class="stage-badge">3.藤蔓</span>
+      <span id="badge-4" class="stage-badge">4.設施</span>
+      <span id="badge-5" class="stage-badge">5.公主</span>
+    </div>
+  </div>
+
+  <!-- 遊戲畫布 -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
+  </div>
+
+  <div class="info">
+    👉 點擊 <b>「✨ 升級！建造下一階段」</b> 觀看蓬開白煙、果凍回彈與沖天星光效果！<br>
+    ※ 圖片預設讀取同層資料夾之 <code>win1-1</code> 到 <code>win1-5</code>。
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const TOTAL_STAGES = 5;
+    let currentStage = 1;
+    let previousStage = 1;
+
+    // 圖片載入池
+    let images = {};
+    let imgLoaded = {};
+
+    function reloadImages() {
+      const prefix = document.getElementById('prefixInput').value.trim();
+      const ext = document.getElementById('extSelect').value;
+
+      for (let i = 1; i <= TOTAL_STAGES; i++) {
+        const img = new Image();
+        imgLoaded[i] = false;
+        img.src = `${prefix}-${i}${ext}?t=${Date.now()}`;
+        img.onload = () => { imgLoaded[i] = true; };
+        img.onerror = () => { imgLoaded[i] = false; };
+        images[i] = img;
+      }
+    }
+
+    // 動畫狀態變數
+    let isTransitioning = false;
+    let transitionStartTime = 0;
+    const TRANSITION_DURATION = 800; // 特效持續 0.8 秒
+
+    // 煙霧粒子與星星粒子池
+    let smokeParticles = [];
+    let starParticles = [];
+
+    function triggerBuildEffect() {
+      isTransitioning = true;
+      transitionStartTime = performance.now();
+
+      // 產生 12 顆白色魔法煙霧團 (向外擴散)
+      smokeParticles = [];
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height * 0.48; // 島上房屋中心點
+
+      for (let i = 0; i < 12; i++) {
+        const angle = (i * Math.PI * 2) / 12;
+        smokeParticles.push({
+          x: centerX,
+          y: centerY,
+          vx: Math.cos(angle) * (60 + Math.random() * 40),
+          vy: Math.sin(angle) * (40 + Math.random() * 30),
+          maxRadius: 35 + Math.random() * 20
+        });
+      }
+
+      // 產生 16 顆噴射星星
+      starParticles = [];
+      for (let i = 0; i < 16; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 120 + Math.random() * 100;
+        starParticles.push({
+          x: centerX,
+          y: centerY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          symbol: Math.random() > 0.5 ? '✨' : '⭐',
+          size: 20 + Math.random() * 16
+        });
+      }
+    }
+
+    function nextStage() {
+      if (isTransitioning) return;
+      previousStage = currentStage;
+      currentStage = currentStage >= TOTAL_STAGES ? 1 : currentStage + 1;
+      updateBadges();
+      triggerBuildEffect();
+    }
+
+    function resetStage() {
+      currentStage = 1;
+      previousStage = 1;
+      isTransitioning = false;
+      updateBadges();
+    }
+
+    function updateBadges() {
+      for (let i = 1; i <= TOTAL_STAGES; i++) {
+        const el = document.getElementById(`badge-${i}`);
+        if (el) {
+          el.className = 'stage-badge' + (i === currentStage ? ' active' : '');
+        }
+      }
+    }
+
+    // 主繪製邏輯
+    function draw(now) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let scaleX = 1;
+      let scaleY = 1;
+      let progress = 0;
+
+      if (isTransitioning) {
+        progress = (now - transitionStartTime) / TRANSITION_DURATION;
+        if (progress >= 1) {
+          isTransitioning = false;
+          progress = 1;
+        }
+
+        // ===== 核心魔法：果凍彈簧回彈效果 (Squash & Stretch) =====
+        // 0~0.25 (煙霧遮蔽期) -> 0.25~0.6 (衝起變高) -> 0.6~0.8 (壓扁回彈) -> 1.0 (恢復)
+        if (progress > 0.25) {
+          const t = (progress - 0.25) / 0.75; // 0 ~ 1
+          // 利用衰減的正弦波模擬彈跳果凍
+          const bounce = Math.sin(t * Math.PI * 3) * Math.exp(-t * 3);
+          scaleX = 1 - bounce * 0.15;
+          scaleY = 1 + bounce * 0.15;
+        }
+      }
+
+      // 決定畫哪一張圖：特效前 25% 畫舊圖，被煙霧完全遮住後（>25%）無縫切換到新圖
+      const displayStage = (isTransitioning && progress < 0.25) ? previousStage : currentStage;
+
+      // 1. 繪製主背景/建築
+      ctx.save();
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height * 0.48;
+
+      ctx.translate(centerX, centerY);
+      ctx.scale(scaleX, scaleY);
+
+      const currentImg = images[displayStage];
+      const isLoaded = imgLoaded[displayStage];
+
+      if (isLoaded && currentImg && currentImg.naturalWidth > 0) {
+        // 等比繪製滿版背景
+        ctx.drawImage(currentImg, -canvas.width / 2, -centerY, canvas.width, canvas.height);
+      } else {
+        // 【備援圖層】當沒有圖片時，繪製示意圖確保效果一目了然
+        drawPlaceholderStage(ctx, displayStage);
+      }
+      ctx.restore();
+
+      // 2. 繪製過場特效（光柱、煙霧、噴散星星）
+      if (isTransitioning) {
+        drawTransitionFX(ctx, progress);
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    // 特效層繪製
+    function drawTransitionFX(ctx, p) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height * 0.48;
+
+      ctx.save();
+
+      // (A) 沖天金黃/粉紅魔法光柱 (在前半段 0~0.5 快速沖起並淡出)
+      if (p < 0.6) {
+        const beamAlpha = (1 - p / 0.6) * 0.7;
+        const grad = ctx.createLinearGradient(centerX, canvas.height, centerX, 0);
+        grad.addColorStop(0, 'rgba(255, 235, 59, 0)');
+        grad.addColorStop(0.5, `rgba(255, 105, 180, ${beamAlpha})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(centerX - 80, 0, 160, canvas.height);
+      }
+
+      // (B) 蓬開並散去的白色雲朵煙霧 (用半透明圓形組合)
+      if (p < 0.7) {
+        const smokeAlpha = (1 - p / 0.7);
+        ctx.fillStyle = `rgba(255, 255, 255, ${smokeAlpha * 0.9})`;
+
+        smokeParticles.forEach(pt => {
+          const curX = pt.x + pt.vx * p;
+          const curY = pt.y + pt.vy * p;
+          const curR = pt.maxRadius * Math.sin(p * Math.PI); // 先大後小
+          ctx.beginPath();
+          ctx.arc(curX, curY, Math.max(0, curR), 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // (C) 噴射爆散的星星粒子
+      starParticles.forEach(pt => {
+        const curX = pt.x + pt.vx * p;
+        const curY = pt.y + pt.vy * p;
+        ctx.font = `${pt.size * (1 - p * 0.4)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = Math.max(0, 1 - p);
+        ctx.fillText(pt.symbol, curX, curY);
+      });
+
+      ctx.restore();
+    }
+
+    // 備援幾何繪製（若本機尚未放圖片時自動展示）
+    function drawPlaceholderStage(ctx, stage) {
+      // 繪製假空島草地底圖
+      ctx.fillStyle = '#4caf50';
+      ctx.beginPath();
+      ctx.ellipse(0, 50, 240, 70, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#2e7d32';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+
+      if (stage === 1) {
+        // 階段 1：發光地基
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(0, 50, 40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#333';
+        ctx.fillText('階段 1: 發光地基', 0, 55);
+      } else if (stage >= 2) {
+        // 階段 2：小屋本體
+        ctx.fillStyle = '#ff77a9';
+        ctx.fillRect(-70, -70, 140, 120);
+        ctx.fillStyle = '#8e24aa';
+        ctx.beginPath();
+        ctx.moveTo(0, -140);
+        ctx.lineTo(-90, -70);
+        ctx.lineTo(90, -70);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`階段 ${stage}: 小屋`, 0, -10);
+      }
+
+      if (stage >= 3) {
+        // 階段 3：綠色藤蔓
+        ctx.strokeStyle = '#00e676';
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(-75, 40);
+        ctx.lineTo(-65, -60);
+        ctx.lineTo(0, -130);
+        ctx.stroke();
+      }
+
+      if (stage >= 4) {
+        // 階段 4：路徑與小旗幟
+        ctx.fillStyle = '#ffeb3b';
+        ctx.fillText('🚩', 80, -130);
+        ctx.fillText('🌸', -100, 30);
+        ctx.fillText('🌸', 100, 30);
+      }
+
+      if (stage >= 5) {
+        // 階段 5：公主登場
+        ctx.font = '50px sans-serif';
+        ctx.fillText('👸', 0, 30);
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillStyle = '#ff4081';
+        ctx.fillText('🎉 奇幻王國建造大成功！', 0, -160);
+      }
+    }
+
+    // 啟動
+    reloadImages();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

@@ -5,11 +5,11 @@
 //更新項目v2.3:星正map13遊戲結束後產生的大廳卡死.map5題目字體縮小
 //更新項目v2.4:修正大廳卡死,增加大廳更新公告,增加版本號碼
 //更新項目v2.5:修正map13無圖片的問題.修正map5選擇難度排版問題
-
+//更新項目v2.6:增加人物-小志1.小志2,增加關卡14以及相關素材
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v2.5';
+const CACHE_NAME = 'dollhouse-game-v2.6';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
@@ -29,6 +29,7 @@ const GAME_ASSETS = [
   'map11.html',
   'map12.html',
   'map13.html',
+  'map14.html',
   'bopomofo.js',
   'OrbitControls.js',
   'three.min.js',
@@ -52,6 +53,7 @@ const GAME_ASSETS = [
   'assets/map/map11.webp',
   'assets/map/map12.webp',
   'assets/map/map13.webp',
+  'assets/map/map14.webp',
   'assets/player/han1-1.webp',
   'assets/player/han1-2.webp',
   'assets/player/han1-3.webp',
@@ -67,6 +69,12 @@ const GAME_ASSETS = [
   'assets/player/han5-1.webp',
   'assets/player/han5-2.webp',
   'assets/player/han5-3.webp', 
+  'assets/player/chih1-1.webp',
+  'assets/player/chih1-2.webp',
+  'assets/player/chih1-3.webp',
+  'assets/player/chih2-1.webp',
+  'assets/player/chih2-2.webp',
+  'assets/player/chih2-3.webp',
   'assets/bad/bad1-1.webp',
   'assets/bad/bad1-2.webp',
   'assets/bad/bad1-3.webp',
@@ -83,6 +91,7 @@ const GAME_ASSETS = [
   'assets/sticker/map11.webp',
   'assets/sticker/map12.webp',
   'assets/sticker/map13.webp',
+  'assets/sticker/map14.webp',
   'assets/sticker/lobby1.webp',
   'assets/sticker/lobby2.webp',
   'assets/sticker/lobby3.webp',
