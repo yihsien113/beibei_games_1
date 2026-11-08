@@ -178,56 +178,86 @@ const PLAYER_CHARACTERS = {
       }
     }
   },
-  'han6': {
+ 'han6': {
     name: '冰雪公主', prefix: 'han6', size: 165, hitboxOffsetX: 120, hitboxOffsetY: 0, hitboxRadius: 55,
     drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      // 1. 繪製丟出的一陣風 (藍色線條)
       ctx.save();
+      // 使用天藍色，並隨著進度淡出
+      ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`; 
+      ctx.shadowColor = '#00BFFF';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 4 + 4 * (1 - p); 
+      ctx.lineCap = 'round';
       
-      if (p < 0.7) {
-        // 前段 (p < 0.7)：丟出冷風與旋轉雪花
-        const flyP = p / 0.7;
-        const currentX = startX + (targetX - startX) * flyP;
-        const currentY = startY + (targetY - startY) * flyP;
-        
-        ctx.translate(currentX, currentY);
-        ctx.rotate(flyP * Math.PI * 6); // 讓雪花帶有旋轉效果
-        
-        ctx.globalAlpha = 0.9;
-        ctx.font = '60px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('❄️', 0, 0);
-        
-        // 加上冷風的視覺殘影
-        ctx.globalAlpha = 0.6 * (1 - flyP * 0.3);
-        ctx.font = '45px sans-serif';
-        ctx.fillText('💨', -40, 20);
-      } else {
-        // 後段 (p >= 0.7)：在攻擊區域把敵人變成冰塊[cite: 1]
-        const freezeP = (p - 0.7) / 0.3;
+      // 計算風的前端 (head) 與後端 (tail)，製造出往前飛行的線條拉扯感
+      const headX = startX + (targetX - startX) * p;
+      const headY = startY + (targetY - startY) * p;
+      const tailP = Math.max(0, p - 0.3); 
+      const tailX = startX + (targetX - startX) * tailP;
+      const tailY = startY + (targetY - startY) * tailP;
+
+      // 計算垂直於攻擊方向的法向量，用來畫出兩側的副風線
+      const dx = targetX - startX;
+      const dy = targetY - startY;
+      const dist = Math.hypot(dx, dy) || 1;
+      const nx = -dy / dist;
+      const ny = dx / dist;
+
+      ctx.beginPath();
+      // 中間主風線
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(headX, headY);
+      
+      // 兩側副風線 (稍微短一點)
+      const sideTailP = Math.max(0, p - 0.2);
+      const sideTailX = startX + (targetX - startX) * sideTailP;
+      const sideTailY = startY + (targetY - startY) * sideTailP;
+      
+      ctx.moveTo(sideTailX + nx * 25, sideTailY + ny * 25);
+      ctx.lineTo(headX + nx * 15, headY + ny * 15);
+
+      ctx.moveTo(sideTailX - nx * 25, sideTailY - ny * 25);
+      ctx.lineTo(headX - nx * 15, headY - ny * 15);
+
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. 繪製終點原地變大的雪花 (不旋轉)
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      
+      // 依據動畫進度 p 計算雪花大小，從小變大 (30px 到 150px)
+      const currentSize = 30 + p * 120;
+      
+      // 動畫快結束時逐漸淡出
+      ctx.globalAlpha = p < 0.8 ? 1 : 1 - ((p - 0.8) / 0.2); 
+      
+      ctx.font = `${currentSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('❄️', 0, 0);
+      ctx.restore();
+
+      // 3. 抵達動畫尾聲時 (p > 0.8)，加上小雪花向外散開的特效
+      if (p > 0.8) {
+        ctx.save();
+        const burstP = (p - 0.8) / 0.2;
         ctx.translate(targetX, targetY);
         
-        // 設定 globalAlpha 讓冰塊具有穿透感的透明度
-        ctx.globalAlpha = 0.7 - (freezeP * 0.2); 
-        
-        // 藍色大 emoji (冰塊) 隨時間稍微膨脹
-        const iceSize = 130 + freezeP * 20; 
-        ctx.font = `${iceSize}px sans-serif`;
+        ctx.globalAlpha = 1 - burstP;
+        ctx.font = '35px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🧊', 0, 0);
         
-        // 在冰塊周圍點綴散開的細碎冷氣/小雪花
-        ctx.globalAlpha = 0.9 * (1 - freezeP);
-        ctx.font = '35px sans-serif';
+        // 5 片小雪花向外擴散
         for (let i = 0; i < 5; i++) {
-          const angle = (i * Math.PI * 2) / 5 + freezeP;
-          const dist = 70 + freezeP * 40; // 向外擴散
-          ctx.fillText('❄️', Math.cos(angle) * dist, Math.sin(angle) * dist);
+          const angle = (i * Math.PI * 2) / 5 + burstP;
+          const burstDist = 50 + burstP * 60; 
+          ctx.fillText('❄️', Math.cos(angle) * burstDist, Math.sin(angle) * burstDist);
         }
+        ctx.restore();
       }
-      
-      ctx.restore();
     }
   },
   'chih1': {
