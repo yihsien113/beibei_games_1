@@ -279,14 +279,21 @@
           <button class="btn btn-buy" data-btn="han5" onclick="buyOrEquip('han5', 40)"></button>
         </div>
 
-        <!-- 角色 6：揮劍里長 -->
+        <!-- 角色 6：冰雪公主 -->
+        <div class="char-card" data-char="han6">
+          <img src="assets/player/han6-1.webp" alt="冰雪公主">
+          <div class="char-name"><ruby>冰<rt>ㄅㄧㄥ</rt></ruby><ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby></div>
+          <button class="btn btn-buy" data-btn="han6" onclick="buyOrEquip('han6', 40)"></button>
+        </div>
+
+        <!-- 角色 7：揮劍里長 -->
         <div class="char-card" data-char="chih1">
           <img src="assets/player/chih1-1.webp" alt="揮劍里長">
           <div class="char-name"><ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>里<rt>ㄌㄧˇ</rt></ruby><ruby>長<rt>ㄓㄤˇ</rt></ruby></div>
           <button class="btn btn-buy" data-btn="chih1" onclick="buyOrEquip('chih1', 5)"></button>
         </div>
 
-        <!-- 角色 7：弓箭男孩 -->
+        <!-- 角色 8：弓箭男孩 -->
         <div class="char-card" data-char="chih2">
           <img src="assets/player/chih2-1.webp" alt="飛車男孩">
           <div class="char-name"><ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby><ruby>男<rt>ㄋㄢˊ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby></div>
@@ -321,6 +328,7 @@
     let ownsHan3 = localStorage.getItem('owns_han3') === 'true';
     let ownsHan4 = localStorage.getItem('owns_han4') === 'true';
     let ownsHan5 = localStorage.getItem('owns_han5') === 'true';
+    let ownsHan6 = localStorage.getItem('owns_han6') === 'true';
     let ownsChih1 = localStorage.getItem('owns_chih1') === 'true';
     let ownsChih2 = localStorage.getItem('owns_chih2') === 'true';
 
@@ -346,13 +354,15 @@
 
     const charImages = {
       han1: new Image(), han2: new Image(), han3: new Image(),
-      han4: new Image(), han5: new Image(), chih1: new Image(), chih2: new Image()
+      han4: new Image(), han5: new Image(), han6: new Image(),
+      chih1: new Image(), chih2: new Image()
     };
     charImages.han1.src = 'assets/player/han1-1.webp';
     charImages.han2.src = 'assets/player/han2-1.webp';
     charImages.han3.src = 'assets/player/han3-1.webp';
     charImages.han4.src = 'assets/player/han4-1.webp';
     charImages.han5.src = 'assets/player/han5-1.webp';
+    charImages.han6.src = 'assets/player/han6-1.webp';
     charImages.chih1.src = 'assets/player/chih1-1.webp';
     charImages.chih2.src = 'assets/player/chih2-1.webp';
 
@@ -461,6 +471,7 @@
       updateCardState('han3', equipped === 'han3', ownsHan3, TEXT_BUY_40);
       updateCardState('han4', equipped === 'han4', ownsHan4, TEXT_BUY_40);
       updateCardState('han5', equipped === 'han5', ownsHan5, TEXT_BUY_40);
+      updateCardState('han6', equipped === 'han6', ownsHan6, TEXT_BUY_40);
       updateCardState('chih1', equipped === 'chih1', ownsChih1, TEXT_BUY_5);
       updateCardState('chih2', equipped === 'chih2', ownsChih2, TEXT_BUY_40);
       if (window.Bopomofo && typeof window.Bopomofo.render === 'function') window.Bopomofo.render();
@@ -489,6 +500,7 @@
           if (charKey === 'han3') ownsHan3 = true;
           if (charKey === 'han4') ownsHan4 = true;
           if (charKey === 'han5') ownsHan5 = true;
+          if (charKey === 'han6') ownsHan6 = true;
           if (charKey === 'chih1') ownsChih1 = true;
           if (charKey === 'chih2') ownsChih2 = true;
 

@@ -178,6 +178,58 @@ const PLAYER_CHARACTERS = {
       }
     }
   },
+  'han6': {
+    name: '冰雪公主', prefix: 'han6', size: 165, hitboxOffsetX: 120, hitboxOffsetY: 0, hitboxRadius: 55,
+    drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      ctx.save();
+      
+      if (p < 0.7) {
+        // 前段 (p < 0.7)：丟出冷風與旋轉雪花
+        const flyP = p / 0.7;
+        const currentX = startX + (targetX - startX) * flyP;
+        const currentY = startY + (targetY - startY) * flyP;
+        
+        ctx.translate(currentX, currentY);
+        ctx.rotate(flyP * Math.PI * 6); // 讓雪花帶有旋轉效果
+        
+        ctx.globalAlpha = 0.9;
+        ctx.font = '60px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('❄️', 0, 0);
+        
+        // 加上冷風的視覺殘影
+        ctx.globalAlpha = 0.6 * (1 - flyP * 0.3);
+        ctx.font = '45px sans-serif';
+        ctx.fillText('💨', -40, 20);
+      } else {
+        // 後段 (p >= 0.7)：在攻擊區域把敵人變成冰塊[cite: 1]
+        const freezeP = (p - 0.7) / 0.3;
+        ctx.translate(targetX, targetY);
+        
+        // 設定 globalAlpha 讓冰塊具有穿透感的透明度
+        ctx.globalAlpha = 0.7 - (freezeP * 0.2); 
+        
+        // 藍色大 emoji (冰塊) 隨時間稍微膨脹
+        const iceSize = 130 + freezeP * 20; 
+        ctx.font = `${iceSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧊', 0, 0);
+        
+        // 在冰塊周圍點綴散開的細碎冷氣/小雪花
+        ctx.globalAlpha = 0.9 * (1 - freezeP);
+        ctx.font = '35px sans-serif';
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * Math.PI * 2) / 5 + freezeP;
+          const dist = 70 + freezeP * 40; // 向外擴散
+          ctx.fillText('❄️', Math.cos(angle) * dist, Math.sin(angle) * dist);
+        }
+      }
+      
+      ctx.restore();
+    }
+  },
   'chih1': {
     name: '揮劍里長', prefix: 'chih1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
     drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
