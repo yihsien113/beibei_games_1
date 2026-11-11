@@ -29,8 +29,9 @@ self.addEventListener('activate', (event) => {
 
 // 3. 攔截請求：優先讀取快取，沒有才走網路（並順手將新請求寫入快取）
 self.addEventListener('fetch', (event) => {
-  // 只攔截 GET 請求
+  // 只攔截 GET 請求，且略過 Firebase / Google 雲端 API 請求（確保雲端存檔永遠抓最新資料，離線時由前端自行處理）
   if (event.request.method !== 'GET') return;
+  if (event.request.url.includes('googleapis.com') || event.request.url.includes('firebase')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡15 (拉麵大胃王)</title>
+  
+  <!-- 引入外部注音模組 -->
+  <script src="bopomofo.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      outline: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      height: 100dvh;
+      width: 100%;
+      position: fixed;
+      overscroll-behavior: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #4cd137;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4; 
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #3e2723; 
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* 頂部時間與星星面板 */
+    #timer-board {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(25, 18, 15, 0.92);
+      border: 4px solid #ff9800;
+      border-radius: 20px;
+      padding: 6px 24px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      pointer-events: none;
+    }
+
+    #timer-board h2 {
+      margin: 0;
+      font-size: 38px;
+      color: #FFF;
+      text-shadow: 0 0 10px #ff9800;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    #timer-board .star-count {
+      color: #ffeb3b;
+      text-shadow: 0 0 10px rgba(255, 235, 59, 0.8);
+    }
+
+    /* ========================================= */
+    /* 🍜 上方單一拉麵大招牌按鈕 (DOM + 注音) */
+    /* ========================================= */
+    #order-sign-btn {
+      position: absolute;
+      top: 10.5%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(180deg, #fff8e1 0%, #ffe082 100%);
+      border: 6px solid #d84315;
+      border-radius: 24px;
+      box-shadow: 0 8px 0 #4e342e, 0 12px 24px rgba(0,0,0,0.55);
+      padding: 10px 36px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      cursor: pointer;
+      z-index: 80;
+      transition: transform 0.1s ease, opacity 0.2s ease, filter 0.2s ease;
+      white-space: nowrap;
+    }
+
+    #order-sign-btn:active {
+      transform: translateX(-50%) translateY(5px) scale(0.96);
+      box-shadow: 0 3px 0 #4e342e, 0 6px 12px rgba(0,0,0,0.45);
+    }
+
+    @keyframes sign-pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 8px 0 #4e342e, 0 0 25px rgba(255, 193, 7, 0.9); }
+      50% { transform: translateX(-50%) scale(1.06); box-shadow: 0 8px 0 #4e342e, 0 0 38px rgba(255, 235, 59, 1); }
+    }
+
+    #order-sign-btn.active-order {
+      animation: sign-pulse 0.9s infinite ease-in-out;
+    }
+
+    #order-sign-btn.disabled-order {
+      opacity: 0.45;
+      filter: grayscale(35%);
+      pointer-events: none;
+    }
+
+    .sign-icon {
+      font-size: clamp(32px, 6vw, 60px);
+      line-height: 1;
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.25));
+    }
+
+    .sign-text {
+      font-size: clamp(22px, 4.5vw, 42px);
+      font-weight: 900;
+      color: #bf360c;
+    }
+    .sign-text .bopo {
+      color: #e65100 !important;
+      font-weight: 900;
+    }
+
+    .start-exit-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 (全面優化按鈕比例與觸控空間) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+      }
+      #game-container {
+        width: min(100vw, calc(100dvh * 0.75)) !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+
+      /* 左上角離開按鈕縮小並貼邊，避免誤觸或遮擋畫面 */
+      #back-btn,
+      .start-exit-btn {
+        top: 8px !important;
+        left: 8px !important;
+        padding: 5px 11px !important;
+        font-size: 13px !important;
+        border-radius: 18px !important;
+      }
+
+      /* 右上角計時與星星面板精緻化，不與離開鈕或下方招牌重疊 */
+      #timer-board {
+        top: 8px !important;
+        left: auto !important;
+        right: 8px !important;
+        transform: none !important;
+        padding: 4px 11px !important;
+        border-width: 2.5px !important;
+        border-radius: 14px !important;
+      }
+      #timer-board h2 {
+        font-size: 18px !important;
+        gap: 8px !important;
+      }
+
+      /* 上方拉麵招牌適中化，留出上方狀態列與下方主角頭頂的呼吸空間 */
+      #order-sign-btn {
+        top: 10.5% !important;
+        padding: 5px 16px !important;
+        border-width: 3.5px !important;
+        border-radius: 16px !important;
+        gap: 8px !important;
+        box-shadow: 0 4px 0 #4e342e, 0 6px 14px rgba(0,0,0,0.45) !important;
+      }
+      #order-sign-btn:active {
+        transform: translateX(-50%) translateY(3px) scale(0.96) !important;
+        box-shadow: 0 1px 0 #4e342e, 0 3px 8px rgba(0,0,0,0.4) !important;
+      }
+      .sign-icon {
+        font-size: 26px !important;
+      }
+      .sign-text {
+        font-size: 20px !important;
+      }
+
+      /* 開始畫面文字與按鈕比例優化 */
+      #start-screen .intro-copy {
+        padding: 12px 14px !important;
+      }
+      #start-screen .intro-copy h1 {
+        font-size: clamp(28px, 8vw, 34px) !important;
+        margin-bottom: 12px !important;
+      }
+      #start-screen .intro-copy p {
+        font-size: clamp(18px, 5vw, 22px) !important;
+        line-height: 1.45 !important;
+      }
+      #start-screen button[onclick="startGame()"] {
+        font-size: 22px !important;
+        padding: 10px 34px !important;
+        margin-top: 14px !important;
+      }
+      
+      /* 結算畫面緊湊化，確保星星多時按鈕也不會超出螢幕 */
+      #result-screen {
+        padding: 14px !important;
+      }
+      #result-screen h1 {
+        font-size: 26px !important;
+        margin-bottom: 4px !important;
+      }
+      .math-box {
+        font-size: 18px !important;
+        padding: 8px 14px !important;
+        margin: 8px 0 !important;
+        line-height: 1.6 !important;
+      }
+      #totalCoins {
+        font-size: 22px !important;
+      }
+      #star-container {
+        font-size: 18px !important;
+        margin-top: 4px !important;
+        max-height: 22% !important;
+        overflow-y: auto !important;
+      }
+      #result-screen div[style*="flex-direction: column"] {
+        gap: 8px !important;
+        margin-top: 8px !important;
+        max-width: 220px !important;
+      }
+      #result-screen div[style*="flex-direction: column"] .btn {
+        font-size: 20px !important;
+        padding: 9px 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">關卡載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 頂部時間與星星面板 -->
+    <div id="timer-board">
+      <h2>
+        <span>⏱️ <span id="time-display">20.0</span> <span class="zh-text"><ruby>秒<rt>ㄇㄧㄠˇ</rt></ruby></span></span>
+        <span class="star-count">⭐ <span id="star-display">0</span></span>
+      </h2>
+    </div>
+
+    <!-- 上方單一拉麵大招牌 -->
+    <div id="order-sign-btn" onpointerdown="handleOrderSignClick(event)">
+      <span class="sign-icon">🍜</span>
+      <span class="sign-text zh-text">
+        <ruby>拉<rt>ㄌㄚ</rt></ruby><ruby>麵<rt>ㄇㄧㄢˋ</rt></ruby>
+      </span>
+    </div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn start-exit-btn" onclick="exitToLobby()">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>拉<rt>ㄌㄚ</rt></ruby>
+          <ruby>麵<rt>ㄇㄧㄢˋ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>胃<rt>ㄨㄟˋ</rt></ruby>
+          <ruby>王<rt>ㄨㄤˊ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 38px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>招<rt>ㄓㄠ</rt></ruby><ruby>牌<rt>ㄆㄞˊ</rt></ruby>、<ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>三<rt>ㄙㄢ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby><ruby>吃<rt>ㄔ</rt></ruby><ruby>完<rt>ㄨㄢˊ</rt></ruby><br>
+          <ruby>把<rt>ㄅㄚˇ</rt></ruby><ruby>空<rt>ㄎㄨㄥ</rt></ruby><ruby>碗<rt>ㄨㄢˇ</rt></ruby><ruby>拉<rt>ㄌㄚ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>旁<rt>ㄆㄤˊ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby> 🍜
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      
+      <h1 id="result-title" class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>吃<rt>ㄔ</rt></ruby>
+        <ruby>飽<rt>ㄅㄠˇ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>試<rt>ㄕˋ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="exitToLobby()">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const timeDisplayEl = document.getElementById('time-display');
+    const starDisplayEl = document.getElementById('star-display');
+    const orderSignBtn = document.getElementById('order-sign-btn');
+
+    // =========================================
+    // 🎮 遊戲常數設定 (內部畫布 900x1200)
+    // =========================================
+    const CANVAS_W = 900;
+    const CANVAS_H = 1200;
+    const GAME_DURATION = 20.0; // 計時 20 秒
+    const BITES_PER_BOWL = 3;   // 每碗點 3 下吃完
+
+    // 主角、拉麵碗與右側收碗區位置
+    const CHAR_X = 295;
+    const CHAR_BOTTOM_Y = 790;  // 主角肩膀下緣對齊吧台
+    const BOWL_X = 295;
+    const BOWL_Y = 915;
+    const STACK_X = 715;
+    const STACK_BASE_Y = 930;
+
+    // 右側收碗目標區域 (拖曳放開判定框)
+    const DROP_ZONE = {
+      x: 545,
+      y: 380,
+      w: 330,
+      h: 610
+    };
+
+    // 遊戲狀態變數
+    let gamePhase = 'start';    // start / playing / ending / result / exiting
+    let stepState = 'order';    // order (點招牌) / eat (點三下吃麵) / stack (拖曳空碗到右邊)
+    let timeLeft = GAME_DURATION;
+    let lastDisplayedTenths = -1;
+    let stars = 0;              // 吃完並疊好的碗數 = 星星數
+
+    // 桌上的拉麵碗狀態
+    let currentBowl = null;     // { bitesLeft, x, y, dropProgress, scaleBounce, isDragging }
+    let activeDragPointerId = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    let stackedCount = 0;       // 右側已疊好的空碗數量
+    let popups = [];            // 浮動文字與特效
+    let particles = [];         // 麵湯水花/星星粒子
+    let confetti = [];          // 結束慶祝彩帶
+
+    // 主角張嘴 (map15-1) / 閉嘴 (map15-2) 咀嚼動畫狀態
+    let isMouthOpen = false;    // false = 閉嘴(map15-2), true = 張大嘴(map15-1)
+    let chewTimer = 0;          // 咀嚼動畫剩餘時間
+    let charBounce = 0;
+    let steamTime = 0;
+    let whiteFade = 0;
+    let lastTime = 0;
+    let animationFrameId = null;
+    let endTimeoutId = null;
+
+    // 🌟 離屏預渲染快取畫布
+    let shopBgCacheCanvas = null;
+    let narutoCache = null;
+    let eggCache = null;
+    let fingerCache = null;
+
+    function makeEmojiCache(emoji, fontSize, canvasSize) {
+      const c = document.createElement('canvas');
+      c.width = canvasSize;
+      c.height = canvasSize;
+      const cCtx = c.getContext('2d');
+      cCtx.font = `${fontSize}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
+      cCtx.textAlign = 'center';
+      cCtx.textBaseline = 'middle';
+      cCtx.fillStyle = '#000000';
+      cCtx.shadowColor = 'transparent';
+      cCtx.shadowBlur = 0;
+      cCtx.fillText(emoji, canvasSize / 2, canvasSize / 2);
+      return c;
+    }
+
+    // 繪製溫馨精緻的「日式餐廳」背景與木頭吧台
+    function initRenderCaches() {
+      narutoCache = makeEmojiCache('🍥', 56, 80);
+      eggCache = makeEmojiCache('🥚', 52, 80);
+      fingerCache = makeEmojiCache('👆', 76, 110);
+
+      shopBgCacheCanvas = document.createElement('canvas');
+      shopBgCacheCanvas.width = CANVAS_W;
+      shopBgCacheCanvas.height = CANVAS_H;
+      const bCtx = shopBgCacheCanvas.getContext('2d');
+
+      // 1. 日式餐廳室內牆面 (溫暖米色土牆與深色木柱)
+      let wallGrad = bCtx.createLinearGradient(0, 0, 0, 790);
+      wallGrad.addColorStop(0, '#5d4037');
+      wallGrad.addColorStop(0.25, '#8d6e63');
+      wallGrad.addColorStop(1, '#4e342e');
+      bCtx.fillStyle = wallGrad;
+      bCtx.fillRect(0, 0, CANVAS_W, 790);
+
+      // 2. 後方日式障子拉門 (Shoji 格柵窗，透出柔和暖黃燈光)
+      const drawShojiWindow = (wx, wy, ww, wh) => {
+        bCtx.save();
+        // 外木框
+        bCtx.fillStyle = '#3e2723';
+        bCtx.fillRect(wx - 12, wy - 12, ww + 24, wh + 24);
+        // 和紙透光底色
+        let paperGrad = bCtx.createLinearGradient(wx, wy, wx, wy + wh);
+        paperGrad.addColorStop(0, '#fff8e1');
+        paperGrad.addColorStop(1, '#ffecb3');
+        bCtx.fillStyle = paperGrad;
+        bCtx.fillRect(wx, wy, ww, wh);
+
+        // 障子木格條
+        bCtx.strokeStyle = '#5d4037';
+        bCtx.lineWidth = 5;
+        const cols = 3;
+        const rows = 4;
+        for (let c = 1; c < cols; c++) {
+          bCtx.beginPath();
+          bCtx.moveTo(wx + (ww / cols) * c, wy);
+          bCtx.lineTo(wx + (ww / cols) * c, wy + wh);
+          bCtx.stroke();
+        }
+        for (let r = 1; r < rows; r++) {
+          bCtx.beginPath();
+          bCtx.moveTo(wx, wy + (wh / rows) * r);
+          bCtx.lineTo(wx + ww, wy + (wh / rows) * r);
+          bCtx.stroke();
+        }
+        bCtx.restore();
+      };
+      drawShojiWindow(55, 290, 230, 380);
+      drawShojiWindow(615, 290, 230, 380);
+
+      // 中央牆面日式木牌裝飾
+      bCtx.save();
+      bCtx.fillStyle = '#3e2723';
+      bCtx.fillRect(330, 280, 240, 420);
+      bCtx.strokeStyle = '#ffca28';
+      bCtx.lineWidth = 3;
+      bCtx.strokeRect(342, 292, 216, 396);
+      bCtx.restore();
+
+      // 3. 屋頂日式深藍與紅暖簾 (Noren)
+      const norenCount = 6;
+      const norenW = CANVAS_W / norenCount;
+      for (let i = 0; i < norenCount; i++) {
+        bCtx.fillStyle = i % 2 === 0 ? '#b71c1c' : '#c62828';
+        bCtx.beginPath();
+        bCtx.roundRect(i * norenW + 5, 0, norenW - 10, 120, [0, 0, 22, 22]);
+        bCtx.fill();
+        bCtx.strokeStyle = '#ffca28';
+        bCtx.lineWidth = 3;
+        bCtx.stroke();
+      }
+
+      // 4. 左右兩側日式紅燈籠
+      const drawLantern = (lx, ly) => {
+        bCtx.save();
+        bCtx.translate(lx, ly);
+        // 掛繩
+        bCtx.strokeStyle = '#212121';
+        bCtx.lineWidth = 5;
+        bCtx.beginPath();
+        bCtx.moveTo(0, -85);
+        bCtx.lineTo(0, -45);
+        bCtx.stroke();
+        // 燈籠光暈
+        let glow = bCtx.createRadialGradient(0, 0, 10, 0, 0, 95);
+        glow.addColorStop(0, 'rgba(255, 193, 7, 0.45)');
+        glow.addColorStop(1, 'rgba(255, 193, 7, 0)');
+        bCtx.fillStyle = glow;
+        bCtx.beginPath();
+        bCtx.arc(0, 0, 95, 0, Math.PI * 2);
+        bCtx.fill();
+        // 燈籠本體
+        bCtx.fillStyle = '#e53935';
+        bCtx.strokeStyle = '#ffca28';
+        bCtx.lineWidth = 4;
+        bCtx.beginPath();
+        bCtx.ellipse(0, 0, 42, 54, 0, 0, Math.PI * 2);
+        bCtx.fill();
+        bCtx.stroke();
+        // 上下黑蓋
+        bCtx.fillStyle = '#212121';
+        bCtx.fillRect(-22, -56, 44, 10);
+        bCtx.fillRect(-22, 46, 44, 10);
+        bCtx.restore();
+      };
+      drawLantern(95, 210);
+      drawLantern(805, 210);
+
+      // 5. 下方日式檜木餐桌吧台
+      let tableGrad = bCtx.createLinearGradient(0, 780, 0, CANVAS_H);
+      tableGrad.addColorStop(0, '#ffe0b2');
+      tableGrad.addColorStop(0.05, '#d7ccc8');
+      tableGrad.addColorStop(0.15, '#a1887f');
+      tableGrad.addColorStop(1, '#5d4037');
+      bCtx.fillStyle = tableGrad;
+      bCtx.fillRect(0, 780, CANVAS_W, CANVAS_H - 780);
+
+      // 吧台桌緣線條
+      bCtx.fillStyle = '#4e342e';
+      bCtx.fillRect(0, 780, CANVAS_W, 12);
+      bCtx.fillStyle = '#fff3e0';
+      bCtx.fillRect(0, 792, CANVAS_W, 6);
+
+      // 主角面前的日式紅色漆器餐墊 + 筷子架
+      bCtx.save();
+      bCtx.fillStyle = '#b71c1c';
+      bCtx.strokeStyle = '#ffca28';
+      bCtx.lineWidth = 5;
+      bCtx.beginPath();
+      bCtx.roundRect(BOWL_X - 190, 830, 380, 195, 22);
+      bCtx.fill();
+      bCtx.stroke();
+
+      // 餐墊上的木筷子
+      bCtx.fillStyle = '#ffe082';
+      bCtx.strokeStyle = '#4e342e';
+      bCtx.lineWidth = 2;
+      bCtx.beginPath();
+      bCtx.roundRect(BOWL_X - 130, 992, 260, 10, 5);
+      bCtx.roundRect(BOWL_X - 130, 1004, 260, 10, 5);
+      bCtx.fill();
+      bCtx.stroke();
+      bCtx.restore();
+
+      // 右側「收碗木托盤」底座
+      bCtx.save();
+      bCtx.fillStyle = '#3e2723';
+      bCtx.strokeStyle = '#ffca28';
+      bCtx.lineWidth = 5;
+      bCtx.beginPath();
+      bCtx.roundRect(STACK_X - 135, STACK_BASE_Y + 5, 270, 44, 14);
+      bCtx.fill();
+      bCtx.stroke();
+      bCtx.restore();
+    }
+
+    // 載入主角張嘴 (map15-1.webp) 與閉嘴 (map15-2.webp) 圖片
+    let totalAssets = 2;
+    let loadedAssets = 0;
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `資源載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+        
+        initRenderCaches();
+        if (window.Bopomofo && window.Bopomofo.render) {
+          window.Bopomofo.render();
+        }
+        
+        draw(); 
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // map15-1.webp: 張嘴, map15-2.webp: 閉嘴
+    const mouthOpenImg = new Image();
+    mouthOpenImg.src = 'assets/map/map15-1.webp';
+    mouthOpenImg.onload = () => checkLoadProgress();
+    mouthOpenImg.onerror = () => checkLoadProgress();
+
+    const mouthClosedImg = new Image();
+    mouthClosedImg.src = 'assets/map/map15-2.webp';
+    mouthClosedImg.onload = () => checkLoadProgress();
+    mouthClosedImg.onerror = () => checkLoadProgress();
+
+    // 🌟 安全清理記憶體並返回大廳
+    function cleanupMemory() {
+      gamePhase = 'exiting';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      popups.length = 0;
+      particles.length = 0;
+      confetti.length = 0;
+      currentBowl = null;
+
+      if (mouthOpenImg) { mouthOpenImg.onload = null; mouthOpenImg.onerror = null; mouthOpenImg.src = ''; }
+      if (mouthClosedImg) { mouthClosedImg.onload = null; mouthClosedImg.onerror = null; mouthClosedImg.src = ''; }
+
+      [shopBgCacheCanvas, narutoCache, eggCache, fingerCache].forEach(c => {
+        if (c) { c.width = 1; c.height = 1; }
+      });
+      shopBgCacheCanvas = null;
+      narutoCache = null;
+      eggCache = null;
+      fingerCache = null;
+
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      cleanupMemory();
+      window.location.href = 'index.html';
+    }
+
+    window.addEventListener('pagehide', cleanupMemory);
+
+    // =========================================
+    // 🎮 遊戲流程控制
+    // =========================================
+    function startGame() {
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      timeLeft = GAME_DURATION;
+      lastDisplayedTenths = -1;
+      stars = 0;
+      stackedCount = 0;
+      popups = [];
+      particles = [];
+      confetti = [];
+      currentBowl = null;
+      activeDragPointerId = null;
+      isMouthOpen = false;
+      chewTimer = 0;
+      charBounce = 0;
+      whiteFade = 0;
+
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('timer-board').style.display = 'block';
+      orderSignBtn.style.display = 'flex';
+
+      starDisplayEl.textContent = '0';
+      updateTimerHUD(true);
+
+      gamePhase = 'playing';
+      enterOrderStep();
+    }
+
+    function updateTimerHUD(force = false) {
+      let tenths = Math.max(0, Math.ceil(timeLeft * 10));
+      if (force || tenths !== lastDisplayedTenths) {
+        lastDisplayedTenths = tenths;
+        timeDisplayEl.textContent = (tenths / 10).toFixed(1);
+      }
+    }
+
+    // 步驟 1：等待點選上方「🍜 拉麵」招牌
+    function enterOrderStep() {
+      stepState = 'order';
+      currentBowl = null;
+      activeDragPointerId = null;
+      isMouthOpen = false;
+
+      orderSignBtn.classList.add('active-order');
+      orderSignBtn.classList.remove('disabled-order');
+    }
+
+    function handleOrderSignClick(e) {
+      if (e) e.stopPropagation();
+      if (gamePhase !== 'playing') return;
+
+      if (stepState !== 'order') {
+        return;
+      }
+
+      // 點擊招牌，拉麵端上桌！進入步驟 2：吃麵
+      stepState = 'eat';
+      orderSignBtn.classList.remove('active-order');
+      orderSignBtn.classList.add('disabled-order');
+
+      currentBowl = {
+        bitesLeft: BITES_PER_BOWL,
+        x: BOWL_X,
+        y: BOWL_Y,
+        dropProgress: 0,
+        scaleBounce: 1,
+        isDragging: false
+      };
+    }
+
+    // 步驟 2：點擊吃麵 (點 3 下，主角張嘴閉嘴咀嚼)
+    function takeBite() {
+      if (gamePhase !== 'playing' || stepState !== 'eat' || !currentBowl) return;
+
+      currentBowl.bitesLeft--;
+      currentBowl.scaleBounce = 1.22;
+
+      // 觸發張嘴 (map15-1) ↔ 閉嘴 (map15-2) 咀嚼動畫
+      chewTimer = 0.34;
+      isMouthOpen = true;
+      charBounce = 20;
+
+      // 噴出麵湯水花
+      spawnEatParticles(BOWL_X, BOWL_Y - 30);
+
+      if (currentBowl.bitesLeft > 0) {
+        const emojis = ['😋', '🍜', '✨'];
+        const pick = emojis[currentBowl.bitesLeft % emojis.length];
+        addPopup(pick, CHAR_X + (Math.random() - 0.5) * 140, 380, '#ffeb3b', 62, false);
+      } else {
+        // 3 下點完，吃光變成空碗！進入步驟 3：拖曳空碗到右側指定位置
+        stepState = 'stack';
+        addPopup('😋', CHAR_X, 360, '#ffeb3b', 72, false);
+      }
+    }
+
+    // 步驟 3 完成：成功把空碗拖曳到右側指定位置！
+    function completeStackBowl() {
+      stackedCount++;
+      stars++;
+      starDisplayEl.textContent = stars;
+
+      const topY = Math.max(410, STACK_BASE_Y - (stackedCount - 1) * 28);
+      addPopup('+1 ⭐', STACK_X, topY - 55, '#FFD700', 54, true);
+      spawnStarParticles(STACK_X, topY);
+
+      // 立刻進入下一碗點餐
+      enterOrderStep();
+    }
+
+    function addPopup(text, x, y, color, size, stroke = true) {
+      popups.push({ text, x, y, color, size, stroke, t: 0, duration: 0.85 });
+    }
+
+    function spawnEatParticles(x, y) {
+      for (let i = 0; i < 8; i++) {
+        const angle = -Math.PI * 0.15 - Math.random() * Math.PI * 0.7;
+        const speed = 180 + Math.random() * 240;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          r: 6 + Math.random() * 6,
+          color: i % 2 === 0 ? '#fff59d' : '#ff7043',
+          alpha: 1
+        });
+      }
+    }
+
+    function spawnStarParticles(x, y) {
+      const colors = ['#ffeb3b', '#ffc107', '#ff9800', '#ffffff'];
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const speed = 150 + Math.random() * 200;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 60,
+          r: 7 + Math.random() * 5,
+          color: colors[i % colors.length],
+          alpha: 1
+        });
+      }
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff6b81', '#eccc68'];
+      for (let i = 0; i < 65; i++) {
+        confetti.push({
+          x: CANVAS_W / 2 + (Math.random() - 0.5) * 600,
+          y: 250 + Math.random() * 300,
+          vx: (Math.random() - 0.5) * 450,
+          vy: -220 - Math.random() * 350,
+          size: 14 + Math.random() * 12,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 10
+        });
+      }
+    }
+
+    function endGame() {
+      if (gamePhase === 'exiting') return;
+      gamePhase = 'result';
+      document.getElementById('timer-board').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      orderSignBtn.style.display = 'none';
+
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+
+      // 解鎖關卡與貼紙
+      localStorage.setItem('map15_cleared', 'true');
+      if (localStorage.getItem('sticker_smap15') !== 'true') {
+        localStorage.setItem('sticker_smap15', 'new');
+      }
+
+      if (stars > 0) {
+        document.getElementById('result-title').innerHTML = `<ruby>吃<rt>ㄔ</rt></ruby><ruby>飽<rt>ㄅㄠˇ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`;
+      } else {
+        document.getElementById('result-title').innerHTML = `<ruby>時<rt>ㄕˊ</rt></ruby><ruby>間<rt>ㄐㄧㄢ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><span>！</span>`;
+      }
+
+      if (window.Bopomofo && window.Bopomofo.render) {
+        window.Bopomofo.render();
+      }
+
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0) starsHtml += '<br>';
+      }
+      if (stars === 0) starsHtml = '💨 再加油喔！';
+
+      document.getElementById('star-container').innerHTML = starsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    // =========================================
+    // 🔄 主迴圈 Update & Draw
+    // =========================================
+    function gameLoop(currentTime) {
+      if (gamePhase === 'exiting') return;
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start' && gamePhase !== 'result') {
+        update(Math.min(dt, 0.1));
+        draw();
+      }
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      steamTime += dt;
+
+      // 更新浮動文字
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].t += dt;
+        if (popups[i].t >= popups[i].duration) popups.splice(i, 1);
+      }
+
+      // 更新粒子
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.vy += 650 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.alpha -= 1.8 * dt;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+
+      // 更新拉麵碗動畫與彈回原位
+      if (currentBowl) {
+        if (currentBowl.dropProgress < 1) {
+          currentBowl.dropProgress = Math.min(1, currentBowl.dropProgress + dt * 7);
+        }
+        if (currentBowl.scaleBounce > 1) {
+          currentBowl.scaleBounce = Math.max(1, currentBowl.scaleBounce - dt * 2.8);
+        }
+        // 如果沒有在拖曳，平滑回到餐墊中心
+        if (!currentBowl.isDragging) {
+          currentBowl.x += (BOWL_X - currentBowl.x) * Math.min(1, dt * 18);
+          currentBowl.y += (BOWL_Y - currentBowl.y) * Math.min(1, dt * 18);
+        }
+      }
+
+      // 更新主角張嘴 (map15-1) ↔ 閉嘴 (map15-2) 咀嚼切換
+      if (chewTimer > 0) {
+        chewTimer -= dt;
+        if (chewTimer <= 0) {
+          chewTimer = 0;
+          isMouthOpen = false; // 嚼完閉嘴
+        } else {
+          // 在 0.34 秒內快速張嘴 → 閉嘴 → 張嘴 → 閉嘴，做出大口吃東西的感覺
+          const phase = Math.floor((0.34 - chewTimer) / 0.085);
+          isMouthOpen = (phase % 2 === 0);
+        }
+      } else {
+        isMouthOpen = false;
+      }
+
+      if (charBounce > 0) {
+        charBounce = Math.max(0, charBounce - dt * 95);
+      }
+
+      if (gamePhase === 'playing') {
+        timeLeft -= dt;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          updateTimerHUD(true);
+          gamePhase = 'ending';
+          activeDragPointerId = null;
+          orderSignBtn.style.display = 'none';
+          spawnConfetti();
+          addPopup('⏰ 時間到！', CANVAS_W / 2, 520, '#ffeb3b', 72, true);
+          return;
+        }
+        updateTimerHUD();
+      } else if (gamePhase === 'ending') {
+        for (let c of confetti) {
+          c.vy += 480 * dt;
+          c.x += c.vx * dt;
+          c.y += c.vy * dt;
+          c.rot += c.vRot * dt;
+        }
+        whiteFade += dt * 1.1;
+        if (whiteFade >= 1) {
+          whiteFade = 1;
+          endGame();
+        }
+      }
+    }
+
+    // =========================================
+    // 🎨 Canvas 繪圖函式
+    // =========================================
+    function drawProtagonist() {
+      const img = isMouthOpen ? mouthOpenImg : mouthClosedImg;
+      if (!(img && img.complete && img.naturalWidth > 0)) return;
+
+      // 保持圖片原始長寬比例，不變形
+      const drawH = 470;
+      const aspect = img.naturalWidth / img.naturalHeight;
+      const drawW = drawH * aspect;
+
+      const idleBob = Math.sin(steamTime * 3.5) * 4;
+      const yOffset = idleBob - charBounce;
+
+      ctx.save();
+      ctx.translate(CHAR_X, CHAR_BOTTOM_Y + yOffset);
+      if (charBounce > 0) {
+        ctx.scale(1.03, 0.97);
+      }
+      ctx.drawImage(img, -drawW / 2, -drawH, drawW, drawH);
+      ctx.restore();
+    }
+
+    // 繪製招牌拉麵或空碗
+    // fillRatio: 1 (滿), 0.66, 0.33, 0 (空碗)
+    function drawRamenBowl(x, y, fillRatio, scale = 1, isStacked = false) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+
+      const bowlW = isStacked ? 94 : 135;
+      const bowlH = isStacked ? 55 : 82;
+
+      // 1. 碗底陰影
+      if (!isStacked) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(0, bowlH * 0.72, bowlW * 0.78, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2. 碗內背景 (米白色內壁 + 紅圈紋)
+      ctx.fillStyle = '#fff8e1';
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(0, -14, bowlW, 36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. 如果還有麵跟湯 (fillRatio > 0)
+      if (fillRatio > 0 && !isStacked) {
+        const soupY = -14 + (1 - fillRatio) * 14;
+        const soupRx = bowlW * (0.86 + 0.1 * fillRatio);
+        const soupRy = 28 * (0.7 + 0.3 * fillRatio);
+
+        // 濃郁豚骨醬油湯頭
+        ctx.fillStyle = '#d84315';
+        ctx.beginPath();
+        ctx.ellipse(0, soupY, soupRx, soupRy, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Q彈拉麵線條
+        ctx.strokeStyle = '#fff176';
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        const noodleWaves = Math.ceil(fillRatio * 3);
+        for (let row = 0; row < noodleWaves; row++) {
+          const ny = soupY - 8 + row * 9;
+          ctx.beginPath();
+          for (let nx = -soupRx * 0.68; nx <= soupRx * 0.68; nx += 18) {
+            const wy = ny + Math.sin(nx * 0.12 + row) * 5;
+            if (nx === -soupRx * 0.68) ctx.moveTo(nx, wy);
+            else ctx.lineTo(nx, wy);
+          }
+          ctx.stroke();
+        }
+
+        // 海苔片 (右側斜插)
+        ctx.save();
+        ctx.translate(bowlW * 0.46, soupY - 26);
+        ctx.rotate(0.22);
+        ctx.fillStyle = '#1b5e20';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.fillRect(-22, -28, 44, 48);
+        ctx.strokeRect(-22, -28, 44, 48);
+        ctx.restore();
+
+        // 蔥花點綴
+        ctx.fillStyle = '#4caf50';
+        const scallions = [[-48, soupY + 4], [40, soupY + 8], [-20, soupY - 10], [22, soupY - 6]];
+        scallions.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 魚板 🍥 與 溏心蛋 🥚
+        const topScale = 0.78 + 0.22 * fillRatio;
+        if (narutoCache) {
+          ctx.save();
+          ctx.translate(-26, soupY - 10);
+          ctx.scale(topScale, topScale);
+          ctx.drawImage(narutoCache, -40, -40);
+          ctx.restore();
+        }
+        if (eggCache && fillRatio >= 0.5) {
+          ctx.save();
+          ctx.translate(24, soupY - 12);
+          ctx.scale(topScale, topScale);
+          ctx.drawImage(eggCache, -40, -40);
+          ctx.restore();
+        }
+
+        // 冒熱氣煙霧
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = 5;
+        for (let s = -1; s <= 1; s++) {
+          const sx = s * 42;
+          const phase = steamTime * 3 + s;
+          ctx.beginPath();
+          ctx.moveTo(sx, soupY - 28);
+          ctx.quadraticCurveTo(sx + Math.sin(phase) * 14, soupY - 58, sx - Math.sin(phase) * 10, soupY - 88);
+          ctx.stroke();
+        }
+      }
+
+      // 4. 碗身下半部 (經典日式紅碗)
+      ctx.fillStyle = '#e53935';
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(-bowlW, -14);
+      ctx.bezierCurveTo(-bowlW * 0.95, bowlH * 0.75, bowlW * 0.95, bowlH * 0.75, bowlW, -14);
+      ctx.ellipse(0, -14, bowlW, 36, 0, 0, Math.PI, false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 5. 碗身金色花紋條
+      ctx.strokeStyle = '#ffeb3b';
+      ctx.lineWidth = isStacked ? 4 : 6;
+      ctx.beginPath();
+      ctx.ellipse(0, 5, bowlW * 0.92, 26, 0, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+
+      // 6. 碗底圈足
+      ctx.fillStyle = '#b71c1c';
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(-bowlW * 0.42, bowlH * 0.52, bowlW * 0.84, 16, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawDropZoneAndStack() {
+      // 當拉麵吃完處於「收碗階段 (stack)」時，只畫黃色虛線弧線引導
+      if (stepState === 'stack' && gamePhase === 'playing' && currentBowl && !currentBowl.isDragging) {
+        const pulse = 0.55 + Math.sin(steamTime * 7) * 0.35;
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 235, 59, ${pulse})`;
+        ctx.lineWidth = 9;
+        ctx.lineCap = 'round';
+        ctx.setLineDash([16, 14]);
+        ctx.beginPath();
+        ctx.moveTo(BOWL_X + 150, BOWL_Y - 15);
+        ctx.quadraticCurveTo((BOWL_X + STACK_X) / 2, BOWL_Y - 110, STACK_X - 95, STACK_BASE_Y - 35);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 繪製右側已疊起來的空碗塔
+      const maxVisible = 22;
+      const count = Math.min(stackedCount, maxVisible);
+      for (let i = 0; i < count; i++) {
+        const by = STACK_BASE_Y - i * 28;
+        const wobble = Math.sin(steamTime * 3.5 + i * 0.5) * Math.min(6, i * 0.35);
+        drawRamenBowl(STACK_X + wobble, by, 0, 1, true);
+      }
+
+      // 右側托盤前方的「已吃碗數」木牌
+      ctx.save();
+      ctx.fillStyle = '#4e342e';
+      ctx.strokeStyle = '#ffca28';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(STACK_X - 95, STACK_BASE_Y + 25, 190, 54, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillStyle = '#ffeb3b';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`🍜 ${stars} 碗`, STACK_X, STACK_BASE_Y + 52);
+      ctx.restore();
+    }
+
+    function drawCurrentBowl() {
+      if (!currentBowl) return;
+      const dropOffset = (1 - currentBowl.dropProgress) * -220;
+      const fillRatio = currentBowl.bitesLeft / BITES_PER_BOWL;
+      const dragScale = currentBowl.isDragging ? 1.12 : currentBowl.scaleBounce;
+      const bowlDrawY = currentBowl.y + dropOffset;
+
+      drawRamenBowl(
+        currentBowl.x,
+        bowlDrawY,
+        fillRatio,
+        dragScale,
+        false
+      );
+
+      // 在吃麵階段 (eat)，在拉麵碗上繪製一隻手指點擊拉麵的示意動畫
+      if (stepState === 'eat' && gamePhase === 'playing' && fingerCache) {
+        const tapCycle = (steamTime * 3.8) % 1; // 0 ~ 1 循環點擊
+        const isPressing = tapCycle < 0.35;
+        const pressOffset = isPressing
+          ? Math.sin((tapCycle / 0.35) * Math.PI) * 24
+          : 0;
+
+        // 點擊波紋圈
+        if (isPressing) {
+          const rippleP = tapCycle / 0.35;
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 235, 59, ${1 - rippleP})`;
+          ctx.lineWidth = 6 * (1 - rippleP * 0.5);
+          ctx.beginPath();
+          ctx.arc(currentBowl.x, bowlDrawY - 12, 22 + rippleP * 48, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 手指圖示 (點擊拉麵碗)
+        ctx.save();
+        ctx.translate(currentBowl.x + 18, bowlDrawY + 42 - pressOffset);
+        ctx.rotate(-0.2);
+        const fScale = isPressing ? 0.92 : 1.05;
+        ctx.scale(fScale, fScale);
+        ctx.drawImage(fingerCache, -55, -55);
+        ctx.restore();
+      }
+    }
+
+    function drawParticlesAndPopups() {
+      for (let p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let popup of popups) {
+        const progress = popup.t / popup.duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - Math.pow(progress, 2.5);
+        const floatY = popup.y - progress * 75;
+        ctx.font = `bold ${popup.size}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
+        ctx.fillStyle = popup.color;
+        if (popup.stroke) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 5;
+          ctx.strokeText(popup.text, popup.x, floatY);
+        }
+        ctx.fillText(popup.text, popup.x, floatY);
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      if (gamePhase === 'exiting') return;
+
+      // 1. 繪製主角後方牆面與主角本體
+      // 先畫背景快取，再畫主角，接著重畫吧台下半部讓主角自然坐在吧台後面
+      if (shopBgCacheCanvas) {
+        ctx.drawImage(shopBgCacheCanvas, 0, 0);
+      }
+
+      // 2. 主角 (map15-1 張嘴 / map15-2 閉嘴)
+      drawProtagonist();
+
+      // 3. 把吧台桌面蓋在主角衣服下緣，讓主角看起來坐在桌前
+      if (shopBgCacheCanvas) {
+        ctx.drawImage(
+          shopBgCacheCanvas,
+          0, 780, CANVAS_W, CANVAS_H - 780,
+          0, 780, CANVAS_W, CANVAS_H - 780
+        );
+      }
+
+      // 4. 右側收碗區提示框與已疊好的空碗塔
+      drawDropZoneAndStack();
+
+      // 5. 面前餐墊上（或拖曳中）的拉麵碗
+      drawCurrentBowl();
+
+      // 6. 特效粒子與浮動文字
+      drawParticlesAndPopups();
+
+      // 7. 慶祝彩帶
+      for (let c of confetti) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rot);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+        ctx.restore();
+      }
+
+      // 8. 結束白光淡出
+      if (whiteFade > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${whiteFade})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+    }
+
+    // =========================================
+    // 👆 畫布點擊吃麵 & 拖曳空碗互動
+    // =========================================
+    function getCanvasPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gamePhase !== 'playing') return;
+      const pt = getCanvasPoint(e);
+
+      if (stepState === 'eat') {
+        // 點擊畫面即可大口吃麵 (點 3 下，放寬點擊區域讓手機單手更好按)
+        if (pt.y >= 120) {
+          takeBite();
+        }
+      } else if (stepState === 'stack' && currentBowl) {
+        // 檢查是否按在空碗或左側餐墊附近 (放寬判定範圍，方便手機手指按住拖曳)
+        const dist = Math.hypot(pt.x - currentBowl.x, pt.y - currentBowl.y);
+        const onPlacemat = (pt.x >= 60 && pt.x <= 530 && pt.y >= 680 && pt.y <= 1150);
+        if (dist <= 260 || onPlacemat) {
+          activeDragPointerId = e.pointerId;
+          currentBowl.isDragging = true;
+          // 若手指按在碗外圍，讓碗自動稍微吸附到手指附近，拖曳更順手
+          dragOffsetX = Math.max(-90, Math.min(90, currentBowl.x - pt.x));
+          dragOffsetY = Math.max(-90, Math.min(90, currentBowl.y - pt.y));
+          currentBowl.x = Math.max(90, Math.min(CANVAS_W - 90, pt.x + dragOffsetX));
+          currentBowl.y = Math.max(250, Math.min(CANVAS_H - 90, pt.y + dragOffsetY));
+          try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+      } else if (stepState === 'order') {
+        // 若在點餐階段點到上方招牌周圍區域，也直接幫玩家觸發點餐
+        if (pt.y < 310 && pt.x >= 200 && pt.x <= 700) {
+          handleOrderSignClick(e);
+        } else if (pt.y >= 310) {
+          // 點到下方時，提示點上方的拉麵招牌
+          addPopup('☝️', CHAR_X, 380, '#ffeb3b', 58, false);
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (gamePhase !== 'playing') return;
+      if (stepState === 'stack' && currentBowl && currentBowl.isDragging && e.pointerId === activeDragPointerId) {
+        const pt = getCanvasPoint(e);
+        currentBowl.x = Math.max(90, Math.min(CANVAS_W - 90, pt.x + dragOffsetX));
+        currentBowl.y = Math.max(250, Math.min(CANVAS_H - 90, pt.y + dragOffsetY));
+      }
+    });
+
+    function handlePointerEnd(e) {
+      if (stepState === 'stack' && currentBowl && currentBowl.isDragging && e.pointerId === activeDragPointerId) {
+        currentBowl.isDragging = false;
+        activeDragPointerId = null;
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+
+        // 判定空碗中心是否進入右側收碗區 (放寬手機拖曳的上下與左右判定容錯)
+        const bx = currentBowl.x;
+        const by = currentBowl.y;
+        const inDropZone = (
+          bx >= DROP_ZONE.x - 45 &&
+          bx <= CANVAS_W &&
+          by >= 280 &&
+          by <= CANVAS_H - 40
+        );
+
+        if (inDropZone) {
+          completeStackBowl();
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerup', handlePointerEnd);
+    canvas.addEventListener('pointercancel', handlePointerEnd);
+  </script>
+</body>
+</html>

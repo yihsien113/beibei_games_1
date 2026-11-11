@@ -345,6 +345,155 @@
       transition: transform 0.1s ease, background-color 0.15s ease;
     }
     #btn-close-update:active { transform: scale(0.95); }
+
+    /* ☁️ 帳號登入按鈕與彈窗樣式 (無注音、清晰介面) ☁️ */
+    #account-btn {
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      background: rgba(14, 165, 233, 0.45);
+      padding: 4px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(125, 211, 252, 0.5);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-shadow: none;
+      touch-action: manipulation;
+    }
+    #account-btn:active {
+      transform: scale(0.92);
+      background: rgba(14, 165, 233, 0.7);
+    }
+
+    #account-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10005;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    #account-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #account-modal-content {
+      background-color: #1e293b;
+      border-radius: 1.8rem;
+      padding: 1.8rem 1.6rem;
+      max-width: 420px;
+      width: 90%;
+      margin: 0 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+      border: 5px solid #475569;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: scale(0.92);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #account-modal.active #account-modal-content {
+      transform: scale(1);
+    }
+    .account-modal-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #38bdf8;
+      text-align: center;
+      margin: 0;
+    }
+    .account-modal-desc {
+      font-size: 14px;
+      color: #cbd5e1;
+      text-align: center;
+      margin: -6px 0 4px 0;
+      line-height: 1.4;
+    }
+    .account-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #account-modal input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid #64748b;
+      background-color: #0f172a;
+      color: #fff;
+      font-size: 18px;
+      outline: none;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      touch-action: manipulation !important;
+    }
+    #account-modal input:focus {
+      border-color: #38bdf8;
+    }
+    #auth-status-msg, #logged-status-msg {
+      font-size: 14px;
+      line-height: 1.4;
+      text-align: center;
+      min-height: 20px;
+      color: #fbbf24;
+      font-weight: bold;
+    }
+    .auth-btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-auth {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+      touch-action: manipulation;
+    }
+    .btn-auth:active { transform: scale(0.95); }
+    .btn-auth:disabled { opacity: 0.5; pointer-events: none; }
+    .btn-auth-login {
+      background-color: #2563eb;
+      border-color: #93c5fd;
+    }
+    .btn-auth-register {
+      background-color: #10b981;
+      border-color: #a7f3d0;
+    }
+    .btn-auth-skip {
+      width: 100%;
+      background-color: #334155;
+      border: 2px solid #64748b;
+      color: #e2e8f0;
+      font-size: 16px;
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .btn-auth-skip:active { transform: scale(0.96); }
+    .logged-account-box {
+      background: #0f172a;
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fde68a;
+    }
   </style>
 </head>
 <body>
@@ -375,15 +524,49 @@
   <div id="dom-tutorial-finger" style="position:fixed; font-size:60px; z-index:9002; display:none; pointer-events:none; animation: finger-bounce-y 1s infinite; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">👆</div>
 
   <div id="top-bar">
-    <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
       <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
   
       <div id="version-display" onclick="showUpdateNotice()"></div>
+      <div id="account-btn" onclick="openAccountModal(false)">👤 帳號登入</div>
     </div>
     
     <div id="quick-menu">
       <div id="btn-wardrobe" class="btn-floating" onclick="goToWardrobe()">👗</div>
       <div id="btn-sticker" class="btn-floating" onclick="goToStickerBook()">📖</div>
+    </div>
+  </div>
+
+  <!-- ☁️ 帳號登入 / 註冊彈出視窗 (無注音) -->
+  <div id="account-modal">
+    <div id="account-modal-content">
+      <!-- 未登入視圖：登入 / 註冊 / 不註冊直接遊玩 -->
+      <div id="auth-form-view" style="display: flex; flex-direction: column; gap: 14px;">
+        <h2 class="account-modal-title">☁️ 帳號雲端存檔</h2>
+        <p class="account-modal-desc">登入或註冊帳號，讓手機與平板自動同步遊戲進度</p>
+        <div class="account-input-group">
+          <input type="text" id="auth-account-input" placeholder="請輸入帳號" autocomplete="username">
+          <input type="password" id="auth-password-input" placeholder="請輸入密碼" autocomplete="current-password">
+        </div>
+        <div id="auth-status-msg"></div>
+        <div class="auth-btn-row">
+          <button id="btn-auth-login" class="btn-auth btn-auth-login" onclick="handleAuthSubmit('login')">登入</button>
+          <button id="btn-auth-register" class="btn-auth btn-auth-register" onclick="handleAuthSubmit('register')">註冊</button>
+        </div>
+        <button id="btn-auth-skip" class="btn-auth-skip" onclick="handleSkipAuth()">不註冊直接遊玩</button>
+      </div>
+
+      <!-- 已登入視圖：查看帳號 / 手動同步 / 切換帳號 -->
+      <div id="auth-logged-view" style="display: none; flex-direction: column; gap: 14px;">
+        <h2 class="account-modal-title">☁️ 雲端帳號管理</h2>
+        <div class="logged-account-box" id="logged-account-display">目前帳號：</div>
+        <div id="logged-status-msg">進度會在過關與獲得獎勵時自動同步</div>
+        <div class="auth-btn-row">
+          <button id="btn-manual-sync" class="btn-auth btn-auth-login" onclick="handleManualSync()">立即同步</button>
+          <button class="btn-auth" style="background-color: #ef4444; border-color: #fca5a5;" onclick="handleLogoutAccount()">切換帳號</button>
+        </div>
+        <button class="btn-auth-skip" onclick="closeAccountModal()">返回遊戲</button>
+      </div>
     </div>
   </div>
 
@@ -482,10 +665,10 @@
           preloader.style.opacity = '0';
           setTimeout(() => {
             preloader.remove();
-            checkUpdateAndTutorial(); 
+            initCloudAndStartLobby(); 
           }, 500);
         } else {
-          checkUpdateAndTutorial(); 
+          initCloudAndStartLobby(); 
         }
       }, 200);
     }
@@ -630,6 +813,187 @@
           localStorage.setItem('game_version', GAME_VERSION);
         }
       }
+    }
+
+    // ☁️ === 雲端帳號登入與同步介面控制 === ☁️
+    let isInitialAuthPrompt = false;
+
+    function updateAccountButtonLabel() {
+      const btn = document.getElementById('account-btn');
+      if (!btn || !window.CloudSync) return;
+      const acc = window.CloudSync.getAccount();
+      btn.innerText = acc ? `☁️ ${acc}` : '👤 帳號登入';
+    }
+
+    function refreshLobbyFromStorage() {
+      updateAccountButtonLabel();
+      playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      const coinEl = document.getElementById('coinDisplay');
+      if (coinEl) coinEl.innerText = playerCoins;
+
+      const newCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+      if (newCharKey !== equippedCharKey) {
+        equippedCharKey = newCharKey;
+        if (playerImg) playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+      }
+
+      if (typeof zones !== 'undefined') {
+        for (let z of zones) {
+          if (z.imgSrc && isLevelCleared(z) && !z.img) {
+            z.img = new Image();
+            z.img.src = z.imgSrc;
+          }
+        }
+      }
+    }
+
+    window.addEventListener('cloudsync:updated', refreshLobbyFromStorage);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && window.CloudSync && window.CloudSync.getAccount()) {
+        window.CloudSync.syncNow(false);
+      }
+    });
+
+    async function initCloudAndStartLobby() {
+      document.getElementById('version-display').innerText = GAME_VERSION;
+      updateAccountButtonLabel();
+
+      if (!window.CloudSync) {
+        checkUpdateAndTutorial();
+        return;
+      }
+
+      const acc = window.CloudSync.getAccount();
+      if (acc) {
+        // 已登入過：在背景同步最新進度（最多等待 1.2 秒，離線或慢速時不卡畫面）
+        await Promise.race([
+          window.CloudSync.syncNow(false),
+          new Promise(r => setTimeout(r, 1200))
+        ]);
+        refreshLobbyFromStorage();
+        checkUpdateAndTutorial();
+      } else if (!window.CloudSync.isSkipped()) {
+        // 尚未登入且未選擇略過：先彈出登入/註冊視窗
+        openAccountModal(true);
+      } else {
+        checkUpdateAndTutorial();
+      }
+    }
+
+    function openAccountModal(isStartupPrompt) {
+      if (!isStartupPrompt && isTutorialMode) return;
+      isInitialAuthPrompt = !!isStartupPrompt;
+      isModalOpen = true;
+      player.isMoving = false;
+
+      const modal = document.getElementById('account-modal');
+      const formView = document.getElementById('auth-form-view');
+      const loggedView = document.getElementById('auth-logged-view');
+      const acc = window.CloudSync ? window.CloudSync.getAccount() : '';
+
+      if (acc) {
+        formView.style.display = 'none';
+        loggedView.style.display = 'flex';
+        document.getElementById('logged-account-display').innerText = `目前帳號：${acc}`;
+        document.getElementById('logged-status-msg').style.color = '#fbbf24';
+        document.getElementById('logged-status-msg').innerText = navigator.onLine
+          ? '進度會在過關與獲得獎勵時自動同步'
+          : '目前為離線模式，連上網路後會自動同步';
+      } else {
+        loggedView.style.display = 'none';
+        formView.style.display = 'flex';
+        document.getElementById('auth-status-msg').innerText = '';
+      }
+
+      modal.classList.add('active');
+    }
+
+    function closeAccountModal() {
+      document.getElementById('account-modal').classList.remove('active');
+      isModalOpen = false;
+      if (isInitialAuthPrompt) {
+        isInitialAuthPrompt = false;
+        checkUpdateAndTutorial();
+      }
+    }
+
+    async function handleAuthSubmit(mode) {
+      if (!window.CloudSync) return;
+      const accInput = document.getElementById('auth-account-input');
+      const pwdInput = document.getElementById('auth-password-input');
+      const statusEl = document.getElementById('auth-status-msg');
+      const btnLogin = document.getElementById('btn-auth-login');
+      const btnReg = document.getElementById('btn-auth-register');
+
+      const acc = accInput.value.trim();
+      const pwd = pwdInput.value.trim();
+
+      if (!acc || !pwd) {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = '請輸入帳號與密碼！';
+        return;
+      }
+
+      btnLogin.disabled = true;
+      btnReg.disabled = true;
+      statusEl.style.color = '#38bdf8';
+      statusEl.innerText = mode === 'register' ? '正在註冊並上傳進度...' : '正在登入並同步進度...';
+
+      const res = mode === 'register'
+        ? await window.CloudSync.register(acc, pwd)
+        : await window.CloudSync.login(acc, pwd);
+
+      btnLogin.disabled = false;
+      btnReg.disabled = false;
+
+      if (res.ok) {
+        statusEl.style.color = '#4ade80';
+        statusEl.innerText = res.msg;
+        refreshLobbyFromStorage();
+        setTimeout(() => {
+          closeAccountModal();
+        }, 600);
+      } else {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = res.msg;
+      }
+    }
+
+    function handleSkipAuth() {
+      if (window.CloudSync) {
+        window.CloudSync.setSkipped();
+      }
+      closeAccountModal();
+    }
+
+    async function handleManualSync() {
+      if (!window.CloudSync) return;
+      const statusEl = document.getElementById('logged-status-msg');
+      const btn = document.getElementById('btn-manual-sync');
+      btn.disabled = true;
+      statusEl.style.color = '#38bdf8';
+      statusEl.innerText = '正在與雲端同步中...';
+
+      const res = await window.CloudSync.syncNow(false);
+      btn.disabled = false;
+
+      if (res.ok) {
+        refreshLobbyFromStorage();
+        statusEl.style.color = '#4ade80';
+        statusEl.innerText = '✅ 同步完成！目前已是最新進度。';
+      } else {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = navigator.onLine ? '同步失敗，請確認網路連線。' : '目前為離線狀態，無法連線雲端。';
+      }
+    }
+
+    function handleLogoutAccount() {
+      if (!window.CloudSync) return;
+      window.CloudSync.logout();
+      updateAccountButtonLabel();
+      document.getElementById('auth-account-input').value = '';
+      document.getElementById('auth-password-input').value = '';
+      openAccountModal(false);
     }
     // ==========================================
 
