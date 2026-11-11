@@ -36,6 +36,7 @@ const GAME_ASSETS = [
   'map14.html',
   'map15.html',
   'bopomofo.js',
+  'password.js', // 帳號密碼模組
   'OrbitControls.js',
   'three.min.js',
   'manifest.json',
