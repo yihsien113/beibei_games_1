@@ -757,19 +757,12 @@
     let lobbyAnimId = null;
     let isExitingLobby = false;
 
-    // 暫時的修復補丁：清除錯誤的飛龍貼紙紀錄
-    if (localStorage.getItem('blindbox_slobby2') === 'claimed' && localStorage.getItem('sticker_s14') === 'new') {
-        localStorage.removeItem('blindbox_slobby2'); // 讓大廳星星重新出現
-        localStorage.removeItem('sticker_s14');      // 刪除貼紙簿裡的虛空貼紙紀錄
-    }
-    //下次更新刪除
-
     // ==========================================
     // 🌟 遊戲版本與更新公告設定 🌟
     // ==========================================
     
     // 👇 1. 每次更新時請修改這個版本號碼
-    const GAME_VERSION = "v2.7.0"; 
+    const GAME_VERSION = "v3.0.0"; 
     
     // 👇 2. 【這是公告開關】
     const AUTO_SHOW_NOTICE = true; 
@@ -779,10 +772,12 @@
       <p>✨ <b>
         <ruby>增<rt>ㄗㄥ</rt></ruby>
         <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
-        <ruby>冰<rt>ㄅㄧㄥ</rt></ruby>
-        <ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby>
-        <ruby>公<rt>ㄍㄨㄥ</rt></ruby>
-        <ruby>主<rt>ㄓㄨˇ</rt></ruby>
+        <ruby>好<rt>ㄏㄠˇ</rt></ruby>
+        <ruby>好<rt>ㄏㄠˇ</rt></ruby>
+        <ruby>吃<rt>ㄔ</rt></ruby>
+        <ruby>飯<rt>ㄈㄢˋ</rt></ruby>
+        <ruby>貼<rt>ㄊㄧㄝ</rt></ruby>
+        <ruby>紙<rt>ㄓˇ</rt></ruby>
         `;
 
     function showUpdateNotice() {
@@ -1298,6 +1293,8 @@
       { id: 'map12', type: '關卡', x: 300, y: 2710, w: 225, h: 300, starX: 599, starY: 2948, targetUrl: 'map12.html', clearKey: 'map12_cleared', color: '#2196f3', imgSrc: 'assets/map/map12.webp' },
       { id: 'map13', type: '關卡', x: 2263, y: 815, w: 225, h: 300, starX: 2391, starY: 985, targetUrl: 'map13.html', clearKey: 'map13_cleared', color: '#2196f3', imgSrc: 'assets/map/map13.webp' },
       { id: 'map14', type: '關卡', x: 931, y: 650, w: 225, h: 300, starX: 996, starY: 730, targetUrl: 'map14.html', clearKey: 'map14_cleared', color: '#2196f3', imgSrc: 'assets/map/map14.webp' },
+      // 📌 map15 位置為暫定值，之後再調整 x / y / starX / starY
+      { id: 'map15', type: '關卡', x: 1200, y: 1000, w: 225, h: 300, starX: 1312, starY: 1150, targetUrl: 'map15.html', clearKey: 'map15_cleared', color: '#2196f3', imgSrc: 'assets/map/map15.webp' },
 
       { id: 'slobby1', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 1671, starY: 3318, stickerId: 'slobby1', stickerName: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', stickerSrc: 'assets/sticker/lobby1.webp' },
       { id: 'slobby2', type: '貼紙', x: 1830, y: 2450, w: 225, h: 300, starX: 2344, starY: 2223, stickerId: 'slobby2', stickerName: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', stickerSrc: 'assets/sticker/lobby2.webp' },
