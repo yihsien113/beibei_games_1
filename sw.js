@@ -1,8 +1,8 @@
-//           Version:  3.0.0
+const SW_VERSION = '3.0.1';
 
 //需要更新時修改版本數字↑↑↑↑
-// 引用素材清單
-importScripts('./assets-manifest.js');
+// 引用素材清單（加上版本參數破除 iOS / iPadOS Safari 的 HTTP 快取）
+importScripts('./assets-manifest.js?v=' + SW_VERSION);
 
 // 1. 安裝階段：移除 cache.addAll，交由 index.html 統一預載並顯示進度，避免背景搶頻寬
 self.addEventListener('install', (event) => {
@@ -27,23 +27,46 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. 攔截請求：優先讀取快取，沒有才走網路（並順手將新請求寫入快取）
+// 3. 攔截請求：版本清單永遠優先向伺服器確認，其餘遊戲資源優先讀取快取
 self.addEventListener('fetch', (event) => {
-  // 只攔截 GET 請求，且略過 Firebase / Google 雲端 API 請求（確保雲端存檔永遠抓最新資料，離線時由前端自行處理）
+  // 只攔截 GET 請求，且略過 Firebase / Google 雲端 API 與 sw.js 本身
   if (event.request.method !== 'GET') return;
+  if (event.request.cache === 'only-if-cached' && event.request.mode !== 'same-origin') return;
   if (event.request.url.includes('googleapis.com') || event.request.url.includes('firebase')) return;
+  if (event.request.url.includes('sw.js')) return;
+
+  // 版本清單 assets-manifest.js 採用網路優先 (Network-First + no-store)，離線時才退回快取
+  if (event.request.url.includes('assets-manifest.js')) {
+    event.respondWith(
+      fetch(event.request.url, { cache: 'no-store' })
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('./assets-manifest.js', responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request, { ignoreSearch: true }))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // 1. 如果快取有，直接回傳
+      // 1. 如果快取有，直接回傳（確保離線可玩與載入速度）
       if (cachedResponse) {
         return cachedResponse;
       }
-      
-      // 2. 若快取沒有，準備發送網路請求 (Request 是 Stream，需 clone 一份)
-      const fetchRequest = event.request.clone();
 
-      return fetch(fetchRequest).then((response) => {
+      // 2. 若快取沒有，向伺服器抓取最新檔案（同網域加上 no-cache 避免 Safari 拿底層舊 HTTP 快取）
+      const isSameOrigin = new URL(event.request.url).origin === self.location.origin;
+      const networkPromise = isSameOrigin
+        ? fetch(event.request.url, { cache: 'no-cache' })
+        : fetch(event.request.clone());
+
+      return networkPromise.then((response) => {
         // 檢查回應是否有效 (確保只快取成功且正常的請求)
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;

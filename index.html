@@ -609,56 +609,126 @@
 
   <script src="assets-manifest.js"></script>
   <script>
+    let isPreloading = false;
+    let swControllerChanged = false;
+    let swRegistration = null;
+
     if ('serviceWorker' in navigator) {
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (isPreloading) {
+          swControllerChanged = true;
+          return;
+        }
         if (!refreshing) {
           refreshing = true;
-          window.location.reload(); 
+          window.location.reload();
         }
       });
-      navigator.serviceWorker.register('sw.js')
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
         .then((reg) => {
+          swRegistration = reg;
           console.log('Service Worker 註冊成功');
-          reg.update(); 
+          reg.update();
         })
         .catch((err) => console.warn('Service Worker 註冊失敗:', err));
     }
 
-    // 🌟 優化 1：預載器改為分批載入 (每次最多 5 個檔案)，避免瞬間塞爆手機記憶體
+    // 🌟 優化 1：啟動時自動確認版本、清除舊快取，並分批載入 (每次最多 5 個檔案)
     async function runPreloader() {
+      isPreloading = true;
       const bar = document.getElementById('progress-bar');
       const text = document.getElementById('progress-text');
+      const loadingFileEl = document.getElementById('loading-file');
       const preloader = document.getElementById('preloader');
 
-      const cacheName = typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : (typeof GAME_CACHE_NAME !== 'undefined' ? GAME_CACHE_NAME : 'game-cache');
-      const assetsList = typeof GAME_ASSETS !== 'undefined' ? GAME_ASSETS : [];
-      
-      if (assetsList.length > 0 && 'caches' in window) {
-        const cache = await caches.open(cacheName);
-        let loadedCount = 0;
-        const total = assetsList.length;
-        const batchSize = 5; // 每次最多同時處理 5 個請求
+      let cacheName = typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : (typeof GAME_CACHE_NAME !== 'undefined' ? GAME_CACHE_NAME : 'game-cache');
+      let assetsList = typeof GAME_ASSETS !== 'undefined' ? GAME_ASSETS : [];
+      let hadOldCache = false;
+      let serverManifestUpdated = false;
 
-        for (let i = 0; i < total; i += batchSize) {
-          const batch = assetsList.slice(i, i + batchSize);
-          await Promise.all(batch.map(async (url) => {
-            try {
-              const match = await cache.match(url);
-              if (!match) {
-                const res = await fetch(url, { cache: 'reload' });
-                if (res.ok) await cache.put(url, res);
+      // 有網路時主動向伺服器確認最新版清單（繞過 iOS / iPadOS HTTP 快取）
+      if (navigator.onLine) {
+        try {
+          if (loadingFileEl) loadingFileEl.innerText = '正在確認最新版本...';
+          const manifestRes = await fetch('assets-manifest.js?t=' + Date.now(), { cache: 'no-store' });
+          if (manifestRes.ok) {
+            const manifestText = await manifestRes.text();
+            const parsed = new Function(
+              manifestText + '\nreturn { cacheName: typeof CACHE_NAME !== "undefined" ? CACHE_NAME : "", assetsList: typeof GAME_ASSETS !== "undefined" ? GAME_ASSETS : [] };'
+            )();
+            if (parsed.cacheName) {
+              if (parsed.cacheName !== cacheName) {
+                serverManifestUpdated = true;
               }
-            } catch (err) {
-              console.warn('預載失敗:', url);
-            } finally {
-              loadedCount++;
-              const percent = Math.round((loadedCount / total) * 100);
-              if (bar) bar.style.width = percent + '%';
-              if (text) text.innerText = `${percent}% (${loadedCount} / ${total})`;
+              cacheName = parsed.cacheName;
             }
-          }));
+            if (Array.isArray(parsed.assetsList) && parsed.assetsList.length > 0) {
+              assetsList = parsed.assetsList;
+            }
+          }
+        } catch (err) {
+          console.warn('版本確認略過（離線或連線異常）:', err);
         }
+      }
+
+      if ('caches' in window) {
+        // 清理與最新版本不符的舊快取（不影響 localStorage 遊戲進度）
+        try {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            if (key !== cacheName) {
+              await caches.delete(key);
+              hadOldCache = true;
+            }
+          }
+        } catch (err) {
+          console.warn('清理舊快取失敗:', err);
+        }
+
+        if (hadOldCache && swRegistration) {
+          swRegistration.update().catch(() => {});
+        }
+
+        if (assetsList.length > 0) {
+          const cache = await caches.open(cacheName);
+          let loadedCount = 0;
+          const total = assetsList.length;
+          const batchSize = 5; // 每次最多同時處理 5 個請求
+
+          for (let i = 0; i < total; i += batchSize) {
+            const batch = assetsList.slice(i, i + batchSize);
+            await Promise.all(batch.map(async (url) => {
+              try {
+                const match = await cache.match(url);
+                if (!match) {
+                  if (loadingFileEl) loadingFileEl.innerText = `載入中：${url}`;
+                  const res = await fetch(url, { cache: 'reload' });
+                  if (res.ok) await cache.put(url, res);
+                }
+              } catch (err) {
+                console.warn('預載失敗:', url);
+              } finally {
+                loadedCount++;
+                const percent = Math.round((loadedCount / total) * 100);
+                if (bar) bar.style.width = percent + '%';
+                if (text) text.innerText = `${percent}% (${loadedCount} / ${total})`;
+              }
+            }));
+          }
+        }
+      }
+
+      isPreloading = false;
+
+      // 若偵測到版本更新或 SW 切換，重整一次以確保執行新版 index.html，再進行雲端同步
+      const reloadFlagKey = 'reloaded_for_' + cacheName;
+      const needsReload = (hadOldCache || serverManifestUpdated || swControllerChanged) && !sessionStorage.getItem(reloadFlagKey);
+      if (needsReload && navigator.onLine) {
+        sessionStorage.setItem(reloadFlagKey, '1');
+        if (loadingFileEl) loadingFileEl.innerText = '已更新至最新版本，正在重新啟動...';
+        window.location.reload();
+        return;
       }
 
       setTimeout(() => {
@@ -667,10 +737,10 @@
           preloader.style.opacity = '0';
           setTimeout(() => {
             preloader.remove();
-            initCloudAndStartLobby(); 
+            initCloudAndStartLobby();
           }, 500);
         } else {
-          initCloudAndStartLobby(); 
+          initCloudAndStartLobby();
         }
       }, 200);
     }
@@ -764,7 +834,7 @@
     // ==========================================
     
     // 👇 1. 每次更新時請修改這個版本號碼
-    const GAME_VERSION = "v3.0.0"; 
+    const GAME_VERSION = "v3.0.1"; 
     
     // 👇 2. 【這是公告開關】
     const AUTO_SHOW_NOTICE = true; 

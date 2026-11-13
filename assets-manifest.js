@@ -10,10 +10,11 @@
 //更新項目v2.7.0:增加冰雪公主
 //更新項目v2.8.0:增加"map15關卡"以及相對應貼紙
 //更新項目v3.0.0:增加登入功能,以便記錄遊戲進度
+//更新項目v3.0.1:修正iPad快取無法自動刷新的問題，並優化map13畫布記憶體釋放
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v3.0.0';
+const CACHE_NAME = 'dollhouse-game-v3.0.1';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
