@@ -1,6 +1,6 @@
 {
-  "name": "詹粢涵娃娃屋尋寶",
-  "short_name": "粢涵尋寶去",
+  "name": "冒險小遊戲",
+  "short_name": "冒險小遊戲",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
