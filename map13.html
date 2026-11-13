@@ -644,8 +644,14 @@ body {
 
   <script>
     function releaseMemoryAndExit() {
+      undoStack = [];
+      if (audioCtx && typeof audioCtx.close === 'function') {
+        try { audioCtx.close(); } catch (e) {}
+        audioCtx = null;
+      }
       const cvs = document.getElementById('drawCanvas');
       if (cvs) {
+        if (ctx) ctx.clearRect(0, 0, cvs.width, cvs.height);
         // 將畫布尺寸歸零，強迫 iOS 立即回收記憶體
         cvs.width = 0;
         cvs.height = 0; 
@@ -973,11 +979,12 @@ body {
       });
     }
 
-    function resizeCanvas() {
+    // preserve = true 時保留畫布內容（用於螢幕旋轉/縮放），false 時直接清空
+    function resizeCanvas(preserve = true) {
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
       const dpr = window.devicePixelRatio || 1;
-      const prev = canvas.width > 0 ? canvas.toDataURL() : null;
+      const prev = (preserve && canvas.width > 0) ? canvas.toDataURL() : null;
 
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
@@ -1055,7 +1062,8 @@ body {
       document.getElementById('hud').style.display = 'block';
       document.getElementById('phaseBanner').style.display = 'block';
 
-      resizeCanvas();
+      // 傳入 false，避免把上一局最後一題的畫作還原回來
+      resizeCanvas(false);
       updateHUD();
       prepareRound();
     }
@@ -1273,11 +1281,11 @@ if (localStorage.getItem('sticker_smap13') !== 'true') {
       document.getElementById('loading-screen').style.display = 'none';
       document.getElementById('game-container').style.display = 'flex';
       document.getElementById('start-screen').style.display = 'flex';
-      resizeCanvas();
+      resizeCanvas(false);
     });
 
     window.addEventListener('resize', () => {
-      resizeCanvas();
+      resizeCanvas(true);
     });
   </script>
 </body>
