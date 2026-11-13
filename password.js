@@ -24,7 +24,11 @@
       key === 'equippedCharacter' ||
       key === 'lobby_tutorial_done' ||
       key === 'sticker_tutorial_done' ||
-      key === 'game_version'
+      key === 'lobbyPlayerX' ||
+      key === 'lobbyPlayerY' ||
+      key === 'lobby1PlayerX' ||
+      key === 'lobby1PlayerY' ||
+      key === 'last_lobby'
     ) {
       return true;
     }
@@ -123,6 +127,9 @@
       keysToRemove.forEach((k) => rawRemoveItem.call(localStorage, k));
       rawRemoveItem.call(localStorage, 'lobbyPlayerX');
       rawRemoveItem.call(localStorage, 'lobbyPlayerY');
+      rawRemoveItem.call(localStorage, 'lobby1PlayerX');
+      rawRemoveItem.call(localStorage, 'lobby1PlayerY');
+      rawRemoveItem.call(localStorage, 'last_lobby');
     } finally {
       isApplyingCloudData = false;
     }

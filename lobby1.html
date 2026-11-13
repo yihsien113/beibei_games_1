@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head> 
+  <link rel="icon" href="assets/icon.webp">
+  <link rel="apple-touch-icon" href="assets/icon.webp">
+  <link rel="manifest" href="manifest.json">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>冒險小遊戲 - 魔法森林</title>
+  <meta name="application-name" content="冒險小遊戲">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="冒險小遊戲">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="冒險小遊戲">
+  <meta property="og:site_name" content="冒險小遊戲">
+  <meta property="og:description" content="冒險小遊戲">
+  <meta property="og:image" content="https://yihsien113.github.io/beibei_games_1/assets/icon.webp">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="冒險小遊戲">
+  
+  <script src="bopomofo.js"></script>
+  <!-- 帳號密碼模組 -->
+  <script src="password.js"></script>
+
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+    html, body { 
+      width: 100%; 
+      height: 100%;
+      margin: 0; 
+      padding: 0;
+      overflow: hidden; 
+      background-color: #000; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: rgba(30, 30, 30, 0.95);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: max(env(safe-area-inset-top), 12px) 20px 12px 20px;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      transition: z-index 0.1s; /* 教學模式升降層級用 */
+    }
+
+    #hud {
+      color: #fff; 
+      font-size: 26px; 
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      padding: 5px 15px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.3);
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+
+    #quick-menu {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+
+    .btn-floating {
+      width: 55px;
+      height: 55px;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+      border: 3px solid #fff;
+      border-radius: 50%;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 105, 180, 0.6);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.3s ease, filter 0.3s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-floating:active {
+      transform: scale(0.85);
+      box-shadow: 0 2px 6px rgba(255, 105, 180, 0.5);
+    }
+
+    /* 🌟 教學模式用的樣式與動畫 🌟 */
+    .tutorial-highlight { 
+      pointer-events: none !important; 
+    }
+    .dimmed { 
+      opacity: 0.25 !important; 
+      filter: grayscale(80%) brightness(0.5); 
+      pointer-events: none; 
+    }
+    @keyframes finger-bounce-y {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    #reward-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px); 
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    #reward-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 10000;
+    }
+
+    #reward-modal-content {
+      background-color: #1e293b;
+      border-radius: 3rem;       
+      padding: 2.5rem 1.8rem 2rem 1.8rem;
+      max-width: 560px;
+      width: 90%;
+      margin: 0 16px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border: 10px solid #475569; 
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #reward-modal.active #reward-modal-content {
+      transform: scale(1);
+    }
+
+    #reward-badge {
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #f59e0b; 
+      color: #ffffff;
+      padding: 8px 28px;
+      border-radius: 9999px;
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 800;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+      border: 4px solid #ffffff;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 260px;
+    }
+
+    #reward-img-box {
+      position: relative;
+      width: clamp(180px, 45vw, 240px);
+      height: clamp(180px, 45vw, 240px);
+      margin: 20px auto 20px auto;
+      background-color: #334155; 
+      border-radius: 2.5rem;
+      box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 8px solid #475569; 
+    }
+
+    #reward-bg-ray {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(253, 230, 138, 0.55) 0%, rgba(253, 230, 138, 0) 70%);
+      animation: pulse-ray 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-ray {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+
+    #reward-img {
+      width: 75%;
+      height: 75%;
+      object-fit: contain;
+      position: relative;
+      z-index: 10;
+      filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+    }
+
+    #reward-coin-icon {
+      font-size: clamp(90px, 22vw, 130px);
+      position: relative;
+      z-index: 10;
+      filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+      display: none;
+    }
+
+    #reward-info-box {
+      background-color: #334155; 
+      border-radius: 1.5rem;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      border: 2px solid #64748b; 
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    #reward-title {
+      color: #fde68a; 
+      font-weight: 900;
+      font-size: clamp(26px, 6vw, 36px);
+      line-height: 1.4;
+    }
+
+    #btn-claim-reward {
+      width: 100%;
+      background-color: #10b981; 
+      color: #ffffff;
+      font-weight: 900;
+      font-size: clamp(24px, 5.5vw, 32px);
+      padding: 16px 24px;
+      border-radius: 1.25rem;
+      border: 4px solid #a7f3d0;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    #btn-claim-reward:hover {
+      background-color: #059669;
+    }
+
+    #btn-claim-reward:active {
+      transform: scale(0.95);
+    }
+
+    #reward-modal .char-block { margin-right: 0.6em; margin-bottom: 6px; }
+    #reward-modal .bopo { font-size: 0.4em; font-weight: 800; margin-left: 4px; letter-spacing: 0px; line-height: 1.15; color: #fcd34d; }
+
+    /* 🌟 版本號碼顯示樣式 🌟 */
+    #version-display {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-shadow: none;
+    }
+    
+    #version-display:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+  
+    #update-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    #update-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #update-modal-content {
+      background-color: #1e293b;
+      border-radius: 2rem;
+      padding: 2rem 1.8rem;
+      max-width: 500px;
+      width: 85%;
+      margin: 0 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border: 6px solid #64748b;
+      position: relative;
+      transform: scale(0.9);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #update-modal.active #update-modal-content {
+      transform: scale(1);
+    }
+
+    .update-title {
+      color: #38bdf8;
+      font-size: clamp(24px, 5vw, 32px);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px dashed #475569;
+      padding-bottom: 15px;
+    }
+
+    .update-log {
+      color: #fff;
+      font-size: 18px;
+      line-height: 1.8;
+      max-height: 40vh;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      padding-right: 10px;
+      text-align: left;
+    }
+
+    /* 滾動條美化 */
+    .update-log::-webkit-scrollbar { width: 6px; }
+    .update-log::-webkit-scrollbar-track { background: #334155; border-radius: 3px; }
+    .update-log::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+
+    #btn-close-update {
+      background-color: #3b82f6;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 22px;
+      padding: 12px;
+      border-radius: 1rem;
+      border: 3px solid #93c5fd;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+    #btn-close-update:active { transform: scale(0.95); }
+
+    /* ☁️ 帳號登入按鈕與彈窗樣式 (無注音、清晰介面) ☁️ */
+    #account-btn {
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      background: rgba(14, 165, 233, 0.45);
+      padding: 4px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid rgba(125, 211, 252, 0.5);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-shadow: none;
+      touch-action: manipulation;
+    }
+    #account-btn:active {
+      transform: scale(0.92);
+      background: rgba(14, 165, 233, 0.7);
+    }
+
+    #account-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10005;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    #account-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #account-modal-content {
+      background-color: #1e293b;
+      border-radius: 1.8rem;
+      padding: 1.8rem 1.6rem;
+      max-width: 420px;
+      width: 90%;
+      margin: 0 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+      border: 5px solid #475569;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: scale(0.92);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #account-modal.active #account-modal-content {
+      transform: scale(1);
+    }
+    .account-modal-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #38bdf8;
+      text-align: center;
+      margin: 0;
+    }
+    .account-modal-desc {
+      font-size: 14px;
+      color: #cbd5e1;
+      text-align: center;
+      margin: -6px 0 4px 0;
+      line-height: 1.4;
+    }
+    .account-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #account-modal input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid #64748b;
+      background-color: #0f172a;
+      color: #fff;
+      font-size: 18px;
+      outline: none;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      touch-action: manipulation !important;
+    }
+    #account-modal input:focus {
+      border-color: #38bdf8;
+    }
+    #auth-status-msg, #logged-status-msg {
+      font-size: 14px;
+      line-height: 1.4;
+      text-align: center;
+      min-height: 20px;
+      color: #fbbf24;
+      font-weight: bold;
+    }
+    .auth-btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-auth {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+      touch-action: manipulation;
+    }
+    .btn-auth:active { transform: scale(0.95); }
+    .btn-auth:disabled { opacity: 0.5; pointer-events: none; }
+    .btn-auth-login {
+      background-color: #2563eb;
+      border-color: #93c5fd;
+    }
+    .btn-auth-register {
+      background-color: #10b981;
+      border-color: #a7f3d0;
+    }
+    .btn-auth-skip {
+      width: 100%;
+      background-color: #334155;
+      border: 2px solid #64748b;
+      color: #e2e8f0;
+      font-size: 16px;
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .btn-auth-skip:active { transform: scale(0.96); }
+    .logged-account-box {
+      background: #0f172a;
+      border: 2px solid #475569;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fde68a;
+    }
+    .confirm-account-box {
+      background: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 14px;
+      padding: 18px 14px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #fde68a;
+      word-break: break-all;
+    }
+    #confirm-status-msg {
+      font-size: 14px;
+      line-height: 1.4;
+      text-align: center;
+      min-height: 20px;
+      color: #38bdf8;
+      font-weight: bold;
+    }
+    .btn-confirm-o {
+      background-color: #10b981;
+      border-color: #a7f3d0;
+      font-size: 28px;
+      font-weight: 900;
+      padding: 14px;
+    }
+    .btn-confirm-x {
+      background-color: #ef4444;
+      border-color: #fca5a5;
+      font-size: 28px;
+      font-weight: 900;
+      padding: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="preloader" style="position:fixed;inset:0;background:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;font-family:sans-serif;color:#fff;">
+    <div style="font-size:22px;margin-bottom:20px;font-weight:bold;">遊戲素材載入中...</div>
+    <div style="width:300px;height:18px;background:#333;border-radius:9px;overflow:hidden;border:2px solid #555;">
+      <div id="progress-bar" style="width:0%;height:100%;background:#4caf50;transition:width 0.1s ease;"></div>
+    </div>
+    <div id="progress-text" style="margin-top:12px;font-size:16px;color:#bbb;">0% (0 / 0)</div>
+    <div id="loading-file" style="margin-top:8px;font-size:13px;color:#888;max-width:85vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">準備檢查檔案...</div>
+    <div id="loading-speed" style="margin-top:4px;font-size:13px;color:#4caf50;height:18px;"></div>
+  </div>
+
+  <div id="top-bar">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
+
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+        <div id="version-display" onclick="showUpdateNotice()"></div>
+        <div id="account-btn" onclick="openAccountModal(false)">👤 帳號登入</div>
+      </div>
+    </div>
+
+    <div id="quick-menu">
+      <div id="btn-wardrobe" class="btn-floating" onclick="goToWardrobe()">👗</div>
+      <div id="btn-sticker" class="btn-floating" onclick="goToStickerBook()">📖</div>
+    </div>
+  </div>
+
+  <!-- ☁️ 帳號登入 / 註冊彈出視窗 (無注音) -->
+  <div id="account-modal">
+    <div id="account-modal-content">
+      <!-- 未登入視圖：登入 / 註冊 / 不註冊直接遊玩 -->
+      <div id="auth-form-view" style="display: flex; flex-direction: column; gap: 14px;">
+        <h2 class="account-modal-title">☁️ 帳號雲端存檔</h2>
+        <p class="account-modal-desc">登入或註冊帳號，讓手機與平板自動同步遊戲進度</p>
+        <div class="account-input-group">
+          <input type="text" id="auth-account-input" placeholder="請輸入帳號（中英文皆可）" autocomplete="username">
+          <input type="password" id="auth-password-input" placeholder="請輸入密碼" autocomplete="current-password">
+        </div>
+        <div id="auth-status-msg"></div>
+        <div class="auth-btn-row">
+          <button id="btn-auth-login" class="btn-auth btn-auth-login" onclick="handleAuthSubmit('login')">登入</button>
+          <button id="btn-auth-register" class="btn-auth btn-auth-register" onclick="handleAuthSubmit('register')">註冊</button>
+        </div>
+        <button id="btn-auth-skip" class="btn-auth-skip" onclick="handleSkipAuth()">不註冊直接遊玩</button>
+      </div>
+
+      <!-- 已登入視圖：查看帳號 / 手動同步 / 切換帳號 -->
+      <div id="auth-logged-view" style="display: none; flex-direction: column; gap: 14px;">
+        <h2 class="account-modal-title">☁️ 雲端帳號管理</h2>
+        <div class="logged-account-box" id="logged-account-display">目前帳號：</div>
+        <div id="logged-status-msg">進度會在過關與獲得獎勵時自動同步</div>
+        <div class="auth-btn-row">
+          <button id="btn-manual-sync" class="btn-auth btn-auth-login" onclick="handleManualSync()">立即同步</button>
+          <button class="btn-auth" style="background-color: #ef4444; border-color: #fca5a5;" onclick="handleLogoutAccount()">切換帳號</button>
+        </div>
+        <button class="btn-auth-skip" onclick="closeAccountModal()">返回遊戲</button>
+      </div>
+
+      <!-- 開啟遊戲時的帳號確認視圖：是否為 xxx？ (O / X) -->
+      <div id="auth-confirm-view" style="display: none; flex-direction: column; gap: 16px;">
+        <h2 class="account-modal-title">☁️ 帳號確認</h2>
+        <div class="confirm-account-box" id="confirm-account-prompt">是否為 yi ？</div>
+        <div id="confirm-status-msg"></div>
+        <div class="auth-btn-row">
+          <button id="btn-confirm-yes" class="btn-auth btn-confirm-o" onclick="handleConfirmAccountYes()">O</button>
+          <button id="btn-confirm-no" class="btn-auth btn-confirm-x" onclick="handleConfirmAccountNo()">X</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reward-modal">
+    <div id="reward-modal-content">
+      <div id="reward-badge"></div>
+      <div id="reward-img-box">
+        <div id="reward-bg-ray"></div>
+        <img id="reward-img" src="" alt="reward">
+        <div id="reward-coin-icon">⭐</div>
+      </div>
+      <div id="reward-info-box">
+        <div id="reward-title" class="zh-text"></div>
+      </div>
+      <button id="btn-claim-reward" onclick="claimCurrentReward()">
+        <span>🎁</span>
+        <span class="zh-text"><ruby>收<rt>ㄕㄡ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="update-modal">
+    <div id="update-modal-content">
+      <div class="update-title zh-text">
+        <ruby>更<rt>ㄍㄥ</rt></ruby><ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>告<rt>ㄍㄠˋ</rt></ruby>
+      </div>
+      <div id="update-log-content" class="update-log zh-text">
+        <!-- 內容由 JS 動態填入 -->
+      </div>
+      <button id="btn-close-update" onclick="closeUpdateNotice()">
+        <span class="zh-text"><ruby>我<rt>ㄨㄛˇ</rt></ruby><ruby>知<rt>ㄓ</rt></ruby><ruby>道<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby></span>
+      </button>
+    </div>
+  </div>
+
+  <canvas id="lobbyCanvas"></canvas>
+
+  <script src="assets-manifest.js"></script>
+  <script>
+    let isPreloading = false;
+    let swControllerChanged = false;
+    let swRegistration = null;
+
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (isPreloading) {
+          swControllerChanged = true;
+          return;
+        }
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        .then((reg) => {
+          swRegistration = reg;
+          console.log('Service Worker 註冊成功');
+          reg.update();
+        })
+        .catch((err) => console.warn('Service Worker 註冊失敗:', err));
+    }
+
+    // 🌟 啟動時自動確認版本、清除舊快取，並分批載入 (每次最多 5 個檔案)
+    async function runPreloader() {
+      isPreloading = true;
+      const bar = document.getElementById('progress-bar');
+      const text = document.getElementById('progress-text');
+      const loadingFileEl = document.getElementById('loading-file');
+      const preloader = document.getElementById('preloader');
+
+      let cacheName = typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : (typeof GAME_CACHE_NAME !== 'undefined' ? GAME_CACHE_NAME : 'game-cache');
+      let assetsList = typeof GAME_ASSETS !== 'undefined' ? GAME_ASSETS : [];
+      let hadOldCache = false;
+      let serverManifestUpdated = false;
+
+      // 有網路時主動向伺服器確認最新版清單（繞過 iOS / iPadOS HTTP 快取）
+      if (navigator.onLine) {
+        try {
+          if (loadingFileEl) loadingFileEl.innerText = '正在確認最新版本...';
+          const manifestRes = await fetch('assets-manifest.js?t=' + Date.now(), { cache: 'no-store' });
+          if (manifestRes.ok) {
+            const manifestText = await manifestRes.text();
+            const parsed = new Function(
+              manifestText + '\nreturn { cacheName: typeof CACHE_NAME !== "undefined" ? CACHE_NAME : "", assetsList: typeof GAME_ASSETS !== "undefined" ? GAME_ASSETS : [] };'
+            )();
+            if (parsed.cacheName) {
+              if (parsed.cacheName !== cacheName) {
+                serverManifestUpdated = true;
+              }
+              cacheName = parsed.cacheName;
+            }
+            if (Array.isArray(parsed.assetsList) && parsed.assetsList.length > 0) {
+              assetsList = parsed.assetsList;
+            }
+          }
+        } catch (err) {
+          console.warn('版本確認略過（離線或連線異常）:', err);
+        }
+      }
+
+      if ('caches' in window) {
+        // 清理與最新版本不符的舊快取（不影響 localStorage 遊戲進度）
+        try {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            if (key !== cacheName) {
+              await caches.delete(key);
+              hadOldCache = true;
+            }
+          }
+        } catch (err) {
+          console.warn('清理舊快取失敗:', err);
+        }
+
+        if (hadOldCache && swRegistration) {
+          swRegistration.update().catch(() => {});
+        }
+
+        if (assetsList.length > 0) {
+          const cache = await caches.open(cacheName);
+          let loadedCount = 0;
+          const total = assetsList.length;
+          const batchSize = 5; // 每次最多同時處理 5 個請求
+
+          for (let i = 0; i < total; i += batchSize) {
+            const batch = assetsList.slice(i, i + batchSize);
+            await Promise.all(batch.map(async (url) => {
+              try {
+                const match = await cache.match(url);
+                if (!match) {
+                  if (loadingFileEl) loadingFileEl.innerText = `載入中：${url}`;
+                  const res = await fetch(url, { cache: 'reload' });
+                  if (res.ok) await cache.put(url, res);
+                }
+              } catch (err) {
+                console.warn('預載失敗:', url);
+              } finally {
+                loadedCount++;
+                const percent = Math.round((loadedCount / total) * 100);
+                if (bar) bar.style.width = percent + '%';
+                if (text) text.innerText = `${percent}% (${loadedCount} / ${total})`;
+              }
+            }));
+          }
+        }
+      }
+
+      isPreloading = false;
+
+      // 若偵測到版本更新或 SW 切換，重整一次以確保執行新版 lobby1.html，再進行雲端同步
+      const reloadFlagKey = 'reloaded_for_' + cacheName;
+      const needsReload = (hadOldCache || serverManifestUpdated || swControllerChanged) && !sessionStorage.getItem(reloadFlagKey);
+      if (needsReload && navigator.onLine) {
+        sessionStorage.setItem(reloadFlagKey, '1');
+        if (loadingFileEl) loadingFileEl.innerText = '已更新至最新版本，正在重新啟動...';
+        window.location.reload();
+        return;
+      }
+
+      setTimeout(() => {
+        if (preloader) {
+          preloader.style.transition = 'opacity 0.5s ease';
+          preloader.style.opacity = '0';
+          setTimeout(() => {
+            preloader.remove();
+            initCloudAndStartLobby();
+          }, 500);
+        } else {
+          initCloudAndStartLobby();
+        }
+      }, 200);
+    }
+
+    window.addEventListener('DOMContentLoaded', runPreloader);
+  </script>
+
+  <script>
+    (function () {
+      if (window.Bopomofo) return;
+      const style = document.createElement('style');
+      style.id = 'bopo-module-style';
+      style.textContent = `
+        .char-block {
+          display: inline-flex; flex-direction: row; align-items: center;
+          margin-right: 0.55em; margin-bottom: 4px; vertical-align: middle; line-height: 1;
+        }
+        .bopo {
+          writing-mode: vertical-rl; text-orientation: upright; font-size: 0.35em;
+          color: #ffeb3b; margin-left: 2px; position: relative; padding: 0;
+          line-height: 1.1; letter-spacing: -1px;
+        }
+        .bopo .tone {
+          position: absolute; right: -0.9em; top: 50%;
+          font-family: "標楷體", "BiauKai", "DFKai-SB", serif;
+          font-size: 1.07em; font-weight: bold;
+          transform: translateY(-50%) scaleY(1.3); pointer-events: none;
+        }
+        .bopo .tone.sp {
+          position: absolute; left: 50%; right: auto; top: -0.55em;
+          transform: translateX(-50%);
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 1.6em; line-height: 1; font-weight: 900; pointer-events: none;
+        }
+        .zh-text {
+          display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        }
+      `;
+      document.head.appendChild(style);
+
+      function convertRuby(rubyElement) {
+        const charText = Array.from(rubyElement.childNodes)
+          .filter(node => node.nodeType === Node.TEXT_NODE)
+          .map(node => node.textContent).join('').trim();
+        const rt = rubyElement.querySelector('rt');
+        if (!rt) return;
+        let bopoText = rt.textContent.trim();
+        let tone = '';
+        let bopoBase = bopoText;
+        const normalTones = ['ˊ', 'ˇ', 'ˋ'];
+        if (bopoText.includes('˙')) {
+          tone = '˙';
+          bopoBase = bopoText.replace(/˙/g, '');
+        } else if (normalTones.includes(bopoText.slice(-1))) {
+          tone = bopoText.slice(-1);
+          bopoBase = bopoText.slice(0, -1);
+        }
+        const charBlock = document.createElement('span');
+        charBlock.className = 'char-block';
+        const charSpan = document.createElement('span');
+        charSpan.textContent = charText;
+        charBlock.appendChild(charSpan);
+        const bopoSpan = document.createElement('span');
+        bopoSpan.className = 'bopo';
+        bopoSpan.textContent = bopoBase;
+        if (tone) {
+          const toneSpan = document.createElement('span');
+          toneSpan.className = tone === '˙' ? 'tone sp' : 'tone';
+          toneSpan.textContent = tone;
+          bopoSpan.appendChild(toneSpan);
+        }
+        charBlock.appendChild(bopoSpan);
+        rubyElement.replaceWith(charBlock);
+      }
+
+      function renderAll() {
+        document.querySelectorAll('ruby').forEach(convertRuby);
+      }
+      window.Bopomofo = { render: renderAll, convert: convertRuby };
+    })();
+
+    // ==========================================
+    // 🌲 第二大廳：魔法森林 (lobby1)
+    // 玩法與第一大廳 (index.html) 相同：點擊移動、採集星星、貼紙、進入關卡
+    // ==========================================
+
+    // 必須 map1 ~ map15 全數通關才能進入（會在同步後驗證）
+    function isForestUnlocked() {
+      for (let i = 1; i <= 15; i++) {
+        if (localStorage.getItem('map' + i + '_cleared') !== 'true') return false;
+      }
+      return true;
+    }
+
+    // 記錄目前所在大廳，讓關卡／衣櫥／貼紙簿返回時回到這裡
+    sessionStorage.setItem('current_lobby', 'lobby1');
+
+    const canvas = document.getElementById('lobbyCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let lobbyAnimId = null;
+    let isExitingLobby = false;
+
+    // 世界座標沿用第一大廳尺寸 (3000x4000)；lobby1.webp 為 1200x1600，等比放大 2.5 倍
+    const MAP_WIDTH = 3000;
+    const MAP_HEIGHT = 4000;
+
+    let scale = 1.0;
+    let minScale = 1.0;
+    let cameraX = 0;
+    let cameraY = 0;
+
+    // 玩家進入森林時的出生點與回大廳傳送門 (位於地圖左上方發光的藤蔓拱門)
+    // 依多邊形點建立傳送門 (平滑封閉曲線 + 範圍 + 中心)
+    function makeEllipsePortal(pixelPts, k, targetUrl) {
+      const pts = pixelPts.map(p => ({ x: p.x * k, y: p.y * k }));
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      }
+      return { pts, minX, minY, maxX, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
+               rx: (maxX - minX) / 2, ry: (maxY - minY) / 2, targetUrl };
+    }
+
+    function portalPath(c, pts) {
+      const n = pts.length;
+      c.beginPath();
+      const m0 = { x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2 };
+      c.moveTo(m0.x, m0.y);
+      for (let i = 0; i < n; i++) {
+        const p = pts[i], q = pts[(i + 1) % n];
+        c.quadraticCurveTo(p.x, p.y, (p.x + q.x) / 2, (p.y + q.y) / 2);
+      }
+      c.closePath();
+    }
+
+    function pointInPolygon(x, y, pts) {
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+
+    // 楓之谷風格傳送門：整個發光、看不見裡面
+    function drawGlowPortal(c, p, time) {
+      const t = time / 1000;
+      const pulse = 0.85 + Math.sin(t * 3) * 0.15;
+      c.save();
+      // 外圍光暈
+      portalPath(c, p.pts);
+      c.shadowColor = 'rgba(140, 255, 220, ' + pulse + ')';
+      c.shadowBlur = 70;
+      c.fillStyle = '#d8fff4';
+      c.fill();
+      c.shadowBlur = 0;
+
+      // 不透明的發光核心 (中心近白、邊緣偏青綠)
+      portalPath(c, p.pts);
+      c.clip();
+      const g = c.createRadialGradient(p.cx, p.cy, 0, p.cx, p.cy, Math.max(p.rx, p.ry) * 1.1);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.5, '#c8fff0');
+      g.addColorStop(1, '#5fe8c0');
+      c.fillStyle = g;
+      c.fillRect(p.minX - 20, p.minY - 20, p.maxX - p.minX + 40, p.maxY - p.minY + 40);
+
+      // 旋轉的光紋
+      c.globalCompositeOperation = 'lighter';
+      c.translate(p.cx, p.cy);
+      c.lineCap = 'round';
+      for (let i = 0; i < 5; i++) {
+        const a0 = t * 1.6 + i * (Math.PI * 2 / 5);
+        c.beginPath();
+        c.ellipse(0, 0, p.rx * (0.35 + 0.12 * i), p.ry * (0.35 + 0.12 * i), 0, a0, a0 + 1.2);
+        c.strokeStyle = 'rgba(255,255,255,' + (0.55 + 0.3 * Math.sin(t * 2 + i)) + ')';
+        c.lineWidth = 8;
+        c.stroke();
+      }
+      // 上下飄動的光點
+      for (let i = 0; i < 7; i++) {
+        const ph = (t * 0.5 + i / 7) % 1;
+        const px = Math.sin(i * 12.9 + t) * p.rx * 0.6;
+        const py = p.ry * (0.9 - ph * 1.8);
+        c.beginPath();
+        c.arc(px, py, 6 + 4 * (1 - ph), 0, Math.PI * 2);
+        c.fillStyle = 'rgba(255,255,255,' + (1 - ph) + ')';
+        c.fill();
+      }
+      c.restore();
+
+      // 發亮邊框
+      c.save();
+      portalPath(c, p.pts);
+      c.strokeStyle = 'rgba(255,255,255,0.95)';
+      c.lineWidth = 6;
+      c.shadowColor = '#7dffd8';
+      c.shadowBlur = 30;
+      c.stroke();
+      c.restore();
+    }
+
+    // 回第一大廳的傳送門：lobby1.webp (1200x1600) 的像素座標，× 2.5 轉成世界座標
+    const RETURN_PORTAL = makeEllipsePortal([
+      { x: 223, y: 463 }, { x: 226, y: 439 }, { x: 221, y: 412 }, { x: 218, y: 375 },
+      { x: 235, y: 339 }, { x: 251, y: 329 }, { x: 272, y: 335 }, { x: 287, y: 358 },
+      { x: 291, y: 391 }, { x: 293, y: 416 }, { x: 294, y: 448 }, { x: 284, y: 465 },
+      { x: 256, y: 470 }, { x: 239, y: 471 }
+    ], 2.5, 'index.html');
+    const SPAWN_X = Math.round(RETURN_PORTAL.cx);
+    const SPAWN_Y = Math.round(RETURN_PORTAL.maxY + 100);
+
+    function clampCamera() {
+      let viewW = canvas.width / scale;
+      let viewH = canvas.height / scale;
+
+      if (viewW > MAP_WIDTH) {
+        cameraX = -(viewW - MAP_WIDTH) / 2;
+      } else {
+        cameraX = Math.max(0, Math.min(cameraX, MAP_WIDTH - viewW));
+      }
+
+      if (viewH > MAP_HEIGHT) {
+        cameraY = -(viewH - MAP_HEIGHT) / 2;
+      } else {
+        const barEl = document.getElementById('top-bar');
+        const topInset = barEl ? barEl.offsetHeight / scale : 0;
+        cameraY = Math.max(-topInset, Math.min(cameraY, MAP_HEIGHT - viewH));
+      }
+    }
+
+    function resize() {
+      if (isExitingLobby) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      minScale = canvas.width / (MAP_WIDTH / 2);
+      if (scale < minScale) scale = minScale;
+      clampCamera();
+    }
+    window.addEventListener('resize', resize);
+
+    // ---------- 資源 ----------
+    const starCache = document.createElement('canvas');
+    const starSize = 200;
+    starCache.width = starSize;
+    starCache.height = starSize;
+    const sCtx = starCache.getContext('2d');
+    if (sCtx) {
+      sCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      sCtx.textAlign = 'center';
+      sCtx.textBaseline = 'middle';
+      sCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
+      sCtx.shadowBlur = 25;
+      sCtx.fillText('🌟', starSize / 2, starSize / 2);
+    }
+
+    let playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+    document.getElementById('coinDisplay').innerText = playerCoins;
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+
+    const bgImg = new Image();
+    bgImg.src = 'assets/lobby/lobby1.webp';
+
+    const playerImg = new Image();
+    playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+
+    // ---------- 玩家位置 (與第一大廳分開儲存) ----------
+    const savedX = localStorage.getItem('lobby1PlayerX');
+    const savedY = localStorage.getItem('lobby1PlayerY');
+    const initialX = (savedX !== null && !isNaN(parseFloat(savedX))) ? parseFloat(savedX) : SPAWN_X;
+    const initialY = (savedY !== null && !isNaN(parseFloat(savedY))) ? parseFloat(savedY) : SPAWN_Y;
+
+    const player = {
+      x: initialX, y: initialY, size: 160, speed: 600,
+      targetX: initialX, targetY: initialY,
+      isMoving: false, isFacingLeft: false, walkCycle: 0
+    };
+
+    function savePlayerPosition() {
+      localStorage.setItem('lobby1PlayerX', Math.round(player.x));
+      localStorage.setItem('lobby1PlayerY', Math.round(player.y));
+    }
+
+    // ---------- 記憶體釋放 / 換頁 ----------
+    function cleanupLobbyMemory() {
+      if (isExitingLobby) return;
+      isExitingLobby = true;
+
+      if (lobbyAnimId) {
+        cancelAnimationFrame(lobbyAnimId);
+        lobbyAnimId = null;
+      }
+      if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (playerImg) { playerImg.onload = null; playerImg.onerror = null; playerImg.src = ''; }
+      for (let z of zones) {
+        if (z.img) { z.img.onload = null; z.img.onerror = null; z.img.src = ''; z.img = null; }
+      }
+      if (starCache) {
+        if (sCtx) sCtx.clearRect(0, 0, starCache.width, starCache.height);
+        starCache.width = 1;
+        starCache.height = 1;
+      }
+      if (window.portalGradCache && window.portalGradCache !== 'fallback') {
+        window.portalGradCache.width = 1;
+        window.portalGradCache.height = 1;
+        window.portalGradCache = null;
+      }
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function cleanupLobbyAndGo(targetUrl) {
+      sessionStorage.setItem('returning_from_subpage', '1');
+      savePlayerPosition();
+      cleanupLobbyMemory();
+      window.location.href = targetUrl;
+    }
+
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted || isExitingLobby) window.location.reload();
+    });
+    window.addEventListener('pagehide', () => {
+      savePlayerPosition();
+      cleanupLobbyMemory();
+    });
+    window.addEventListener('beforeunload', savePlayerPosition);
+
+    function goToWardrobe() { cleanupLobbyAndGo('wardrobe.html'); }
+    function goToStickerBook() { cleanupLobbyAndGo('sticker.html'); }
+
+    // 回到第一大廳：站在傳送門下方，避免立刻再次觸發；先將 lobby1 的 player 移到安全出生點，避免 savePlayerPosition() 覆寫成傳送門內座標
+    function enterReturnPortal() {
+      player.x = SPAWN_X;
+      player.y = SPAWN_Y;
+      localStorage.setItem('lobbyPlayerX', 658);
+      localStorage.setItem('lobbyPlayerY', 1793);
+      localStorage.setItem('last_lobby', 'index');
+      sessionStorage.setItem('current_lobby', 'index');
+      cleanupLobbyAndGo(RETURN_PORTAL.targetUrl);
+    }
+
+    // ---------- 區域設定 ----------
+    // type: '關卡' / '貼紙' / '金幣'，格式與第一大廳 zones 相同。
+    // 座標為世界座標 (地圖 3000x4000；lobby1.webp 像素座標 × 2.5)。
+    // 範例：
+    //   { id: 'forest_star1', type: '金幣', starX: 1200, starY: 1500, rewardAmount: 5 },
+    //   { id: 'sforest1', type: '貼紙', starX: 1500, starY: 2000, stickerId: 'sforest1',
+    //     stickerName: '貼紙名稱', stickerSrc: 'assets/sticker/forest1.webp' },
+    //   { id: 'map16', type: '關卡', x: 1400, y: 2600, w: 225, h: 300, starX: 1500, starY: 2750,
+    //     targetUrl: 'map16.html', clearKey: 'map16_cleared', color: '#2196f3', imgSrc: 'assets/map/map16.webp' },
+    // 注意：id 不可與第一大廳重複 (領取狀態以 'blindbox_' + id 儲存)。
+    const zones = [
+      { id: 'map16', type: '關卡', x: 1240, y: 1250, w: 225, h: 300, starX: 1352, starY: 1400, targetUrl: 'map16.html', clearKey: 'map16_cleared', color: '#2196f3', imgSrc: 'assets/map/map16.webp' }
+    ];
+
+    function isZoneClaimed(z) {
+      return localStorage.getItem('blindbox_' + z.id) === 'claimed';
+    }
+
+    function isLevelCleared(z) {
+      const key = z.clearKey || (z.id + '_cleared');
+      return localStorage.getItem(key) === 'true';
+    }
+
+    function loadClearedImages() {
+      for (let z of zones) {
+        if (z.imgSrc && isLevelCleared(z) && !z.img) {
+          z.img = new Image();
+          z.img.src = z.imgSrc;
+        }
+      }
+    }
+    loadClearedImages();
+
+    // ---------- 獎勵視窗 ----------
+    let isModalOpen = false;
+    let activeRewardZone = null;
+
+    const rewardModal = document.getElementById('reward-modal');
+    const rewardBadge = document.getElementById('reward-badge');
+    const rewardImg = document.getElementById('reward-img');
+    const rewardCoinIcon = document.getElementById('reward-coin-icon');
+    const rewardTitle = document.getElementById('reward-title');
+
+    function openRewardModal(zone) {
+      isModalOpen = true;
+      activeRewardZone = zone;
+      player.isMoving = false;
+
+      if (zone.type === '貼紙') {
+        rewardBadge.innerHTML = `<span class="zh-text"><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby></span>`;
+        rewardImg.src = zone.stickerSrc || '';
+        rewardImg.style.display = 'block';
+        rewardCoinIcon.style.display = 'none';
+        rewardTitle.innerHTML = zone.stickerName || '';
+      } else if (zone.type === '金幣') {
+        rewardBadge.innerHTML = `<span class="zh-text"><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby></span>`;
+        rewardImg.style.display = 'none';
+        rewardCoinIcon.style.display = 'block';
+        rewardTitle.innerHTML = `⭐ + ${zone.rewardAmount || 0}`;
+      }
+
+      if (window.Bopomofo) window.Bopomofo.render();
+      rewardModal.classList.add('active');
+    }
+
+    function closeRewardModal() {
+      rewardModal.classList.remove('active');
+      isModalOpen = false;
+      activeRewardZone = null;
+    }
+
+    function claimCurrentReward() {
+      if (!activeRewardZone) return;
+      const z = activeRewardZone;
+
+      if (z.type === '貼紙') {
+        if (z.stickerId && localStorage.getItem('sticker_' + z.stickerId) !== 'true') {
+          localStorage.setItem('sticker_' + z.stickerId, 'new');
+        }
+        localStorage.setItem('blindbox_' + z.id, 'claimed');
+      } else if (z.type === '金幣') {
+        playerCoins += parseInt(z.rewardAmount || 0, 10);
+        localStorage.setItem('playerCoins', playerCoins);
+        document.getElementById('coinDisplay').innerText = playerCoins;
+        localStorage.setItem('blindbox_' + z.id, 'claimed');
+      }
+
+      closeRewardModal();
+      if (window.CloudSync && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
+      }
+    }
+
+    // ==========================================
+    // 🌟 遊戲版本與更新公告設定 🌟
+    // ==========================================
+    // 版本號自動取自 assets-manifest.js 的 CACHE_NAME
+    const GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?";
+    const AUTO_SHOW_NOTICE = true;
+    const UPDATE_LOG = `
+      <p>✨ <b>
+        <ruby>增<rt>ㄗㄥ</rt></ruby>
+        <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
+        <ruby>帳<rt>ㄓㄤˋ</rt></ruby>
+        <ruby>號<rt>ㄏㄠˋ</rt></ruby>
+        <ruby>系<rt>ㄒㄧˋ</rt></ruby>
+        <ruby>統<rt>ㄊㄨㄥˇ</rt></ruby>
+        <ruby>方<rt>ㄈㄤ</rt></ruby>
+        <ruby>便<rt>ㄅㄧㄢˋ</rt></ruby>
+        <ruby>記<rt>ㄐㄧˋ</rt></ruby>
+        <ruby>錄<rt>ㄌㄨˋ</rt></ruby>
+        <ruby>遊<rt>ㄧㄡˊ</rt></ruby>
+        <ruby>戲<rt>ㄒㄧˋ</rt></ruby>
+        <ruby>進<rt>ㄐㄧㄣˋ</rt></ruby>
+        <ruby>度<rt>ㄉㄨˋ</rt></ruby>
+        `;
+
+    function showUpdateNotice() {
+      const contentDiv = document.getElementById('update-log-content');
+      contentDiv.innerHTML = UPDATE_LOG;
+      if (window.Bopomofo) window.Bopomofo.render();
+      document.getElementById('update-modal').classList.add('active');
+    }
+
+    function closeUpdateNotice() {
+      document.getElementById('update-modal').classList.remove('active');
+    }
+
+    function checkUpdateAndTutorial() {
+      // 同步後若未解鎖魔法森林，或帳號雲端紀錄上次在第一大廳，導回 index.html
+      if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
+        sessionStorage.setItem('current_lobby', 'index');
+        sessionStorage.setItem('returning_from_subpage', '1');
+        window.location.replace('index.html');
+        return;
+      }
+      if (localStorage.getItem('last_lobby') !== 'lobby1') {
+        localStorage.setItem('last_lobby', 'lobby1');
+      }
+
+      document.getElementById('version-display').innerText = GAME_VERSION;
+
+      const savedVersion = localStorage.getItem('game_version');
+      const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
+      if (isTutorialDone && savedVersion !== GAME_VERSION) {
+        if (AUTO_SHOW_NOTICE) {
+          showUpdateNotice();
+        }
+        localStorage.setItem('game_version', GAME_VERSION);
+      }
+    }
+
+    // ☁️ === 雲端帳號登入與同步介面控制 === ☁️
+    let isInitialAuthPrompt = false;
+    document.getElementById('version-display').innerText = GAME_VERSION;
+
+    function updateAccountButtonLabel() {
+      const btn = document.getElementById('account-btn');
+      if (!btn || !window.CloudSync) return;
+      const acc = window.CloudSync.getAccount();
+      btn.innerText = acc ? `☁️ ${acc}` : '👤 帳號登入';
+    }
+
+    function applySavedPosition() {
+      if (player.isMoving) return;
+      const sx = parseFloat(localStorage.getItem('lobby1PlayerX'));
+      const sy = parseFloat(localStorage.getItem('lobby1PlayerY'));
+      if (!isNaN(sx) && !isNaN(sy) && (Math.abs(sx - player.x) > 1 || Math.abs(sy - player.y) > 1)) {
+        player.x = player.targetX = sx;
+        player.y = player.targetY = sy;
+        cameraX = player.x - (canvas.width / scale) / 2;
+        cameraY = player.y - (canvas.height / scale) / 2;
+        clampCamera();
+      }
+    }
+
+    function refreshFromStorage() {
+      updateAccountButtonLabel();
+      playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      document.getElementById('coinDisplay').innerText = playerCoins;
+      const newCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+      if (newCharKey !== equippedCharKey) {
+        equippedCharKey = newCharKey;
+        playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+      }
+      applySavedPosition();
+      loadClearedImages();
+    }
+    window.addEventListener('cloudsync:updated', refreshFromStorage);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && window.CloudSync && window.CloudSync.getAccount()) {
+        window.CloudSync.syncNow(false);
+      }
+    });
+
+    async function initCloudAndStartLobby() {
+      document.getElementById('version-display').innerText = GAME_VERSION;
+      updateAccountButtonLabel();
+
+      const isReturningFromSubpage = sessionStorage.getItem('returning_from_subpage') === '1';
+      sessionStorage.removeItem('returning_from_subpage');
+
+      if (!window.CloudSync) {
+        checkUpdateAndTutorial();
+        return;
+      }
+
+      const acc = window.CloudSync.getAccount();
+      if (acc) {
+        if (isReturningFromSubpage) {
+          // 從關卡／衣櫥／貼紙簿／第一大廳跳轉過來：直接背景同步，不再重複詢問
+          await Promise.race([
+            window.CloudSync.syncNow(false),
+            new Promise(r => setTimeout(r, 1200))
+          ]);
+          refreshFromStorage();
+          checkUpdateAndTutorial();
+        } else {
+          // 剛開啟遊戲：彈出「是否為 <帳號>？」確認視窗
+          openAccountConfirmModal(acc);
+        }
+      } else if (!window.CloudSync.isSkipped()) {
+        openAccountModal(true);
+      } else {
+        checkUpdateAndTutorial();
+      }
+    }
+
+    function openAccountConfirmModal(acc) {
+      isInitialAuthPrompt = true;
+      isModalOpen = true;
+      player.isMoving = false;
+
+      const modal = document.getElementById('account-modal');
+      document.getElementById('auth-form-view').style.display = 'none';
+      document.getElementById('auth-logged-view').style.display = 'none';
+      document.getElementById('auth-confirm-view').style.display = 'flex';
+      document.getElementById('confirm-account-prompt').innerText = `是否為 ${acc} ？`;
+      document.getElementById('confirm-status-msg').innerText = '';
+      document.getElementById('btn-confirm-yes').disabled = false;
+      document.getElementById('btn-confirm-no').disabled = false;
+
+      modal.classList.add('active');
+    }
+
+    async function handleConfirmAccountYes() {
+      const btnYes = document.getElementById('btn-confirm-yes');
+      const btnNo = document.getElementById('btn-confirm-no');
+      const statusEl = document.getElementById('confirm-status-msg');
+      btnYes.disabled = true;
+      btnNo.disabled = true;
+      statusEl.innerText = navigator.onLine ? '正在同步雲端進度...' : '目前為離線模式，準備進入遊戲...';
+
+      if (window.CloudSync) {
+        await Promise.race([
+          window.CloudSync.syncNow(false),
+          new Promise(r => setTimeout(r, 1200))
+        ]);
+        refreshFromStorage();
+      }
+      closeAccountModal();
+    }
+
+    function handleConfirmAccountNo() {
+      if (window.CloudSync) {
+        window.CloudSync.logout();
+      }
+      updateAccountButtonLabel();
+      document.getElementById('auth-account-input').value = '';
+      document.getElementById('auth-password-input').value = '';
+      openAccountModal(true);
+    }
+
+    function openAccountModal(isStartupPrompt) {
+      isInitialAuthPrompt = !!isStartupPrompt;
+      isModalOpen = true;
+      player.isMoving = false;
+      const formView = document.getElementById('auth-form-view');
+      const loggedView = document.getElementById('auth-logged-view');
+      const confirmView = document.getElementById('auth-confirm-view');
+      const acc = window.CloudSync ? window.CloudSync.getAccount() : '';
+      if (confirmView) confirmView.style.display = 'none';
+
+      if (acc) {
+        formView.style.display = 'none';
+        loggedView.style.display = 'flex';
+        document.getElementById('logged-account-display').innerText = `目前帳號：${acc}`;
+        document.getElementById('logged-status-msg').style.color = '#fbbf24';
+        document.getElementById('logged-status-msg').innerText = navigator.onLine
+          ? '進度會在過關與獲得獎勵時自動同步'
+          : '目前為離線模式，連上網路後會自動同步';
+      } else {
+        loggedView.style.display = 'none';
+        formView.style.display = 'flex';
+        document.getElementById('auth-status-msg').innerText = '';
+      }
+      document.getElementById('account-modal').classList.add('active');
+    }
+
+    function closeAccountModal() {
+      document.getElementById('account-modal').classList.remove('active');
+      isModalOpen = false;
+      if (isInitialAuthPrompt) {
+        isInitialAuthPrompt = false;
+        checkUpdateAndTutorial();
+      } else if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
+        sessionStorage.setItem('current_lobby', 'index');
+        sessionStorage.setItem('returning_from_subpage', '1');
+        cleanupLobbyAndGo('index.html');
+      }
+    }
+
+    async function handleAuthSubmit(mode) {
+      if (!window.CloudSync) return;
+      const accInput = document.getElementById('auth-account-input');
+      const pwdInput = document.getElementById('auth-password-input');
+      const statusEl = document.getElementById('auth-status-msg');
+      const btnLogin = document.getElementById('btn-auth-login');
+      const btnReg = document.getElementById('btn-auth-register');
+      const acc = accInput.value.trim();
+      const pwd = pwdInput.value.trim();
+
+      if (!acc || !pwd) {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = '請輸入帳號與密碼！';
+        return;
+      }
+
+      btnLogin.disabled = true;
+      btnReg.disabled = true;
+      statusEl.style.color = '#38bdf8';
+      statusEl.innerText = mode === 'register' ? '正在註冊並上傳進度...' : '正在登入並同步進度...';
+
+      const res = mode === 'register'
+        ? await window.CloudSync.register(acc, pwd)
+        : await window.CloudSync.login(acc, pwd);
+
+      btnLogin.disabled = false;
+      btnReg.disabled = false;
+
+      if (res.ok) {
+        statusEl.style.color = '#4ade80';
+        statusEl.innerText = res.msg;
+        refreshFromStorage();
+        setTimeout(closeAccountModal, 600);
+      } else {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = res.msg;
+      }
+    }
+
+    function handleSkipAuth() {
+      if (window.CloudSync) window.CloudSync.setSkipped();
+      closeAccountModal();
+    }
+
+    async function handleManualSync() {
+      if (!window.CloudSync) return;
+      const statusEl = document.getElementById('logged-status-msg');
+      const btn = document.getElementById('btn-manual-sync');
+      btn.disabled = true;
+      statusEl.style.color = '#38bdf8';
+      statusEl.innerText = '正在與雲端同步中...';
+
+      const res = await window.CloudSync.syncNow(false);
+      btn.disabled = false;
+
+      if (res.ok) {
+        refreshFromStorage();
+        statusEl.style.color = '#4ade80';
+        statusEl.innerText = '✅ 同步完成！目前已是最新進度。';
+      } else {
+        statusEl.style.color = '#f87171';
+        statusEl.innerText = navigator.onLine ? '同步失敗，請確認網路連線。' : '目前為離線狀態，無法連線雲端。';
+      }
+    }
+
+    // 切換帳號：先清空本機進度，再直接開啟登入/註冊視窗（與 index.html 行為一致）
+    function handleLogoutAccount() {
+      if (!window.CloudSync) return;
+      window.CloudSync.logout();
+      updateAccountButtonLabel();
+      document.getElementById('auth-account-input').value = '';
+      document.getElementById('auth-password-input').value = '';
+      openAccountModal(false);
+    }
+
+    // ---------- 遊戲迴圈 ----------
+    let lastTime = performance.now();
+    function gameLoop(currentTime) {
+      if (isExitingLobby) return;
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      update(Math.min(dt, 0.1));
+      draw(currentTime);
+      lobbyAnimId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (isModalOpen) return;
+
+      if (player.isMoving) {
+        let dx = player.targetX - player.x;
+        let dy = player.targetY - player.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let moveDist = player.speed * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.walkCycle += 20 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          savePlayerPosition();
+          checkZones();
+        }
+      }
+    }
+
+    function isInReturnPortal() {
+      return pointInPolygon(player.x, player.y, RETURN_PORTAL.pts);
+    }
+
+    function checkZones() {
+      if (isModalOpen || isExitingLobby) return;
+
+      if (isInReturnPortal()) {
+        savePlayerPosition();
+        enterReturnPortal();
+        return;
+      }
+
+      for (let z of zones) {
+        let isPortal = (z.type === '關卡' && isLevelCleared(z));
+        let isHit = false;
+
+        if (isPortal) {
+          isHit = (player.x > z.x && player.x < z.x + z.w &&
+                   player.y > z.y && player.y < z.y + z.h);
+        } else {
+          let sx = (z.starX !== undefined) ? z.starX : (z.x + z.w / 2);
+          let sy = (z.starY !== undefined) ? z.starY : (z.y + z.h / 2);
+          let half = 75;
+          isHit = (player.x > sx - half && player.x < sx + half &&
+                   player.y > sy - half && player.y < sy + half);
+        }
+
+        if (isHit) {
+          if (z.type === '關卡') {
+            cleanupLobbyAndGo(z.targetUrl || (z.id + '.html'));
+            return;
+          } else if (z.type === '貼紙' || z.type === '金幣') {
+            if (isZoneClaimed(z)) continue;
+            savePlayerPosition();
+            openRewardModal(z);
+            return;
+          }
+        }
+      }
+    }
+
+    // ---------- 繪製 ----------
+    function ensurePortalGrad() {
+      if (window.portalGradCache) return;
+      let off = document.createElement('canvas');
+      off.width = 400;
+      off.height = 400;
+      let oCtx = off.getContext('2d');
+      if (oCtx && oCtx.createConicGradient) {
+        let grad = oCtx.createConicGradient(0, 200, 200);
+        grad.addColorStop(0, "#ff0000");
+        grad.addColorStop(0.15, "#ff7f00");
+        grad.addColorStop(0.33, "#ffff00");
+        grad.addColorStop(0.5, "#00ff00");
+        grad.addColorStop(0.66, "#0000ff");
+        grad.addColorStop(0.83, "#ff00ff");
+        grad.addColorStop(1, "#ff0000");
+        oCtx.fillStyle = grad;
+        oCtx.fillRect(0, 0, 400, 400);
+        window.portalGradCache = off;
+      } else {
+        window.portalGradCache = 'fallback';
+      }
+    }
+
+    function drawEllipsePortal(p, time) {
+      ctx.save();
+      const pulse = 1 + Math.sin(time / 500) * 0.04;
+      ctx.shadowColor = 'rgba(120, 255, 200, 0.9)';
+      ctx.shadowBlur = 40;
+      ctx.beginPath();
+      ctx.ellipse(p.cx, p.cy, p.rx * pulse, p.ry * pulse, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(10, 40, 30, 0.55)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      ctx.ellipse(p.cx, p.cy, (p.rx + 12) * pulse, (p.ry + 12) * pulse, 0, 0, Math.PI * 2);
+      ctx.ellipse(p.cx, p.cy, p.rx * pulse, p.ry * pulse, 0, 0, Math.PI * 2, true);
+      ctx.clip('evenodd');
+      ctx.translate(p.cx, p.cy);
+      if (window.portalGradCache && window.portalGradCache !== 'fallback') {
+        ctx.rotate((time / 800) * Math.PI * 2);
+        ctx.drawImage(window.portalGradCache, -200, -200);
+      } else {
+        ctx.fillStyle = '#00ffcc';
+        ctx.fillRect(-200, -200, 400, 400);
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(p.cx, p.cy);
+      for (let i = 0; i < 6; i++) {
+        const a = time / 700 + i * Math.PI / 3;
+        const k = 0.55 + 0.25 * Math.sin(time / 400 + i);
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * p.rx * k, Math.sin(a) * p.ry * k, 7, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(200, 255, 230, 0.85)';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function draw(time) {
+      if (isExitingLobby) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.scale(scale, scale);
+      ctx.translate(-cameraX, -cameraY);
+
+      if (bgImg.complete && bgImg.naturalWidth > 0) {
+        ctx.drawImage(bgImg, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+      } else {
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+      }
+
+      let viewW = canvas.width / scale;
+      let viewH = canvas.height / scale;
+
+      ensurePortalGrad();
+      drawGlowPortal(ctx, RETURN_PORTAL, time);
+
+      for (let z of zones) {
+        if ((z.type === '貼紙' || z.type === '金幣') && isZoneClaimed(z)) continue;
+
+        if (z.type === '關卡' && isLevelCleared(z)) {
+          if (z.x + z.w < cameraX || z.x > cameraX + viewW ||
+              z.y + z.h < cameraY || z.y > cameraY + viewH) continue;
+
+          ctx.save();
+          let cx = z.x + z.w / 2;
+          let cy = z.y + z.h / 2;
+          ctx.beginPath();
+          ctx.rect(z.x - 12, z.y - 12, z.w + 24, z.h + 24);
+          ctx.rect(z.x, z.y, z.w, z.h);
+          ctx.clip("evenodd");
+          ctx.translate(cx, cy);
+          if (window.portalGradCache !== 'fallback') {
+            ctx.rotate((time / 800) * Math.PI * 2);
+            ctx.drawImage(window.portalGradCache, -200, -200);
+          } else {
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(-200, -200, 400, 400);
+          }
+          ctx.restore();
+
+          if (z.img && z.img.complete && z.img.naturalWidth > 0) {
+            ctx.drawImage(z.img, z.x, z.y, z.w, z.h);
+          } else {
+            ctx.fillStyle = z.color || '#2196f3';
+            ctx.fillRect(z.x, z.y, z.w, z.h);
+          }
+        } else {
+          let sx = (z.starX !== undefined) ? z.starX : (z.x + z.w / 2);
+          let sy = (z.starY !== undefined) ? z.starY : (z.y + z.h / 2);
+          if (sx < cameraX - 150 || sx > cameraX + viewW + 150 ||
+              sy < cameraY - 150 || sy > cameraY + viewH + 150) continue;
+
+          ctx.save();
+          let floatOffsetY = Math.sin(time / 300 + sx) * 16;
+          let pulseScale = 1 + Math.sin(time / 400 + sy) * 0.08;
+          ctx.translate(sx, sy + floatOffsetY);
+          ctx.scale(pulseScale, pulseScale);
+          ctx.drawImage(starCache, -starSize / 2, -starSize / 2);
+          ctx.restore();
+        }
+      }
+
+      ctx.save();
+      let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 5 : 0;
+      let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;
+      ctx.translate(player.x, player.y + offsetY);
+      ctx.rotate(rotationAngle);
+      if (player.isFacingLeft) ctx.scale(-1, 1);
+      if (playerImg.complete && playerImg.naturalWidth > 0) {
+        ctx.drawImage(playerImg, -player.size / 2, -player.size / 2, player.size, player.size);
+      } else {
+        ctx.fillStyle = 'pink';
+        ctx.fillRect(-player.size / 2, -player.size / 2, player.size, player.size);
+      }
+      ctx.restore();
+
+      ctx.restore();
+      drawOffscreenPointer();
+    }
+
+    function drawOffscreenPointer() {
+      let pxScreen = (player.x - cameraX) * scale;
+      let pyScreen = (player.y - cameraY) * scale;
+      let margin = 40;
+      let isOffscreen = (
+        pxScreen < margin || pxScreen > canvas.width - margin ||
+        pyScreen < margin || pyScreen > canvas.height - margin
+      );
+
+      if (isOffscreen) {
+        let cx = canvas.width / 2;
+        let cy = canvas.height / 2;
+        let angle = Math.atan2(pyScreen - cy, pxScreen - cx);
+        let arrowX = Math.max(margin, Math.min(canvas.width - margin, pxScreen));
+        let arrowY = Math.max(margin, Math.min(canvas.height - margin, pyScreen));
+
+        ctx.save();
+        ctx.translate(arrowX, arrowY);
+        ctx.rotate(angle);
+        ctx.fillStyle = '#ffeb3b';
+        ctx.strokeStyle = '#ff5722';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(25, 0);
+        ctx.lineTo(-20, 20);
+        ctx.lineTo(-10, 0);
+        ctx.lineTo(-20, -20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ---------- 操作：點擊移動 / 拖曳地圖 / 雙指縮放 / 滾輪縮放 ----------
+    const activePointers = new Map();
+    let isPointerDown = false;
+    let isDragActive = false;
+    let hasMoved = false;
+    let dragStart = { x: 0, y: 0 };
+    let camStart = { x: 0, y: 0 };
+    let initialPinchDist = null;
+    let initialScale = 1;
+    let pinchCenter = { x: 0, y: 0 };
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target !== canvas || isModalOpen) return;
+
+      canvas.setPointerCapture(e.pointerId);
+      activePointers.set(e.pointerId, e);
+
+      if (activePointers.size === 1) {
+        isPointerDown = true;
+        isDragActive = false;
+        hasMoved = false;
+        dragStart = { x: e.clientX, y: e.clientY };
+        camStart = { x: cameraX, y: cameraY };
+      } else if (activePointers.size === 2) {
+        isPointerDown = false;
+        isDragActive = false;
+        hasMoved = true;
+        let pts = Array.from(activePointers.values());
+        initialPinchDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+        initialScale = scale;
+        const rect = canvas.getBoundingClientRect();
+        pinchCenter = {
+          x: (pts[0].clientX + pts[1].clientX) / 2 - rect.left,
+          y: (pts[0].clientY + pts[1].clientY) / 2 - rect.top
+        };
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activePointers.has(e.pointerId) || isModalOpen) return;
+      activePointers.set(e.pointerId, e);
+
+      if (activePointers.size === 1 && isPointerDown) {
+        let dx = e.clientX - dragStart.x;
+        let dy = e.clientY - dragStart.y;
+
+        if (!isDragActive) {
+          if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            isDragActive = true;
+            hasMoved = true;
+            dragStart = { x: e.clientX, y: e.clientY };
+            camStart = { x: cameraX, y: cameraY };
+          }
+        }
+
+        if (isDragActive) {
+          cameraX = camStart.x - (e.clientX - dragStart.x) / scale;
+          cameraY = camStart.y - (e.clientY - dragStart.y) / scale;
+          clampCamera();
+        }
+      } else if (activePointers.size === 2) {
+        let pts = Array.from(activePointers.values());
+        let currentDist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+        let newScale = initialScale * (currentDist / initialPinchDist);
+        newScale = Math.max(minScale, Math.min(newScale, 2.5));
+
+        const rect = canvas.getBoundingClientRect();
+        let currentPinchCenter = {
+          x: (pts[0].clientX + pts[1].clientX) / 2 - rect.left,
+          y: (pts[0].clientY + pts[1].clientY) / 2 - rect.top
+        };
+
+        let oldWorldX = pinchCenter.x / scale + cameraX;
+        let oldWorldY = pinchCenter.y / scale + cameraY;
+        scale = newScale;
+        cameraX = oldWorldX - currentPinchCenter.x / scale;
+        cameraY = oldWorldY - currentPinchCenter.y / scale;
+        pinchCenter = currentPinchCenter;
+        clampCamera();
+      }
+    });
+
+    const onPointerUp = (e) => {
+      activePointers.delete(e.pointerId);
+      if (isModalOpen) return;
+
+      if (activePointers.size === 0) {
+        if (isPointerDown && !hasMoved) {
+          const rect = canvas.getBoundingClientRect();
+          let clickWorldX = ((e.clientX - rect.left) / scale) + cameraX;
+          let clickWorldY = ((e.clientY - rect.top) / scale) + cameraY;
+          clickWorldX = Math.max(0, Math.min(clickWorldX, MAP_WIDTH));
+          clickWorldY = Math.max(0, Math.min(clickWorldY, MAP_HEIGHT));
+
+          player.isFacingLeft = clickWorldX < player.x;
+          player.targetX = clickWorldX;
+          player.targetY = clickWorldY;
+          player.isMoving = true;
+        }
+        isPointerDown = false;
+        isDragActive = false;
+      } else if (activePointers.size === 1) {
+        let ptr = Array.from(activePointers.values())[0];
+        isPointerDown = true;
+        isDragActive = true;
+        hasMoved = true;
+        dragStart = { x: ptr.clientX, y: ptr.clientY };
+        camStart = { x: cameraX, y: cameraY };
+      }
+    };
+
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('pointerout', onPointerUp);
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (isModalOpen) return;
+
+      let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      let newScale = Math.max(minScale, Math.min(scale * zoomFactor, 2.5));
+
+      const rect = canvas.getBoundingClientRect();
+      let mouseX = e.clientX - rect.left;
+      let mouseY = e.clientY - rect.top;
+      let oldWorldX = mouseX / scale + cameraX;
+      let oldWorldY = mouseY / scale + cameraY;
+
+      scale = newScale;
+      cameraX = oldWorldX - mouseX / scale;
+      cameraY = oldWorldY - mouseY / scale;
+      clampCamera();
+    }, { passive: false });
+
+    // ---------- 啟動 ----------
+    resize();
+    scale = minScale;
+    cameraX = player.x - (canvas.width / scale) / 2;
+    cameraY = player.y - (canvas.height / scale) / 2;
+    clampCamera();
+
+    if (window.Bopomofo) window.Bopomofo.render();
+    lobbyAnimId = requestAnimationFrame(gameLoop);
+  </script>
+
+  <script src="rpg-dialog-ui.js"></script>
+</body>
+</html>

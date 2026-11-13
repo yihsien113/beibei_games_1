@@ -16,11 +16,12 @@
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v3.0.3';
+const CACHE_NAME = 'dollhouse-game-v3.1.3';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
   'index.html',
+  'lobby1.html',
   'wardrobe.html',
   'sticker.html',
   'map1.html',
@@ -38,6 +39,7 @@ const GAME_ASSETS = [
   'map13.html',
   'map14.html',
   'map15.html',
+  'map16.html',
   'bopomofo.js',
   'password.js', // 帳號密碼模組
   'OrbitControls.js',
@@ -48,6 +50,7 @@ const GAME_ASSETS = [
   'player.js',
   'assets/icon.webp',
   'assets/lobby/lobby.webp',
+  'assets/lobby/lobby1.webp',
   'assets/system/wardrobe.webp',
   'assets/system/sticker.webp',
   'assets/map/map1.webp',
@@ -67,6 +70,7 @@ const GAME_ASSETS = [
   'assets/map/map15.webp',
   'assets/map/map15-1.webp',
   'assets/map/map15-2.webp',
+  'assets/map/map16.webp',
   'assets/player/han1-1.webp',
   'assets/player/han1-2.webp',
   'assets/player/han1-3.webp',
@@ -109,6 +113,7 @@ const GAME_ASSETS = [
   'assets/sticker/map13.webp',
   'assets/sticker/map14.webp',
   'assets/sticker/map15.webp',
+  'assets/sticker/map16.webp',
   'assets/sticker/lobby1.webp',
   'assets/sticker/lobby2.webp',
   'assets/sticker/lobby3.webp',

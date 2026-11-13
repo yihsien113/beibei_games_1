@@ -19,6 +19,26 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="冒險小遊戲">
   
+  <script>
+    // 從關卡／衣櫥／貼紙簿返回，或上次是在第二大廳(魔法森林)離開且已解鎖時，直接導向 lobby1.html
+    (function () {
+      var isFromSubpageToLobby1 = sessionStorage.getItem('current_lobby') === 'lobby1' &&
+          sessionStorage.getItem('returning_from_subpage') === '1';
+      var isLastLobby1 = localStorage.getItem('last_lobby') === 'lobby1';
+      var forestOpen = true;
+      for (var i = 1; i <= 15; i++) {
+        if (localStorage.getItem('map' + i + '_cleared') !== 'true') {
+          forestOpen = false;
+          break;
+        }
+      }
+      if (forestOpen && (isFromSubpageToLobby1 || isLastLobby1)) {
+        window.location.replace('lobby1.html');
+      } else {
+        sessionStorage.setItem('current_lobby', 'index');
+      }
+    })();
+  </script>
   <script src="bopomofo.js"></script>
   <!-- 帳號密碼模組 -->
   <script src="password.js"></script>
@@ -571,8 +591,10 @@
     <div style="display: flex; align-items: center; gap: 10px;">
       <div id="hud"> ⭐ <span id="coinDisplay">0</span></div>
   
-      <div id="version-display" onclick="showUpdateNotice()"></div>
-      <div id="account-btn" onclick="openAccountModal(false)">👤 帳號登入</div>
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+        <div id="version-display" onclick="showUpdateNotice()"></div>
+        <div id="account-btn" onclick="openAccountModal(false)">👤 帳號登入</div>
+      </div>
     </div>
     
     <div id="quick-menu">
@@ -887,7 +909,8 @@
     // ==========================================
     
     // 👇 1. 每次更新時請修改這個版本號碼
-    const GAME_VERSION = "v3.0.3"; 
+    // 版本號自動取自 assets-manifest.js 的 CACHE_NAME (例如 dollhouse-game-v3.1.2 → v3.1.2)
+    const GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?"; 
     
     // 👇 2. 【這是公告開關】
     const AUTO_SHOW_NOTICE = true; 
@@ -923,6 +946,16 @@
     }
 
     function checkUpdateAndTutorial() {
+      // 上次是在魔法森林(第二大廳)離開的：開啟遊戲 / 換裝置登入後回到那裡
+      if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen()) {
+        sessionStorage.setItem('returning_from_subpage', '1');
+        window.location.replace('lobby1.html');
+        return;
+      }
+      if (localStorage.getItem('last_lobby') !== 'index') {
+        localStorage.setItem('last_lobby', 'index');
+      }
+
       document.getElementById('version-display').innerText = GAME_VERSION;
       
       const savedVersion = localStorage.getItem('game_version');
@@ -964,6 +997,18 @@
       }
 
       if (typeof zones !== 'undefined') {
+        // 雲端同步後若位置不同(例如換裝置登入)，把人偶移到雲端記錄的位置
+        if (!player.isMoving) {
+          const sx = parseFloat(localStorage.getItem('lobbyPlayerX'));
+          const sy = parseFloat(localStorage.getItem('lobbyPlayerY'));
+          if (!isNaN(sx) && !isNaN(sy) && (Math.abs(sx - player.x) > 1 || Math.abs(sy - player.y) > 1)) {
+            player.x = player.targetX = sx;
+            player.y = player.targetY = sy;
+            cameraX = player.x - (canvas.width / scale) / 2;
+            cameraY = player.y - (canvas.height / scale) / 2;
+            clampCamera();
+          }
+        }
         for (let z of zones) {
           if (z.imgSrc && isLevelCleared(z) && !z.img) {
             z.img = new Image();
@@ -1096,6 +1141,9 @@
       if (isInitialAuthPrompt) {
         isInitialAuthPrompt = false;
         checkUpdateAndTutorial();
+      } else if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen()) {
+        sessionStorage.setItem('returning_from_subpage', '1');
+        cleanupLobbyAndGo('lobby1.html');
       }
     }
 
@@ -1328,7 +1376,10 @@
       if (viewH > MAP_HEIGHT) {
         cameraY = -(viewH - MAP_HEIGHT) / 2;
       } else {
-        cameraY = Math.max(0, Math.min(cameraY, MAP_HEIGHT - viewH));
+        // 允許地圖往下拉,讓最上方不被頂部列遮住
+        const barEl = document.getElementById('top-bar');
+        const topInset = barEl ? barEl.offsetHeight / scale : 0;
+        cameraY = Math.max(-topInset, Math.min(cameraY, MAP_HEIGHT - viewH));
       }
     }
 
@@ -1510,6 +1561,135 @@
       }
     }
 
+    // 🌲 魔法森林傳送門：map1 ~ map15 全部通關後，在 (654,1610) 出現橢圓傳送門，通往第二大廳 lobby1.html
+    // 傳送門輪廓：lobby.webp (1200x1600) 的像素座標，× 2.5 轉成世界座標 (3000x4000)
+    const FOREST_PORTAL = makeEllipsePortal([
+      { x: 264, y: 677 }, { x: 255, y: 685 }, { x: 240, y: 661 }, { x: 240, y: 648 },
+      { x: 251, y: 632 }, { x: 265, y: 628 }, { x: 276, y: 634 }, { x: 285, y: 646 },
+      { x: 287, y: 659 }, { x: 285, y: 673 }, { x: 278, y: 680 }
+    ], 2.5, 'lobby1.html');
+
+    // 依多邊形點建立傳送門 (平滑封閉曲線 + 範圍 + 中心)
+    function makeEllipsePortal(pixelPts, k, targetUrl) {
+      const pts = pixelPts.map(p => ({ x: p.x * k, y: p.y * k }));
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      }
+      return { pts, minX, minY, maxX, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
+               rx: (maxX - minX) / 2, ry: (maxY - minY) / 2, targetUrl };
+    }
+
+    function portalPath(c, pts) {
+      const n = pts.length;
+      c.beginPath();
+      const m0 = { x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2 };
+      c.moveTo(m0.x, m0.y);
+      for (let i = 0; i < n; i++) {
+        const p = pts[i], q = pts[(i + 1) % n];
+        c.quadraticCurveTo(p.x, p.y, (p.x + q.x) / 2, (p.y + q.y) / 2);
+      }
+      c.closePath();
+    }
+
+    function pointInPolygon(x, y, pts) {
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+      }
+      return inside;
+    }
+
+    // 楓之谷風格傳送門：整個發光、看不見裡面
+    function drawGlowPortal(c, p, time) {
+      const t = time / 1000;
+      const pulse = 0.85 + Math.sin(t * 3) * 0.15;
+      c.save();
+      // 外圍光暈
+      portalPath(c, p.pts);
+      c.shadowColor = 'rgba(140, 255, 220, ' + pulse + ')';
+      c.shadowBlur = 70;
+      c.fillStyle = '#d8fff4';
+      c.fill();
+      c.shadowBlur = 0;
+
+      // 不透明的發光核心 (中心近白、邊緣偏青綠)
+      portalPath(c, p.pts);
+      c.clip();
+      const g = c.createRadialGradient(p.cx, p.cy, 0, p.cx, p.cy, Math.max(p.rx, p.ry) * 1.1);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.5, '#c8fff0');
+      g.addColorStop(1, '#5fe8c0');
+      c.fillStyle = g;
+      c.fillRect(p.minX - 20, p.minY - 20, p.maxX - p.minX + 40, p.maxY - p.minY + 40);
+
+      // 旋轉的光紋
+      c.globalCompositeOperation = 'lighter';
+      c.translate(p.cx, p.cy);
+      c.lineCap = 'round';
+      for (let i = 0; i < 5; i++) {
+        const a0 = t * 1.6 + i * (Math.PI * 2 / 5);
+        c.beginPath();
+        c.ellipse(0, 0, p.rx * (0.35 + 0.12 * i), p.ry * (0.35 + 0.12 * i), 0, a0, a0 + 1.2);
+        c.strokeStyle = 'rgba(255,255,255,' + (0.55 + 0.3 * Math.sin(t * 2 + i)) + ')';
+        c.lineWidth = 8;
+        c.stroke();
+      }
+      // 上下飄動的光點
+      for (let i = 0; i < 7; i++) {
+        const ph = (t * 0.5 + i / 7) % 1;
+        const px = Math.sin(i * 12.9 + t) * p.rx * 0.6;
+        const py = p.ry * (0.9 - ph * 1.8);
+        c.beginPath();
+        c.arc(px, py, 6 + 4 * (1 - ph), 0, Math.PI * 2);
+        c.fillStyle = 'rgba(255,255,255,' + (1 - ph) + ')';
+        c.fill();
+      }
+      c.restore();
+
+      // 發亮邊框
+      c.save();
+      portalPath(c, p.pts);
+      c.strokeStyle = 'rgba(255,255,255,0.95)';
+      c.lineWidth = 6;
+      c.shadowColor = '#7dffd8';
+      c.shadowBlur = 30;
+      c.stroke();
+      c.restore();
+    }
+
+    function isForestPortalOpen() {
+      for (let i = 1; i <= 15; i++) {
+        if (localStorage.getItem('map' + i + '_cleared') !== 'true') return false;
+      }
+      return true;
+    }
+
+    function isInForestPortal() {
+      return pointInPolygon(player.x, player.y, FOREST_PORTAL.pts);
+    }
+
+    function enterForestPortal() {
+      // 傳回大廳時，站在傳送門下方一點，避免立刻再次觸發；先更新 player 座標，避免 cleanupLobbyAndGo/pagehide 內的 savePlayerPosition() 覆寫成傳送門內座標
+      player.x = Math.round(FOREST_PORTAL.cx);
+      player.y = Math.round(FOREST_PORTAL.maxY + 80);
+      localStorage.setItem('lobbyPlayerX', player.x);
+      localStorage.setItem('lobbyPlayerY', player.y);
+      localStorage.setItem('last_lobby', 'lobby1');
+      sessionStorage.setItem('current_lobby', 'lobby1');
+      cleanupLobbyAndGo(FOREST_PORTAL.targetUrl);
+    }
+
+    function drawForestPortal(time) {
+      if (!isForestPortalOpen()) return;
+      const p = FOREST_PORTAL;
+      if (p.maxX < cameraX - 60 || p.minX > cameraX + canvas.width / scale + 60 ||
+          p.maxY < cameraY - 60 || p.minY > cameraY + canvas.height / scale + 60) return;
+      drawGlowPortal(ctx, p, time);
+    }
+
     function isZoneClaimed(z) {
       return localStorage.getItem('blindbox_' + z.id) === 'claimed';
     }
@@ -1637,6 +1817,12 @@
 
     function checkZones() {
       if (isModalOpen || isExitingLobby) return;
+
+      if (!isTutorialMode && isForestPortalOpen() && isInForestPortal()) {
+        savePlayerPosition();
+        enterForestPortal();
+        return;
+      }
 
       for (let z of zones) {
         let isPortal = (z.type === '關卡' && isLevelCleared(z));
@@ -1768,6 +1954,26 @@
           ctx.restore();
         }
       }
+
+      // 傳送門會用到 portalGradCache，確保已建立
+      if (!window.portalGradCache && isForestPortalOpen()) {
+        let off = document.createElement('canvas');
+        off.width = 400; off.height = 400;
+        let oCtx = off.getContext('2d');
+        if (oCtx && oCtx.createConicGradient) {
+          let grad = oCtx.createConicGradient(0, 200, 200);
+          grad.addColorStop(0, "#ff0000"); grad.addColorStop(0.15, "#ff7f00");
+          grad.addColorStop(0.33, "#ffff00"); grad.addColorStop(0.5, "#00ff00");
+          grad.addColorStop(0.66, "#0000ff"); grad.addColorStop(0.83, "#ff00ff");
+          grad.addColorStop(1, "#ff0000");
+          oCtx.fillStyle = grad;
+          oCtx.fillRect(0, 0, 400, 400);
+          window.portalGradCache = off;
+        } else {
+          window.portalGradCache = 'fallback';
+        }
+      }
+      drawForestPortal(time);
 
       ctx.save();
       let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 5 : 0;

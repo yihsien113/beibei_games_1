@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>粢涵尋寶去 - 關卡15 (躲炸彈挑戰)</title>
+  
+  <!-- 引入外部注音模組與人偶模組 -->
+  <script src="bopomofo.js"></script>
+  <script src="player.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none; 
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #4cd137;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4; 
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none; 
+      background-color: #2d3047; 
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101; 
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #star-container {
+      font-size: 28px;
+      margin-top: 15px;
+      width: 100%; 
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    
+    .math-box {
+      background: rgba(43, 39, 39, 0.85);
+      padding: 15px 25px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* 頂部波數面板 */
+    #timer-board {
+      position: absolute;
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 40, 0.88);
+      border: 4px solid #ff7043;
+      border-radius: 20px;
+      padding: 8px 26px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      pointer-events: none;
+    }
+
+    #timer-board h2 {
+      margin: 0;
+      font-size: 40px;
+      color: #FFF;
+      text-shadow: 0 0 10px #ff7043;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #timer-board .star-count {
+      color: #ffeb3b;
+      margin-left: 18px;
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+      }
+      #game-container {
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        border-radius: 0 !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 20px !important; margin-top: 5px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+      
+      /* 手機版：波數面板靠右，避免和左上角 EXIT 按鈕重疊 */
+      #timer-board {
+        top: 15px !important;
+        left: auto !important;
+        right: 10px !important;
+        transform: none !important;
+        padding: 6px 14px !important;
+        border-width: 3px !important;
+      }
+      #timer-board h2 { font-size: 24px !important; }
+      #timer-board .star-count { margin-left: 10px !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">關卡載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+
+    <div id="hud">⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 頂部波數面板 -->
+    <div id="timer-board">
+      <h2>
+        <span id="wave-display">💣</span>
+        <span class="star-count">⭐ <span id="star-display">0</span></span>
+      </h2>
+    </div>
+    
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="exitToLobby()">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby>
+          <ruby>炸<rt>ㄓㄚˋ</rt></ruby>
+          <ruby>彈<rt>ㄉㄢˋ</rt></ruby>
+          <ruby>挑<rt>ㄊㄧㄠ</rt></ruby>
+          <ruby>戰<rt>ㄓㄢˋ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>格<rt>ㄍㄜˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby><ruby>走<rt>ㄗㄡˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>去<rt>ㄑㄩˋ</rt></ruby><br>
+          <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>字<rt>ㄗˋ</rt></ruby><ruby>爆<rt>ㄅㄠˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby> 💣<br>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      
+      <h1 id="result-title" class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+      
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 15px; width: 100%; max-width: 320px;">
+        <button class="btn" style="width: 100%; font-size: 40px; padding: 16px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>試<rt>ㄕˋ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn" style="width: 100%; font-size: 48px; padding: 16px 10px; margin: 0; background-color: #2196F3;" onclick="exitToLobby()">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
+
+    const canvas = document.getElementById('gameCanvas');
+    // alpha: false 可讓瀏覽器省去畫布底層與網頁背景的透明混合計算，提升效能
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const waveDisplayEl = document.getElementById('wave-display');
+    const starDisplayEl = document.getElementById('star-display');
+
+    // =========================================
+    // 🎮 遊戲參數 (想調整難度改這裡)
+    // =========================================
+    const CANVAS_W = 900;
+    const CANVAS_H = 1200;
+
+    // 8x8 棋盤位置 (內部解析度 900x1200)
+    // 👉 之後做底圖時可參考：棋盤左上角 (34, 330)，每格 104px，整個棋盤 832x832
+    const GRID = 8;
+    const CELL = 104;
+    const BOARD_SIZE = GRID * CELL;     // 832
+    const BOARD_X = (CANVAS_W - BOARD_SIZE) / 2; // 34
+    const BOARD_Y = 330;
+
+    const TOTAL_WAVES = 6;        // 總共幾波 (第 N 波有 N 顆炸彈)
+    const WARNING_TIME = 2.0;     // 炸彈閃爍幾秒後爆炸
+    const EXPLODE_TIME = 0.6;     // 爆炸火焰動畫長度 (只是動畫，不會判定傷害)
+    const GAP_TIME = 0.6;         // 爆炸結束後到下一波的間隔
+    const READY_TIME = 1.2;       // 按下開始後的準備時間
+    const STARS_PER_WAVE = 2;     // 每躲過一波得到幾顆星星
+    const MOVE_SPEED = 900;       // 人偶移動速度 (px/秒)
+    const SPRITE_SCALE = 0.85;    // 人偶在棋盤上的縮放比例
+    const SHOW_DANGER_HINT = true; // 閃爍時是否用淡紅色提示會爆炸的十字範圍 (想更難可改 false)
+
+    // 遊戲狀態
+    let gamePhase = 'start';      // start / playing / dead / winning / result / exiting
+    let waveState = 'ready';      // ready / warning / gap / cleared
+    let waveTimer = 0;
+    let wave = 0;
+    let stars = 0;
+    let bombs = [];               // 目前閃爍中的炸彈 { row, col }
+    let blast = null;             // 目前的爆炸動畫 { t, rows:Set, cols:Set, bombs:[] }
+    let popups = [];              // 浮動文字
+    let confetti = [];            // 過關慶祝彩帶
+    let shakeTime = 0;
+    let whiteFade = 0;
+    let lastTime = 0; 
+    let animationFrameId = null;  // 追蹤動畫迴圈 ID，方便釋放記憶體
+    let endTimeoutId = null;      // 追蹤計時器 ID
+
+    // 人偶 (x, y 代表「腳底」的位置，傷害判定就看腳底踩在哪一格)
+    const player = {
+      x: 0, y: 0,
+      targetX: 0, targetY: 0,
+      size: charConfig.size * SPRITE_SCALE,
+      isMoving: false,
+      isFacingLeft: false,
+      walkCycle: 0,
+      deadSpin: 0,
+      deadTime: 0
+    };
+
+    // 🌟 效能優化：預渲染快取畫布
+    let boardCacheCanvas = null;  // 底圖 + 棋盤
+    let bombCacheCanvas = null;   // 💣
+    let boomCacheCanvas = null;   // 💥
+
+    function makeEmojiCache(emoji, fontSize, canvasSize) {
+      const c = document.createElement('canvas');
+      c.width = canvasSize;
+      c.height = canvasSize;
+      const cCtx = c.getContext('2d');
+      cCtx.font = `${fontSize}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
+      cCtx.textAlign = 'center';
+      cCtx.textBaseline = 'middle';
+      // 【修復 iOS 黑影問題】
+      cCtx.fillStyle = '#000000';
+      cCtx.shadowColor = 'transparent';
+      cCtx.shadowBlur = 0;
+      cCtx.fillText(emoji, canvasSize / 2, canvasSize / 2);
+      return c;
+    }
+
+    function initRenderCaches() {
+      bombCacheCanvas = makeEmojiCache('💣', 80, 120);
+      boomCacheCanvas = makeEmojiCache('💥', 150, 220);
+
+      // 底圖 + 棋盤只畫一次，之後每幀直接貼上
+      boardCacheCanvas = document.createElement('canvas');
+      boardCacheCanvas.width = CANVAS_W;
+      boardCacheCanvas.height = CANVAS_H;
+      const bCtx = boardCacheCanvas.getContext('2d');
+
+      const hasBg = bgImg.complete && bgImg.naturalWidth > 0;
+      if (hasBg) {
+        // 📌 底圖預留位置：assets/map/map16.webp (建議 900x1200，直式 3:4)
+        bCtx.drawImage(bgImg, 0, 0, CANVAS_W, CANVAS_H);
+      } else {
+        // 還沒有底圖時的純色背景
+        let grad = bCtx.createLinearGradient(0, 0, 0, CANVAS_H);
+        grad.addColorStop(0, '#3a3f6b');
+        grad.addColorStop(1, '#22253f');
+        bCtx.fillStyle = grad;
+        bCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+
+      // 棋盤格 (半透明，讓底圖透出來)
+      for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+          const isLight = (r + c) % 2 === 0;
+          if (hasBg) {
+            bCtx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
+          } else {
+            bCtx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.06)';
+          }
+          bCtx.fillRect(BOARD_X + c * CELL, BOARD_Y + r * CELL, CELL, CELL);
+        }
+      }
+
+      // 格線
+      bCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      bCtx.lineWidth = 2;
+      bCtx.beginPath();
+      for (let i = 1; i < GRID; i++) {
+        bCtx.moveTo(BOARD_X + i * CELL, BOARD_Y);
+        bCtx.lineTo(BOARD_X + i * CELL, BOARD_Y + BOARD_SIZE);
+        bCtx.moveTo(BOARD_X, BOARD_Y + i * CELL);
+        bCtx.lineTo(BOARD_X + BOARD_SIZE, BOARD_Y + i * CELL);
+      }
+      bCtx.stroke();
+
+      // 外框
+      bCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      bCtx.lineWidth = 6;
+      bCtx.strokeRect(BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE);
+    }
+
+    let totalAssets = 2; 
+    let loadedAssets = 0;
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `資源載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        // 固定內部畫布解析度為 900x1200
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+        
+        // 初始化離屏快取
+        initRenderCaches();
+        resetPlayer();
+        
+        draw(); 
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // 📌 底圖預留位置：之後把圖片放到 assets/map/map16.webp 即可 (沒有圖時會自動用純色背景)
+    const bgImg = new Image();
+    bgImg.src = 'assets/map/map16.webp'; 
+    bgImg.onload = () => { checkLoadProgress(); };
+    bgImg.onerror = () => { checkLoadProgress(); }; 
+
+    const charImg = new Image();
+    charImg.src = `assets/player/${charConfig.prefix}-1.webp`; 
+    charImg.onload = () => checkLoadProgress();
+    charImg.onerror = () => checkLoadProgress(); 
+
+    // 🌟 安全清理記憶體並返回大廳 (防止手機/平板顯存累積造成閃退)
+    function cleanupMemory() {
+      gamePhase = 'exiting';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      // 清空陣列
+      bombs.length = 0;
+      popups.length = 0;
+      confetti.length = 0;
+      blast = null;
+
+      // 釋放圖片資源紋理
+      if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (charImg) { charImg.onload = null; charImg.onerror = null; charImg.src = ''; }
+
+      // 釋放離屏快取畫布
+      [boardCacheCanvas, bombCacheCanvas, boomCacheCanvas].forEach(c => {
+        if (c) { c.width = 1; c.height = 1; }
+      });
+      boardCacheCanvas = null;
+      bombCacheCanvas = null;
+      boomCacheCanvas = null;
+
+      // 釋放 Canvas GPU 畫布記憶體 (將尺寸縮為 1x1 強制瀏覽器立刻回收 VRAM)
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      cleanupMemory();
+      window.location.href = 'index.html';
+    }
+
+    // 若使用者按瀏覽器自帶的上一頁離開，同樣觸發記憶體釋放
+    window.addEventListener('pagehide', cleanupMemory);
+
+    // ===== 格子座標工具 =====
+    function cellCenterX(col) { return BOARD_X + col * CELL + CELL / 2; }
+    function cellCenterY(row) { return BOARD_Y + row * CELL + CELL / 2; }
+    function clampCell(v) { return Math.max(0, Math.min(GRID - 1, v)); }
+    // 取得腳底所在的格子
+    function cellAt(x, y) {
+      return {
+        col: clampCell(Math.floor((x - BOARD_X) / CELL)),
+        row: clampCell(Math.floor((y - BOARD_Y) / CELL))
+      };
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function resetPlayer() {
+      player.x = cellCenterX(3);
+      player.y = cellCenterY(4);
+      player.targetX = player.x;
+      player.targetY = player.y;
+      player.isMoving = false;
+      player.isFacingLeft = false;
+      player.walkCycle = 0;
+      player.deadSpin = 0;
+      player.deadTime = 0;
+    }
+
+    function startGame() {
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      stars = 0;
+      wave = 0;
+      bombs = [];
+      blast = null;
+      popups = [];
+      confetti = [];
+      shakeTime = 0;
+      whiteFade = 0;
+      resetPlayer();
+
+      waveState = 'ready';
+      waveTimer = READY_TIME;
+
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'none'; 
+      document.getElementById('timer-board').style.display = 'block';
+      updateHUD();
+      
+      gamePhase = 'playing';
+    }
+
+    // 只在波數或星星改變時才更新 DOM (不是每幀)
+    function updateHUD() {
+      let label;
+      if (wave === 0) {
+        label = `💣 <ruby>準<rt>ㄓㄨㄣˇ</rt></ruby><ruby>備<rt>ㄅㄟˋ</rt></ruby>`;
+      } else {
+        label = `💣 <ruby>第<rt>ㄉㄧˋ</rt></ruby> ${wave}/${TOTAL_WAVES} <ruby>波<rt>ㄅㄛ</rt></ruby>`;
+      }
+      waveDisplayEl.innerHTML = label;
+      starDisplayEl.textContent = stars;
+
+      // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
+      if (window.Bopomofo && window.Bopomofo.render) {
+        window.Bopomofo.render();
+      }
+    }
+
+    function endGame(isWin) {
+      if (gamePhase === 'exiting') return;
+      gamePhase = 'result';
+      document.getElementById('timer-board').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      
+      // 不管輸贏，只要玩了就解鎖關卡和給貼紙
+      localStorage.setItem('map16_cleared', 'true');
+      if (localStorage.getItem('sticker_smap16') !== 'true') {
+          localStorage.setItem('sticker_smap16', 'new');
+      }
+
+      // 輸贏只用來改變結算畫面的標題
+      if (isWin) {
+          document.getElementById('result-title').innerHTML = `<ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`;
+      } else {
+          document.getElementById('result-title').innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
+      }
+
+      // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
+      if (window.Bopomofo && window.Bopomofo.render) {
+          window.Bopomofo.render();
+      }
+
+      let newTotalCoins = currentCoins + stars;
+      localStorage.setItem('playerCoins', newTotalCoins); 
+      
+      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let starsHtml = '';
+      for (let i = 1; i <= stars; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0) starsHtml += '<br>'; 
+      }
+      if (stars === 0) starsHtml = '💨 再加油喔！';
+      
+      document.getElementById('star-container').innerHTML = starsHtml;
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    // ===== 波次流程 =====
+
+    // 產生第 n 波：n 顆炸彈，彼此不在同一行、也不在同一列
+    function startWave(n) {
+      wave = n;
+      const rows = shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, n);
+      const cols = shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, n);
+      bombs = rows.map((r, i) => ({ row: r, col: cols[i] }));
+      waveState = 'warning';
+      waveTimer = WARNING_TIME;
+      updateHUD();
+    }
+
+    // 爆炸：只在這一瞬間判定人偶腳下的格子
+    function explode() {
+      blast = {
+        t: 0,
+        rows: new Set(bombs.map(b => b.row)),
+        cols: new Set(bombs.map(b => b.col)),
+        bombs: bombs.slice()
+      };
+      bombs = [];
+      shakeTime = 0.35;
+
+      const foot = cellAt(player.x, player.y);
+      const isHit = blast.rows.has(foot.row) || blast.cols.has(foot.col);
+
+      if (isHit) {
+        gamePhase = 'dead';
+        player.isMoving = false;
+        addPopup('💫', player.x, player.y - player.size, '#ffffff', 70, false);
+        endTimeoutId = setTimeout(() => endGame(false), 1300);
+        return;
+      }
+
+      // 成功躲過這一波
+      stars += STARS_PER_WAVE;
+      addPopup(`+${STARS_PER_WAVE} ⭐`, player.x, player.y - player.size, '#FFD700', 46);
+      updateHUD();
+
+      if (wave >= TOTAL_WAVES) {
+        waveState = 'cleared';
+        waveTimer = EXPLODE_TIME + 0.4;
+      } else {
+        waveState = 'gap';
+        waveTimer = EXPLODE_TIME + GAP_TIME;
+      }
+    }
+
+    // stroke = false：純 Emoji 不描邊
+    function addPopup(text, x, y, color, size, stroke = true) {
+      popups.push({ text, x, y, color, size, stroke, t: 0, duration: 1.0 });
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff6b81', '#eccc68'];
+      for (let i = 0; i < 60; i++) {
+        confetti.push({
+          x: CANVAS_W / 2 + (Math.random() - 0.5) * 500,
+          y: BOARD_Y + Math.random() * 300,
+          vx: (Math.random() - 0.5) * 450,
+          vy: -200 - Math.random() * 350,
+          size: 14 + Math.random() * 12,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 10
+        });
+      }
+    }
+
+    function gameLoop(currentTime) {
+      if (gamePhase === 'exiting') return;
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+      if (gamePhase !== 'start' && gamePhase !== 'result') {
+         update(Math.min(dt, 0.1)); 
+         draw();
+      }
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      // 浮動文字
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].t += dt;
+        if (popups[i].t >= popups[i].duration) popups.splice(i, 1);
+      }
+
+      // 爆炸動畫
+      if (blast) {
+        blast.t += dt;
+        if (blast.t >= EXPLODE_TIME) blast = null;
+      }
+
+      if (shakeTime > 0) shakeTime -= dt;
+
+      if (gamePhase === 'playing') {
+        updatePlayerMove(dt);
+
+        waveTimer -= dt;
+        if (waveState === 'ready' || waveState === 'gap') {
+          if (waveTimer <= 0) startWave(wave + 1);
+        } else if (waveState === 'warning') {
+          if (waveTimer <= 0) explode();
+        } else if (waveState === 'cleared') {
+          if (waveTimer <= 0) {
+            gamePhase = 'winning';
+            spawnConfetti();
+          }
+        }
+      }
+      else if (gamePhase === 'dead') {
+        player.deadTime += dt;
+        player.deadSpin += dt * 12;
+      }
+      else if (gamePhase === 'winning') {
+        for (let c of confetti) {
+          c.vy += 500 * dt;
+          c.x += c.vx * dt;
+          c.y += c.vy * dt;
+          c.rot += c.vRot * dt;
+        }
+        whiteFade += dt * 1.2;
+        if (whiteFade >= 1) {
+          whiteFade = 1;
+          endGame(true);
+        }
+      }
+    }
+
+    function updatePlayerMove(dt) {
+      if (!player.isMoving) return;
+      let dx = player.targetX - player.x;
+      let dy = player.targetY - player.y;
+      let distance = Math.sqrt(dx * dx + dy * dy);
+      let moveDist = MOVE_SPEED * dt;
+
+      if (distance > moveDist) {
+        player.x += (dx / distance) * moveDist;
+        player.y += (dy / distance) * moveDist;
+        player.walkCycle += 25 * dt;
+      } else {
+        player.x = player.targetX;
+        player.y = player.targetY;
+        player.isMoving = false;
+        player.walkCycle = 0;
+      }
+    }
+
+    // ===== 繪圖 =====
+
+    function drawDangerHint(blinkOn) {
+      if (!SHOW_DANGER_HINT || bombs.length === 0) return;
+      ctx.fillStyle = blinkOn ? 'rgba(255, 60, 60, 0.28)' : 'rgba(255, 60, 60, 0.12)';
+      const rows = new Set(bombs.map(b => b.row));
+      const cols = new Set(bombs.map(b => b.col));
+      rows.forEach(r => ctx.fillRect(BOARD_X, BOARD_Y + r * CELL, BOARD_SIZE, CELL));
+      cols.forEach(c => {
+        for (let r = 0; r < GRID; r++) {
+          if (rows.has(r)) continue; // 交叉格不重複上色
+          ctx.fillRect(BOARD_X + c * CELL, BOARD_Y + r * CELL, CELL, CELL);
+        }
+      });
+    }
+
+    function drawBombs(elapsed, blinkOn) {
+      if (!bombCacheCanvas) return;
+      for (let b of bombs) {
+        const cx = cellCenterX(b.col);
+        const cy = cellCenterY(b.row);
+
+        // 出現時的彈出動畫
+        let pop = Math.min(1, elapsed / 0.2);
+        let scale = pop * (blinkOn ? 1.12 : 0.95);
+
+        // 閃爍紅光
+        if (blinkOn) {
+          ctx.fillStyle = 'rgba(255, 50, 50, 0.55)';
+          ctx.beginPath();
+          ctx.arc(cx, cy, CELL * 0.46, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(scale, scale);
+        ctx.drawImage(bombCacheCanvas, -60, -60);
+        ctx.restore();
+      }
+    }
+
+    function drawBlast() {
+      if (!blast) return;
+      const p = blast.t / EXPLODE_TIME;
+      const alpha = 1 - p;
+      const grow = Math.min(1, p * 5);
+      const outer = CELL * (0.35 + 0.65 * grow);
+      const inner = outer * 0.45;
+
+      // 十字火焰：外層橘色
+      ctx.fillStyle = `rgba(255, 110, 20, ${alpha * 0.85})`;
+      blast.rows.forEach(r => {
+        ctx.fillRect(BOARD_X, cellCenterY(r) - outer / 2, BOARD_SIZE, outer);
+      });
+      blast.cols.forEach(c => {
+        ctx.fillRect(cellCenterX(c) - outer / 2, BOARD_Y, outer, BOARD_SIZE);
+      });
+
+      // 內層亮黃色
+      ctx.fillStyle = `rgba(255, 240, 140, ${alpha})`;
+      blast.rows.forEach(r => {
+        ctx.fillRect(BOARD_X, cellCenterY(r) - inner / 2, BOARD_SIZE, inner);
+      });
+      blast.cols.forEach(c => {
+        ctx.fillRect(cellCenterX(c) - inner / 2, BOARD_Y, inner, BOARD_SIZE);
+      });
+
+      // 炸彈中心的 💥
+      if (boomCacheCanvas) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        for (let b of blast.bombs) {
+          const s = 0.6 + p * 0.8;
+          ctx.save();
+          ctx.translate(cellCenterX(b.col), cellCenterY(b.row));
+          ctx.scale(s, s);
+          ctx.drawImage(boomCacheCanvas, -110, -110);
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawPlayer() {
+      // 腳下目前所在格子的提示框
+      if (gamePhase === 'playing') {
+        const foot = cellAt(player.x, player.y);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(BOARD_X + foot.col * CELL + 5, BOARD_Y + foot.row * CELL + 5, CELL - 10, CELL - 10);
+
+        // 正在走去的目標格
+        if (player.isMoving) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.beginPath();
+          ctx.arc(player.targetX, player.targetY, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 被炸到時閃爍
+      if (gamePhase === 'dead' && Math.floor(player.deadTime * 12) % 2 === 1) return;
+
+      // 腳底陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.ellipse(player.x, player.y, CELL * 0.32, CELL * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (!(charImg.complete && charImg.naturalWidth > 0)) return;
+
+      const s = player.size;
+      ctx.save();
+      if (gamePhase === 'dead') {
+        // 被炸到：以身體中心旋轉
+        ctx.translate(player.x, player.y - s / 2);
+        ctx.rotate(player.deadSpin);
+        ctx.translate(0, s / 2);
+      } else {
+        let offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;
+        let rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.15 : 0;
+        ctx.translate(player.x, player.y + offsetY);
+        ctx.rotate(rotationAngle);
+      }
+      if (player.isFacingLeft) ctx.scale(-1, 1);
+      // 圖片底部稍微低於腳底點，讓腳看起來踩在格子中央
+      ctx.drawImage(charImg, -s / 2, -s * 0.94, s, s);
+      ctx.restore();
+    }
+
+    function drawPopups() {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let popup of popups) {
+        const progress = popup.t / popup.duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - Math.pow(progress, 3);
+        const floatY = popup.y - progress * 60;
+        ctx.font = `bold ${popup.size}px sans-serif`;
+        ctx.fillStyle = popup.color;
+        if (popup.stroke) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 4;
+          ctx.strokeText(popup.text, popup.x, floatY);
+        }
+        ctx.fillText(popup.text, popup.x, floatY);
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      if (gamePhase === 'exiting') return;
+
+      ctx.save();
+
+      // 爆炸時的畫面震動
+      if (shakeTime > 0) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        const m = 12 * (shakeTime / 0.35);
+        ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
+      }
+
+      // 1. 底圖 + 棋盤 (預渲染快取)
+      if (boardCacheCanvas) {
+        ctx.drawImage(boardCacheCanvas, 0, 0);
+      }
+
+      // 炸彈閃爍節奏：越接近爆炸閃越快
+      const elapsed = WARNING_TIME - waveTimer;
+      const interval = 0.35 - 0.25 * Math.min(1, Math.max(0, elapsed / WARNING_TIME));
+      const blinkOn = Math.floor(elapsed / interval) % 2 === 0;
+
+      // 2. 危險範圍提示
+      if (waveState === 'warning') drawDangerHint(blinkOn);
+
+      // 3. 閃爍中的炸彈
+      if (waveState === 'warning') drawBombs(elapsed, blinkOn);
+
+      // 4. 十字爆炸火焰
+      drawBlast();
+
+      // 5. 人偶
+      drawPlayer();
+
+      // 6. 浮動文字
+      drawPopups();
+
+      // 7. 慶祝彩帶
+      for (let c of confetti) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rot);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // 8. 過關白光轉場
+      if (whiteFade > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${whiteFade})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+    }
+
+    // 點擊格子 → 人偶走到該格中央
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (gamePhase !== 'playing') return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      const col = Math.floor((clickX - BOARD_X) / CELL);
+      const row = Math.floor((clickY - BOARD_Y) / CELL);
+      if (col < 0 || col >= GRID || row < 0 || row >= GRID) return; // 點到棋盤外面不動作
+
+      player.targetX = cellCenterX(col);
+      player.targetY = cellCenterY(row);
+      if (Math.abs(player.targetX - player.x) > 2) {
+        player.isFacingLeft = player.targetX < player.x;
+      }
+      player.isMoving = true;
+    });
+  </script>
+</body>
+</html>
