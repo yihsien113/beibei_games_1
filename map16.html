@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>粢涵尋寶去 - 關卡15 (躲炸彈挑戰)</title>
+  <title>冒險小遊戲 - 關卡16 (躲炸彈挑戰)</title>
   
   <!-- 引入外部注音模組與人偶模組 -->
   <script src="bopomofo.js"></script>
+  <!-- 帳號密碼模組 -->
+  <script src="password.js"></script>
   <script src="player.js"></script>
   <style>
     * {
@@ -265,7 +267,7 @@
         </h1>
         <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
           <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>格<rt>ㄍㄜˊ</rt></ruby><ruby>子<rt>˙ㄗ</rt></ruby><ruby>走<rt>ㄗㄡˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>去<rt>ㄑㄩˋ</rt></ruby><br>
-          <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>字<rt>ㄗˋ</rt></ruby><ruby>爆<rt>ㄅㄠˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby> 💣<br>
+          <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>彈<rt>ㄉㄢˋ</rt></ruby><ruby>攻<rt>ㄍㄨㄥ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby>
         </p>
       </div>
 
@@ -374,6 +376,9 @@
     let lastTime = 0; 
     let animationFrameId = null;  // 追蹤動畫迴圈 ID，方便釋放記憶體
     let endTimeoutId = null;      // 追蹤計時器 ID
+    let keyCell = null;           // 目前場上的鑰匙位置 { row, col }，null 代表場上無鑰匙
+    let keyPickedThisRun = false; // 這一局是否已撿到鑰匙（進結算畫面才寫入 localStorage）
+    let keyAnimTime = 0;          // 鑰匙浮動與發光動畫計時
 
     // 人偶 (x, y 代表「腳底」的位置，傷害判定就看腳底踩在哪一格)
     const player = {
@@ -391,6 +396,7 @@
     let boardCacheCanvas = null;  // 底圖 + 棋盤
     let bombCacheCanvas = null;   // 💣
     let boomCacheCanvas = null;   // 💥
+    let keyCacheCanvas = null;    // 🔑
 
     function makeEmojiCache(emoji, fontSize, canvasSize) {
       const c = document.createElement('canvas');
@@ -411,6 +417,7 @@
     function initRenderCaches() {
       bombCacheCanvas = makeEmojiCache('💣', 80, 120);
       boomCacheCanvas = makeEmojiCache('💥', 150, 220);
+      keyCacheCanvas = makeEmojiCache('🔑', 72, 110);
 
       // 底圖 + 棋盤只畫一次，之後每幀直接貼上
       boardCacheCanvas = document.createElement('canvas');
@@ -520,12 +527,13 @@
       if (charImg) { charImg.onload = null; charImg.onerror = null; charImg.src = ''; }
 
       // 釋放離屏快取畫布
-      [boardCacheCanvas, bombCacheCanvas, boomCacheCanvas].forEach(c => {
+      [boardCacheCanvas, bombCacheCanvas, boomCacheCanvas, keyCacheCanvas].forEach(c => {
         if (c) { c.width = 1; c.height = 1; }
       });
       boardCacheCanvas = null;
       bombCacheCanvas = null;
       boomCacheCanvas = null;
+      keyCacheCanvas = null;
 
       // 釋放 Canvas GPU 畫布記憶體 (將尺寸縮為 1x1 強制瀏覽器立刻回收 VRAM)
       if (canvas && ctx) {
@@ -588,6 +596,9 @@
       confetti = [];
       shakeTime = 0;
       whiteFade = 0;
+      keyCell = null;
+      keyPickedThisRun = false;
+      keyAnimTime = 0;
       resetPlayer();
 
       waveState = 'ready';
@@ -612,7 +623,7 @@
         label = `💣 <ruby>第<rt>ㄉㄧˋ</rt></ruby> ${wave}/${TOTAL_WAVES} <ruby>波<rt>ㄅㄛ</rt></ruby>`;
       }
       waveDisplayEl.innerHTML = label;
-      starDisplayEl.textContent = stars;
+      starDisplayEl.textContent = stars + (keyPickedThisRun ? ' 🔑' : '');
 
       // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
       if (window.Bopomofo && window.Bopomofo.render) {
@@ -634,16 +645,20 @@
           localStorage.setItem('sticker_smap16', 'new');
       }
 
+      // 這一局有撿到鑰匙，進結算畫面才正式給予貼紙
+      let gotNewKeySticker = false;
+      if (keyPickedThisRun) {
+          if (localStorage.getItem('sticker_skey1') !== 'true') {
+              localStorage.setItem('sticker_skey1', 'new');
+          }
+          gotNewKeySticker = true;
+      }
+
       // 輸贏只用來改變結算畫面的標題
       if (isWin) {
           document.getElementById('result-title').innerHTML = `<ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`;
       } else {
           document.getElementById('result-title').innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
-      }
-
-      // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
-      if (window.Bopomofo && window.Bopomofo.render) {
-          window.Bopomofo.render();
       }
 
       let newTotalCoins = currentCoins + stars;
@@ -657,20 +672,84 @@
         starsHtml += '⭐';
         if (i % 5 === 0) starsHtml += '<br>'; 
       }
-      if (stars === 0) starsHtml = '💨 再加油喔！';
+      if (stars === 0 && !gotNewKeySticker) starsHtml = '💨 再加油喔！';
+      if (gotNewKeySticker) {
+        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
+      }
       
       document.getElementById('star-container').innerHTML = starsHtml;
+
+      // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
+      if (window.Bopomofo && window.Bopomofo.render) {
+          window.Bopomofo.render();
+      }
+
       document.getElementById('result-screen').style.display = 'flex';
     }
 
     // ===== 波次流程 =====
+
+    // 檢查此帳號是否已經擁有鑰匙貼紙 ('new' 或 'true' 都算已獲得)
+    function hasKeySticker() {
+      const val = localStorage.getItem('sticker_skey1');
+      return val === 'true' || val === 'new';
+    }
+
+    // 在棋盤上隨機生成鑰匙（離玩家遠一點，且不與目前炸彈同格）
+    function spawnKey() {
+      const foot = cellAt(player.x, player.y);
+      const bombSet = new Set(bombs.map(b => `${b.row},${b.col}`));
+      const candidates = [];
+
+      for (let r = 0; r < GRID; r++) {
+        for (let c = 0; c < GRID; c++) {
+          if (bombSet.has(`${r},${c}`)) continue;
+          const dist = Math.abs(r - foot.row) + Math.abs(c - foot.col);
+          if (dist >= 4) {
+            candidates.push({ row: r, col: c });
+          }
+        }
+      }
+
+      if (candidates.length > 0) {
+        keyCell = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    }
+
+    // 路過即撿起鑰匙
+    function checkKeyPickup() {
+      if (!keyCell || gamePhase !== 'playing') return;
+      const foot = cellAt(player.x, player.y);
+      if (foot.row === keyCell.row && foot.col === keyCell.col) {
+        keyCell = null;
+        keyPickedThisRun = true;
+        addPopup('🔑', player.x, player.y - player.size, '#FFD700', 64, false);
+        updateHUD();
+      }
+    }
 
     // 產生第 n 波：n 顆炸彈，彼此不在同一行、也不在同一列
     function startWave(n) {
       wave = n;
       const rows = shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, n);
       const cols = shuffle([0, 1, 2, 3, 4, 5, 6, 7]).slice(0, n);
+
+      // 若場上已有鑰匙，避免新炸彈本體直接生在鑰匙那一格
+      if (keyCell && n > 1) {
+        const k = rows.indexOf(keyCell.row);
+        if (k !== -1 && cols[k] === keyCell.col) {
+          const swapIdx = (k + 1) % n;
+          [cols[k], cols[swapIdx]] = [cols[swapIdx], cols[k]];
+        }
+      }
+
       bombs = rows.map((r, i) => ({ row: r, col: cols[i] }));
+
+      // 第 3 波開始，若此帳號尚未獲得鑰匙貼紙且本局還沒撿到，隨機生成一把鑰匙
+      if (n === 3 && !hasKeySticker() && !keyPickedThisRun && !keyCell) {
+        spawnKey();
+      }
+
       waveState = 'warning';
       waveTimer = WARNING_TIME;
       updateHUD();
@@ -745,6 +824,8 @@
     }
 
     function update(dt) {
+      keyAnimTime += dt;
+
       // 浮動文字
       for (let i = popups.length - 1; i >= 0; i--) {
         popups[i].t += dt;
@@ -761,6 +842,7 @@
 
       if (gamePhase === 'playing') {
         updatePlayerMove(dt);
+        checkKeyPickup();
 
         waveTimer -= dt;
         if (waveState === 'ready' || waveState === 'gap') {
@@ -826,6 +908,28 @@
           ctx.fillRect(BOARD_X + c * CELL, BOARD_Y + r * CELL, CELL, CELL);
         }
       });
+    }
+
+    function drawKey() {
+      if (!keyCell || !keyCacheCanvas) return;
+      const cx = cellCenterX(keyCell.col);
+      const cy = cellCenterY(keyCell.row);
+      const pulse = 0.5 + 0.5 * Math.sin(keyAnimTime * 5);
+      const floatY = Math.sin(keyAnimTime * 3.5) * 6;
+
+      // 金色光暈
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 215, 0, ${0.22 + 0.18 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, CELL * (0.38 + 0.06 * pulse), 0, Math.PI * 2);
+      ctx.fill();
+
+      // 鑰匙圖示
+      const scale = 0.95 + 0.08 * pulse;
+      ctx.translate(cx, cy + floatY);
+      ctx.scale(scale, scale);
+      ctx.drawImage(keyCacheCanvas, -55, -55);
+      ctx.restore();
     }
 
     function drawBombs(elapsed, blinkOn) {
@@ -988,6 +1092,9 @@
 
       // 2. 危險範圍提示
       if (waveState === 'warning') drawDangerHint(blinkOn);
+
+      // 2.5 場上的鑰匙
+      drawKey();
 
       // 3. 閃爍中的炸彈
       if (waveState === 'warning') drawBombs(elapsed, blinkOn);

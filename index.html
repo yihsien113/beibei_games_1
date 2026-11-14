@@ -25,6 +25,7 @@
       var isFromSubpageToLobby1 = sessionStorage.getItem('current_lobby') === 'lobby1' &&
           sessionStorage.getItem('returning_from_subpage') === '1';
       var isLastLobby1 = localStorage.getItem('last_lobby') === 'lobby1';
+      var forestIntroDone = localStorage.getItem('forest_portal_intro_cleared') === 'true';
       var forestOpen = true;
       for (var i = 1; i <= 15; i++) {
         if (localStorage.getItem('map' + i + '_cleared') !== 'true') {
@@ -32,7 +33,7 @@
           break;
         }
       }
-      if (forestOpen && (isFromSubpageToLobby1 || isLastLobby1)) {
+      if (forestOpen && forestIntroDone && (isFromSubpageToLobby1 || isLastLobby1)) {
         window.location.replace('lobby1.html');
       } else {
         sessionStorage.setItem('current_lobby', 'index');
@@ -918,20 +919,19 @@
     // 👇 3. 【這是公告內容】
     const UPDATE_LOG = `
       <p>✨ <b>
-        <ruby>增<rt>ㄗㄥ</rt></ruby>
-        <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
-        <ruby>帳<rt>ㄓㄤˋ</rt></ruby>
-        <ruby>號<rt>ㄏㄠˋ</rt></ruby>
-        <ruby>系<rt>ㄒㄧˋ</rt></ruby>
-        <ruby>統<rt>ㄊㄨㄥˇ</rt></ruby>
-        <ruby>方<rt>ㄈㄤ</rt></ruby>
-        <ruby>便<rt>ㄅㄧㄢˋ</rt></ruby>
-        <ruby>記<rt>ㄐㄧˋ</rt></ruby>
-        <ruby>錄<rt>ㄌㄨˋ</rt></ruby>
-        <ruby>遊<rt>ㄧㄡˊ</rt></ruby>
-        <ruby>戲<rt>ㄒㄧˋ</rt></ruby>
-        <ruby>進<rt>ㄐㄧㄣˋ</rt></ruby>
-        <ruby>度<rt>ㄉㄨˋ</rt></ruby>
+        <ruby>新<rt>ㄒㄧㄣ</rt></ruby>
+<ruby>地<rt>ㄉㄧˋ</rt></ruby>
+<ruby>圖<rt>ㄊㄨˊ</rt></ruby>
+<ruby>"<rt></rt></ruby>
+<ruby>魔<rt>ㄇㄛˊ</rt></ruby>
+<ruby>法<rt>ㄈㄚˇ</rt></ruby>
+<ruby>森<rt>ㄙㄣ</rt></ruby>
+<ruby>林<rt>ㄌㄧㄣˊ</rt></ruby>
+<ruby>"<rt></rt></ruby>
+<ruby>開<rt>ㄎㄞ</rt></ruby>
+<ruby>放<rt>ㄈㄤˋ</rt></ruby>
+<ruby>囉<rt>ㄌㄨㄛˊ</rt></ruby>
+<span>!</span>
         `;
 
     function showUpdateNotice() {
@@ -943,15 +943,21 @@
 
     function closeUpdateNotice() {
       document.getElementById('update-modal').classList.remove('active');
+      if (isForestIntroMode && forestIntroStep === -1) {
+        nextForestIntroStep();
+      }
     }
+
+    let hasCheckedInitialLobby = false;
 
     function checkUpdateAndTutorial() {
       // 上次是在魔法森林(第二大廳)離開的：開啟遊戲 / 換裝置登入後回到那裡
-      if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen()) {
+      if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen() && isForestPortalIntroDone()) {
         sessionStorage.setItem('returning_from_subpage', '1');
         window.location.replace('lobby1.html');
         return;
       }
+      hasCheckedInitialLobby = true;
       if (localStorage.getItem('last_lobby') !== 'index') {
         localStorage.setItem('last_lobby', 'index');
       }
@@ -965,12 +971,15 @@
         localStorage.setItem('game_version', GAME_VERSION);
         document.getElementById('tutorial-start-screen').style.display = 'flex';
       } else {
+        let showingUpdateModal = false;
         if (savedVersion !== GAME_VERSION) {
           if (AUTO_SHOW_NOTICE) {
             showUpdateNotice();
+            showingUpdateModal = true;
           }
           localStorage.setItem('game_version', GAME_VERSION);
         }
+        checkForestPortalIntro(showingUpdateModal);
       }
     }
 
@@ -1004,9 +1013,11 @@
           if (!isNaN(sx) && !isNaN(sy) && (Math.abs(sx - player.x) > 1 || Math.abs(sy - player.y) > 1)) {
             player.x = player.targetX = sx;
             player.y = player.targetY = sy;
-            cameraX = player.x - (canvas.width / scale) / 2;
-            cameraY = player.y - (canvas.height / scale) / 2;
-            clampCamera();
+            if (!isTutorialMode && !isForestIntroMode) {
+              cameraX = player.x - (canvas.width / scale) / 2;
+              cameraY = player.y - (canvas.height / scale) / 2;
+              clampCamera();
+            }
           }
         }
         for (let z of zones) {
@@ -1015,6 +1026,11 @@
             z.img.src = z.imgSrc;
           }
         }
+      }
+
+      if (hasCheckedInitialLobby && !isModalOpen && !isTutorialMode && !isForestIntroMode && isForestPortalOpen() && !isForestPortalIntroDone()) {
+        const updateModalEl = document.getElementById('update-modal');
+        checkForestPortalIntro(updateModalEl ? updateModalEl.classList.contains('active') : false);
       }
     }
 
@@ -1105,7 +1121,7 @@
     }
 
     function openAccountModal(isStartupPrompt) {
-      if (!isStartupPrompt && isTutorialMode) return;
+      if (!isStartupPrompt && (isTutorialMode || isForestIntroMode)) return;
       isInitialAuthPrompt = !!isStartupPrompt;
       isModalOpen = true;
       player.isMoving = false;
@@ -1141,7 +1157,9 @@
       if (isInitialAuthPrompt) {
         isInitialAuthPrompt = false;
         checkUpdateAndTutorial();
-      } else if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen()) {
+      } else if (isForestPortalOpen() && !isForestPortalIntroDone()) {
+        checkForestPortalIntro(false);
+      } else if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen() && isForestPortalIntroDone()) {
         sessionStorage.setItem('returning_from_subpage', '1');
         cleanupLobbyAndGo('lobby1.html');
       }
@@ -1327,6 +1345,62 @@
       localStorage.setItem('lobby_tutorial_done', 'true');
     }
 
+    // 🌟 === 魔法森林傳送門首次解鎖引導 === 🌟
+    const FOREST_PORTAL_INTRO_KEY = 'forest_portal_intro_cleared';
+    let isForestIntroMode = false;
+    let forestIntroStep = -1;
+
+    function isForestPortalIntroDone() {
+      return localStorage.getItem(FOREST_PORTAL_INTRO_KEY) === 'true';
+    }
+
+    function lockCameraOnForestPortal() {
+      if (typeof FOREST_PORTAL === 'undefined') return;
+      scale = minScale * 1.3;
+      cameraX = FOREST_PORTAL.cx - (canvas.width / scale) / 2;
+      cameraY = FOREST_PORTAL.cy - (canvas.height / scale) / 2;
+      clampCamera();
+    }
+
+    function checkForestPortalIntro(deferDialog) {
+      if (isTutorialMode || isForestIntroMode) return;
+      if (localStorage.getItem('lobby_tutorial_done') !== 'true') return;
+      if (!isForestPortalOpen() || isForestPortalIntroDone()) return;
+
+      isForestIntroMode = true;
+      forestIntroStep = -1;
+      player.isMoving = false;
+      lockCameraOnForestPortal();
+
+      if (!deferDialog) {
+        nextForestIntroStep();
+      }
+    }
+
+    function nextForestIntroStep() {
+      forestIntroStep++;
+      lockCameraOnForestPortal();
+      if (forestIntroStep === 0) {
+        window.RPGDialog.show(
+          `<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>森<rt>ㄙㄣ</rt></ruby><ruby>林<rt>ㄌㄧㄣˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>入<rt>ㄖㄨˋ</rt></ruby><ruby>口<rt>ㄎㄡˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>啟<rt>ㄑㄧˇ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>!</span>`,
+          'assets/mp3/lobby-9.mp3'
+        );
+      } else if (forestIntroStep === 1) {
+        window.RPGDialog.show(
+          `<ruby>前<rt>ㄑㄧㄢˊ</rt></ruby><ruby>往<rt>ㄨㄤˇ</rt></ruby><ruby>探<rt>ㄊㄢˋ</rt></ruby><ruby>險<rt>ㄒㄧㄢˇ</rt></ruby><ruby>吧<rt>˙ㄅㄚ</rt></ruby>`,
+          'assets/mp3/lobby-10.mp3'
+        );
+      } else {
+        endForestPortalIntro();
+      }
+    }
+
+    function endForestPortalIntro() {
+      isForestIntroMode = false;
+      forestIntroStep = -1;
+      localStorage.setItem(FOREST_PORTAL_INTRO_KEY, 'true');
+    }
+
     function handleLobbyDialogClick() {
       if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
         if (!window.RPGDialog.isLocked()) {
@@ -1334,6 +1408,8 @@
           
           if ([0, 1, 2, 5, 7, 8, 9].includes(lobbyTutorialStep)) {
             nextTutorialStep();
+          } else if (isForestIntroMode) {
+            nextForestIntroStep();
           }
         }
         return true; 
@@ -1390,7 +1466,7 @@
       
       minScale = canvas.width / (MAP_WIDTH / 2);
       
-      if (!isTutorialMode && scale < minScale) {
+      if (!isTutorialMode && !isForestIntroMode && scale < minScale) {
         scale = minScale;
       }
       clampCamera();
@@ -1417,7 +1493,7 @@
     const initialY = (savedY !== null && !isNaN(parseFloat(savedY))) ? parseFloat(savedY) : DEFAULT_PLAYER_Y;
 
     function savePlayerPosition() {
-      if(isTutorialMode) return; 
+      if (isTutorialMode || isForestIntroMode) return; 
       localStorage.setItem('lobbyPlayerX', Math.round(player.x));
       localStorage.setItem('lobbyPlayerY', Math.round(player.y));
     }
@@ -1484,12 +1560,12 @@
     });
 
     function goToWardrobe() {
-      if (isTutorialMode) return; 
+      if (isTutorialMode || isForestIntroMode) return; 
       cleanupLobbyAndGo('wardrobe.html');
     }
 
     function goToStickerBook() {
-      if (isTutorialMode) return; 
+      if (isTutorialMode || isForestIntroMode) return; 
       cleanupLobbyAndGo('sticker.html');
     }
 
@@ -1782,6 +1858,12 @@
         cameraX += (targetCamX - cameraX) * 0.1;
         cameraY += (targetCamY - cameraY) * 0.1;
         clampCamera();
+      } else if (isForestIntroMode) {
+        let targetCamX = FOREST_PORTAL.cx - (canvas.width / scale) / 2;
+        let targetCamY = FOREST_PORTAL.cy - (canvas.height / scale) / 2;
+        cameraX += (targetCamX - cameraX) * 0.1;
+        cameraY += (targetCamY - cameraY) * 0.1;
+        clampCamera();
       }
 
       if (isModalOpen) return; 
@@ -1818,7 +1900,7 @@
     function checkZones() {
       if (isModalOpen || isExitingLobby) return;
 
-      if (!isTutorialMode && isForestPortalOpen() && isInForestPortal()) {
+      if (!isTutorialMode && !isForestIntroMode && isForestPortalOpen() && isInForestPortal()) {
         savePlayerPosition();
         enterForestPortal();
         return;
@@ -2070,7 +2152,7 @@
       if (handleLobbyDialogClick()) return; 
 
       if (e.target !== canvas || isModalOpen) return;
-      if (isTutorialMode && activePointers.size > 0) return; 
+      if ((isTutorialMode || isForestIntroMode) && activePointers.size > 0) return; 
       
       canvas.setPointerCapture(e.pointerId);
       activePointers.set(e.pointerId, e);
@@ -2101,7 +2183,7 @@
       if (!activePointers.has(e.pointerId) || isModalOpen) return;
       activePointers.set(e.pointerId, e);
 
-      if (isTutorialMode) return; 
+      if (isTutorialMode || isForestIntroMode) return; 
 
       if (activePointers.size === 1 && isPointerDown) {
         let dx = e.clientX - dragStart.x;
@@ -2164,6 +2246,12 @@
           clickWorldX = Math.max(0, Math.min(clickWorldX, MAP_WIDTH));
           clickWorldY = Math.max(0, Math.min(clickWorldY, MAP_HEIGHT));
 
+          if (isForestIntroMode) {
+            isPointerDown = false;
+            isDragActive = false;
+            return;
+          }
+
           if (isTutorialMode) {
             if (lobbyTutorialStep === 3) {
               if (Math.hypot(clickWorldX - 1159, clickWorldY - 800) > 150) return;
@@ -2202,7 +2290,7 @@
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (isModalOpen || isTutorialMode) return; 
+      if (isModalOpen || isTutorialMode || isForestIntroMode) return; 
       
       let zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; 
       let newScale = Math.max(minScale, Math.min(scale * zoomFactor, 2.5));
@@ -2226,5 +2314,13 @@
   </script>
   
   <script src="rpg-dialog-ui.js"></script>
+  <script>
+    if (window.RPGDialog && window.RPGDialog.boxElement) {
+      window.RPGDialog.boxElement.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        handleLobbyDialogClick();
+      });
+    }
+  </script>
 </body>
 </html>
