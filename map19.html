@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>冒險小遊戲 - 關卡19 (神秘大門)</title>
+
+  <!-- 引入外部注音模組、帳號密碼模組與人偶模組 -->
+  <script src="bopomofo.js"></script>
+  <script src="password.js"></script>
+  <script src="player.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      outline: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      height: 100dvh;
+      width: 100%;
+      position: fixed;
+      overscroll-behavior: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #69f0ae;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none;
+      background-color: #121622;
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(8, 12, 24, 0.88);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101;
+      display: none;
+    }
+
+    /* 頂部戰鬥波數與血量面板 */
+    #battle-hud {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 16, 30, 0.9);
+      border: 3px solid #ff5252;
+      border-radius: 20px;
+      padding: 8px 24px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.65);
+      text-align: center;
+      z-index: 90;
+      display: none;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+
+    #battle-hud h2 {
+      margin: 0;
+      font-size: 32px;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255, 82, 82, 0.85);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    #battle-hp-display {
+      font-size: 26px;
+      letter-spacing: 2px;
+    }
+
+    /* 結算畫面 */
+    .math-box {
+      background: rgba(43, 39, 39, 0.88);
+      padding: 15px 25px;
+      border-radius: 14px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+      border: 2px solid rgba(255,255,255,0.18);
+    }
+
+    #star-container {
+      font-size: 26px;
+      margin-top: 10px;
+      width: 100%;
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+
+    .result-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-top: 15px;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+      }
+      #game-container {
+        width: min(100vw, calc(100dvh * 0.75)) !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+      #back-btn {
+        top: 10px !important;
+        left: 10px !important;
+        padding: 6px 12px !important;
+        font-size: 14px !important;
+      }
+      #battle-hud {
+        top: 10px !important;
+        left: auto !important;
+        right: 10px !important;
+        transform: none !important;
+        padding: 6px 14px !important;
+        border-width: 2.5px !important;
+        border-radius: 16px !important;
+      }
+      #battle-hud h2 {
+        font-size: 20px !important;
+        gap: 8px !important;
+      }
+      #battle-hp-display {
+        font-size: 16px !important;
+        letter-spacing: 0px !important;
+      }
+      #result-title {
+        font-size: 32px !important;
+        margin-bottom: 6px !important;
+      }
+      .math-box {
+        font-size: 20px !important;
+        padding: 10px 15px !important;
+        margin: 10px 0 !important;
+      }
+      #totalCoins {
+        font-size: 26px !important;
+      }
+      #star-container {
+        font-size: 19px !important;
+        margin-top: 6px !important;
+      }
+      .result-actions {
+        gap: 10px !important;
+        margin-top: 10px !important;
+      }
+      .result-actions .btn-main {
+        font-size: 24px !important;
+        padding: 10px 0 !important;
+      }
+      .result-actions .btn-sub {
+        font-size: 16px !important;
+        padding: 8px 16px !important;
+      }
+      #rpg-dialog-text {
+        font-size: 24px !important;
+      }
+      #rpg-dialog-hint {
+        font-size: 16px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">關卡載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+
+    <!-- 頂部戰鬥波數與血量面板（戰鬥階段） -->
+    <div id="battle-hud">
+      <h2>
+        <span id="battle-wave-display"></span>
+        <span id="battle-hp-display"></span>
+      </h2>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 id="result-title" class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;"></h1>
+
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+
+      <div id="star-container"></div>
+
+      <div class="result-actions">
+        <button class="btn btn-main" style="width: 100%; font-size: 36px; padding: 14px 10px; margin: 0;" onclick="retryBattle()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>試<rt>ㄕˋ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+
+        <button class="btn btn-main" style="width: 100%; font-size: 42px; padding: 14px 10px; margin: 0; background-color: #2196F3; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.45);" onclick="exitToLobby()">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+
+        <button class="btn btn-sub" style="margin-top: 6px; font-size: 20px; padding: 10px 22px; background-color: #475569; box-shadow: 0 4px 10px rgba(0,0,0,0.45);" onclick="replayGateAnimation()">
+          <span>🔑</span>
+          <span class="zh-text">
+            <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+            <ruby>看<rt>ㄎㄢˋ</rt></ruby>
+            <ruby>一<rt>ㄧ</rt></ruby>
+            <ruby>次<rt>ㄘˋ</rt></ruby>
+            <ruby>開<rt>ㄎㄞ</rt></ruby>
+            <ruby>門<rt>ㄇㄣˊ</rt></ruby>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <!-- 置於 body 尾部確保 document.body 已生成再載入對話框模組 -->
+  <script src="rpg-dialog-ui.js"></script>
+
+  <script>
+    // =========================================
+    // 🎮 關卡19 戰鬥參數（方便後續調整難度與獎勵）
+    // =========================================
+    const TOTAL_WAVES = 6;
+    const WAVE_ENEMY_COUNTS = [3, 5, 7, 9, 10, 12];
+    const WAVE_SPAWN_INTERVALS = [1.1, 1.0, 0.9, 0.9, 0.9, 0.8];
+    const ENEMY_SPEED_BASE = 150;
+    const ENEMY_SPEED_PER_WAVE = 12;
+    const ENEMY_SIZE = 115;
+    const CHAR_SCALE = 0.86;
+    const PLAYER_SPEED = 780;
+    const PLAYER_MAX_HP = 6;
+    const PLAYER_INVINCIBLE_TIME = 1.2;
+    const FIRST_CLEAR_REWARD = 12;
+
+    const CANVAS_W = 900;
+    const CANVAS_H = 1200;
+    const GEAR_CENTER = { x: 450, y: 548 };
+    const ARENA_CENTER = { x: 450, y: 560 };
+    const ARENA_START_POS = { x: 450, y: 1060 };
+
+    // 對應 map19-2.webp 四周八個開口
+    const ARENA_DOORS = [
+      { x: 450, y: 135 }, // 上
+      { x: 155, y: 225 }, // 左上
+      { x: 745, y: 225 }, // 右上
+      { x: 85,  y: 575 }, // 左中
+      { x: 815, y: 575 }, // 右中
+      { x: 135, y: 920 }, // 左下
+      { x: 765, y: 920 }, // 右下
+      { x: 450, y: 1015 } // 下
+    ];
+
+    // 三個石框與對應能量線座標（精準對應 900x1200 的 map19-1.webp）
+    const KEY_SLOTS = [
+      {
+        index: 0,
+        stickerId: 'skey1',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 1</span>',
+        cx: 177, cy: 943,
+        hitRect: { x: 62, y: 822, w: 230, h: 241 },
+        innerRect: { x: 90, y: 853, w: 174, h: 180 },
+        primaryColor: '#69f0ae',
+        secondaryColor: '#b388ff',
+        glowRgba: 'rgba(105, 240, 174, ',
+        paths: [
+          [
+            { x: 177, y: 822 }, { x: 188, y: 798 }, { x: 248, y: 794 },
+            { x: 325, y: 782 }, { x: 356, y: 760 }, { x: 360, y: 725 },
+            { x: 385, y: 645 }, { x: 432, y: 550 }
+          ],
+          [
+            { x: 255, y: 822 }, { x: 290, y: 800 }, { x: 365, y: 792 },
+            { x: 406, y: 775 }, { x: 417, y: 750 }, { x: 428, y: 655 }, { x: 438, y: 552 }
+          ]
+        ],
+        doorGlowPoints: [
+          { x: 360, y: 715, r: 18 },
+          { x: 416, y: 725, r: 18 },
+          { x: 318, y: 548, r: 36 },
+          { x: 434, y: 548, r: 24 }
+        ]
+      },
+      {
+        index: 1,
+        stickerId: 'skey2',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 2</span>',
+        cx: 450, cy: 945,
+        hitRect: { x: 330, y: 822, w: 240, h: 244 },
+        innerRect: { x: 366, y: 858, w: 168, h: 174 },
+        primaryColor: '#76ff03',
+        secondaryColor: '#00e676',
+        glowRgba: 'rgba(118, 255, 3, ',
+        paths: [
+          [
+            { x: 450, y: 822 }, { x: 449, y: 785 }, { x: 450, y: 750 },
+            { x: 450, y: 650 }, { x: 450, y: 548 }
+          ]
+        ],
+        doorGlowPoints: [
+          { x: 450, y: 745, r: 20 },
+          { x: 450, y: 548, r: 46 },
+          { x: 450, y: 128, r: 36 }
+        ]
+      },
+      {
+        index: 2,
+        stickerId: 'skey3',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 3</span>',
+        cx: 723, cy: 945,
+        hitRect: { x: 606, y: 822, w: 234, h: 244 },
+        innerRect: { x: 636, y: 856, w: 174, h: 178 },
+        primaryColor: '#ffd740',
+        secondaryColor: '#ffab00',
+        glowRgba: 'rgba(255, 215, 64, ',
+        paths: [
+          [
+            { x: 675, y: 822 }, { x: 650, y: 795 }, { x: 575, y: 798 },
+            { x: 498, y: 782 }, { x: 483, y: 752 }, { x: 472, y: 655 }, { x: 462, y: 552 }
+          ],
+          [
+            { x: 724, y: 822 }, { x: 714, y: 794 }, { x: 635, y: 790 },
+            { x: 560, y: 778 }, { x: 539, y: 745 }, { x: 515, y: 650 }, { x: 468, y: 550 }
+          ]
+        ],
+        doorGlowPoints: [
+          { x: 482, y: 725, r: 18 },
+          { x: 538, y: 715, r: 18 },
+          { x: 582, y: 548, r: 36 },
+          { x: 466, y: 548, r: 24 }
+        ]
+      }
+    ];
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const battleWaveEl = document.getElementById('battle-wave-display');
+    const battleHpEl = document.getElementById('battle-hp-display');
+
+    let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    let charConfig = PLAYER_CHARACTERS[equippedCharKey] || PLAYER_CHARACTERS['han1'];
+
+    // 狀態變數
+    // loading / gate / gate_opening /
+    // battle_intro_walk / battle_intro_dialog1 / battle_intro_flash / battle_intro_dialog2 /
+    // battle_playing / battle_dead / battle_winning / battle_result / exiting
+    let gamePhase = 'loading';
+    let animTime = 0;
+    let lastTime = 0;
+    let animationFrameId = null;
+    let endTimeoutId = null;
+    let shakeTime = 0;
+    let shakeMax = 0.35;
+    let whiteFade = 0;
+    let gateOpenTimer = 0;
+    let gearAngle = 0;
+
+    // 戰鬥階段變數
+    let introFlashTimer = 0;
+    let battleWave = 0;
+    let playerHp = PLAYER_MAX_HP;
+    let playerInvincible = 0;
+    let waveRemainingToSpawn = 0;
+    let spawnCooldown = 0;
+    let waveGapTimer = 0;
+    let lastDoorIdx = -1;
+    let lastRenderedWave = -1;
+    let lastRenderedHp = -1;
+
+    let enemies = [];
+    let activeEffects = [];
+    let confetti = [];
+    let particles = [];
+    let popups = [];
+
+    const player = {
+      x: ARENA_CENTER.x,
+      y: ARENA_CENTER.y,
+      targetX: ARENA_CENTER.x,
+      targetY: ARENA_CENTER.y,
+      size: Math.round(charConfig.size * CHAR_SCALE),
+      speed: PLAYER_SPEED,
+      hitboxOffsetX: Math.round(charConfig.hitboxOffsetX * CHAR_SCALE),
+      hitboxOffsetY: Math.round(charConfig.hitboxOffsetY * CHAR_SCALE),
+      hitboxRadius: Math.round(charConfig.hitboxRadius * CHAR_SCALE),
+      frame: 0,
+      isMoving: false,
+      isFacingLeft: false,
+      isAttacking: false,
+      attackTimer: 0,
+      attackSlashed: false,
+      slashOnArrive: false,
+      walkCycle: 0,
+      deadTime: 0,
+      deadSpin: 0
+    };
+
+    const slotStates = KEY_SLOTS.map(() => ({
+      owned: false,
+      activated: false,
+      beamProgress: 0,
+      beamDone: false,
+      shakeTimer: 0
+    }));
+
+    // 離屏快取畫布（避免 iPad Safari 每幀濾鏡掉幀）
+    let bgCacheCanvas = null;
+    let arenaBgCacheCanvas = null;
+    let keyColorCaches = [null, null, null];
+    let keySilhouetteCaches = [null, null, null];
+    let lockCacheCanvas = null;
+    let fingerCacheCanvas = null;
+
+    // 資源圖片（1 張大門圖 + 3 張鑰匙 + 1 張戰鬥底圖 + 3 張主角 + 3 張骷髏 = 11 張）
+    const bgImg = new Image();
+    const arenaBgImg = new Image();
+    const keyImgs = [new Image(), new Image(), new Image()];
+    const playerImages = [new Image(), new Image(), new Image()];
+    const enemyImages = [new Image(), new Image(), new Image()];
+    const totalAssets = 11;
+    let loadedAssets = 0;
+
+    function makeEmojiCache(emoji, fontSize, canvasSize) {
+      const c = document.createElement('canvas');
+      c.width = canvasSize;
+      c.height = canvasSize;
+      const cCtx = c.getContext('2d');
+      cCtx.font = `${fontSize}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
+      cCtx.textAlign = 'center';
+      cCtx.textBaseline = 'middle';
+      cCtx.fillStyle = '#000000';
+      cCtx.shadowColor = 'transparent';
+      cCtx.shadowBlur = 0;
+      cCtx.fillText(emoji, canvasSize / 2, canvasSize / 2);
+      return c;
+    }
+
+    function makeKeyCaches(img) {
+      const cacheSize = 200;
+      const drawSize = 166;
+      const offset = (cacheSize - drawSize) / 2;
+
+      const colorCanvas = document.createElement('canvas');
+      colorCanvas.width = cacheSize;
+      colorCanvas.height = cacheSize;
+      const cCtx = colorCanvas.getContext('2d');
+      if (img && img.complete && img.naturalWidth > 0) {
+        cCtx.drawImage(img, offset, offset, drawSize, drawSize);
+      }
+
+      const silCanvas = document.createElement('canvas');
+      silCanvas.width = cacheSize;
+      silCanvas.height = cacheSize;
+      const sCtx = silCanvas.getContext('2d');
+      if (img && img.complete && img.naturalWidth > 0) {
+        sCtx.drawImage(img, offset, offset, drawSize, drawSize);
+        sCtx.globalCompositeOperation = 'source-in';
+        sCtx.fillStyle = 'rgba(10, 14, 24, 0.88)';
+        sCtx.fillRect(0, 0, cacheSize, cacheSize);
+        sCtx.globalCompositeOperation = 'source-over';
+      }
+
+      return { colorCanvas, silCanvas };
+    }
+
+    function makeBgCache(img, fallbackTop, fallbackBottom) {
+      const c = document.createElement('canvas');
+      c.width = CANVAS_W;
+      c.height = CANVAS_H;
+      const bCtx = c.getContext('2d');
+      if (img && img.complete && img.naturalWidth > 0) {
+        bCtx.drawImage(img, 0, 0, CANVAS_W, CANVAS_H);
+      } else {
+        const grad = bCtx.createLinearGradient(0, 0, 0, CANVAS_H);
+        grad.addColorStop(0, fallbackTop);
+        grad.addColorStop(1, fallbackBottom);
+        bCtx.fillStyle = grad;
+        bCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+      return c;
+    }
+
+    function initRenderCaches() {
+      bgCacheCanvas = makeBgCache(bgImg, '#182038', '#0b0e18');
+      arenaBgCacheCanvas = makeBgCache(arenaBgImg, '#2b2433', '#120e18');
+
+      for (let i = 0; i < 3; i++) {
+        const caches = makeKeyCaches(keyImgs[i]);
+        keyColorCaches[i] = caches.colorCanvas;
+        keySilhouetteCaches[i] = caches.silCanvas;
+      }
+
+      lockCacheCanvas = makeEmojiCache('🔒', 48, 80);
+      fingerCacheCanvas = makeEmojiCache('👆', 54, 88);
+    }
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `資源載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+
+        initRenderCaches();
+
+        if (localStorage.getItem('map19_gate_cleared') === 'true') {
+          enterBattleStage();
+        } else {
+          enterGateStage();
+        }
+
+        draw();
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    bgImg.onload = checkLoadProgress;
+    bgImg.onerror = checkLoadProgress;
+    bgImg.src = 'assets/map/map19-1.webp';
+
+    arenaBgImg.onload = checkLoadProgress;
+    arenaBgImg.onerror = checkLoadProgress;
+    arenaBgImg.src = 'assets/map/map19-2.webp';
+
+    ['key1', 'key2', 'key3'].forEach((name, idx) => {
+      keyImgs[idx].onload = checkLoadProgress;
+      keyImgs[idx].onerror = checkLoadProgress;
+      keyImgs[idx].src = `assets/sticker/${name}.webp`;
+    });
+
+    [1, 2, 3].forEach((num, idx) => {
+      playerImages[idx].onload = checkLoadProgress;
+      playerImages[idx].onerror = checkLoadProgress;
+      playerImages[idx].src = `assets/player/${charConfig.prefix}-${num}.webp`;
+    });
+
+    ['bad19-1', 'bad19-2', 'bad19-3'].forEach((name, idx) => {
+      enemyImages[idx].onload = checkLoadProgress;
+      enemyImages[idx].onerror = checkLoadProgress;
+      enemyImages[idx].src = `assets/bad/${name}.webp`;
+    });
+
+    // 安全釋放記憶體並返回所屬大廳
+    function cleanupMemory() {
+      gamePhase = 'exiting';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      enemies.length = 0;
+      activeEffects.length = 0;
+      confetti.length = 0;
+      particles.length = 0;
+      popups.length = 0;
+
+      if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (arenaBgImg) { arenaBgImg.onload = null; arenaBgImg.onerror = null; arenaBgImg.src = ''; }
+      [...keyImgs, ...playerImages, ...enemyImages].forEach(img => {
+        if (img) { img.onload = null; img.onerror = null; img.src = ''; }
+      });
+
+      const caches = [
+        bgCacheCanvas,
+        arenaBgCacheCanvas,
+        lockCacheCanvas,
+        fingerCacheCanvas,
+        ...keyColorCaches,
+        ...keySilhouetteCaches
+      ];
+      caches.forEach(c => {
+        if (c) { c.width = 1; c.height = 1; }
+      });
+      bgCacheCanvas = null;
+      arenaBgCacheCanvas = null;
+      lockCacheCanvas = null;
+      fingerCacheCanvas = null;
+      keyColorCaches = [null, null, null];
+      keySilhouetteCaches = [null, null, null];
+
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      if (window.RPGDialog) window.RPGDialog.hide();
+      cleanupMemory();
+      sessionStorage.setItem('returning_from_subpage', '1');
+      const targetLobby = sessionStorage.getItem('current_lobby') === 'index' ? 'index.html' : 'lobby1.html';
+      window.location.replace(targetLobby);
+    }
+
+    window.addEventListener('pagehide', cleanupMemory);
+
+    // ===== 第一階段：鑰匙收集與神秘大門流程 =====
+
+    function hasKeySticker(stickerId) {
+      const val = localStorage.getItem('sticker_' + stickerId);
+      return val === 'true' || val === 'new';
+    }
+
+    function refreshOwnership() {
+      KEY_SLOTS.forEach((slot, idx) => {
+        slotStates[idx].owned = hasKeySticker(slot.stickerId);
+      });
+    }
+
+    function enterGateStage() {
+      if (window.RPGDialog) window.RPGDialog.hide();
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      refreshOwnership();
+      slotStates.forEach(s => {
+        s.activated = false;
+        s.beamProgress = 0;
+        s.beamDone = false;
+        s.shakeTimer = 0;
+      });
+      enemies = [];
+      activeEffects = [];
+      confetti = [];
+      particles = [];
+      popups = [];
+      shakeTime = 0;
+      whiteFade = 0;
+      gateOpenTimer = 0;
+      gearAngle = 0;
+
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('battle-hud').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+
+      gamePhase = 'gate';
+    }
+
+    function replayGateAnimation() {
+      enterGateStage();
+    }
+
+    // ===== 第二階段：六波骷髏大軍圍攻戰 =====
+
+    function resetPlayerForBattle(x, y) {
+      player.x = x;
+      player.y = y;
+      player.targetX = x;
+      player.targetY = y;
+      player.frame = 0;
+      player.isMoving = false;
+      player.isFacingLeft = false;
+      player.isAttacking = false;
+      player.attackTimer = 0;
+      player.attackSlashed = false;
+      player.slashOnArrive = false;
+      player.walkCycle = 0;
+      player.deadTime = 0;
+      player.deadSpin = 0;
+    }
+
+    function updateBattleHUD() {
+      if (lastRenderedWave !== battleWave) {
+        lastRenderedWave = battleWave;
+        if (battleWave === 0) {
+          battleWaveEl.innerHTML = `💀 <ruby>準<rt>ㄓㄨㄣˇ</rt></ruby><ruby>備<rt>ㄅㄟˋ</rt></ruby>`;
+        } else {
+          battleWaveEl.innerHTML = `💀 <ruby>第<rt>ㄉㄧˋ</rt></ruby> ${battleWave}/${TOTAL_WAVES} <ruby>波<rt>ㄅㄛ</rt></ruby>`;
+        }
+        if (window.Bopomofo && window.Bopomofo.render) {
+          window.Bopomofo.render();
+        }
+      }
+
+      if (lastRenderedHp !== playerHp) {
+        lastRenderedHp = playerHp;
+        let hearts = '';
+        for (let i = 0; i < PLAYER_MAX_HP; i++) {
+          hearts += i < playerHp ? '❤️' : '🖤';
+        }
+        battleHpEl.textContent = hearts;
+      }
+    }
+
+    function enterBattleStage() {
+      if (gamePhase === 'exiting') return;
+      if (window.RPGDialog) window.RPGDialog.hide();
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+
+      enemies = [];
+      activeEffects = [];
+      confetti = [];
+      particles = [];
+      popups = [];
+      whiteFade = 0;
+      shakeTime = 0;
+      introFlashTimer = 0;
+      battleWave = 0;
+      playerHp = PLAYER_MAX_HP;
+      playerInvincible = 0;
+      waveRemainingToSpawn = 0;
+      spawnCooldown = 0;
+      waveGapTimer = 0;
+      lastDoorIdx = -1;
+      lastRenderedWave = -1;
+      lastRenderedHp = -1;
+
+      resetPlayerForBattle(ARENA_START_POS.x, ARENA_START_POS.y);
+      player.targetX = ARENA_CENTER.x;
+      player.targetY = ARENA_CENTER.y;
+      player.isMoving = true;
+
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('battle-hud').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+
+      gamePhase = 'battle_intro_walk';
+    }
+
+    function retryBattle() {
+      if (gamePhase === 'exiting') return;
+      if (window.RPGDialog) window.RPGDialog.hide();
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+
+      enemies = [];
+      activeEffects = [];
+      confetti = [];
+      particles = [];
+      popups = [];
+      whiteFade = 0;
+      shakeTime = 0;
+      playerHp = PLAYER_MAX_HP;
+      playerInvincible = 0;
+      lastDoorIdx = -1;
+      lastRenderedWave = -1;
+      lastRenderedHp = -1;
+
+      resetPlayerForBattle(ARENA_CENTER.x, ARENA_CENTER.y);
+
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+      document.getElementById('battle-hud').style.display = 'block';
+
+      gamePhase = 'battle_playing';
+      startBattleWave(1);
+    }
+
+    function showIntroDialog1() {
+      gamePhase = 'battle_intro_dialog1';
+      if (window.RPGDialog) {
+        window.RPGDialog.show(
+          `<ruby>四<rt>ㄙˋ</rt></ruby><ruby>周<rt>ㄓㄡ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>好<rt>ㄏㄠˇ</rt></ruby><ruby>多<rt>ㄉㄨㄛ</rt></ruby><ruby>敵<rt>ㄉㄧˊ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>聲<rt>ㄕㄥ</rt></ruby><ruby>音<rt>ㄧㄣ</rt></ruby><span>！</span>`,
+          'assets/mp3/map19-1.mp3'
+        );
+      } else {
+        startIntroFlash();
+      }
+    }
+
+    function startIntroFlash() {
+      gamePhase = 'battle_intro_flash';
+      introFlashTimer = 1.1;
+      shakeTime = 1.1;
+      shakeMax = 1.1;
+    }
+
+    function showIntroDialog2() {
+      gamePhase = 'battle_intro_dialog2';
+      if (window.RPGDialog) {
+        window.RPGDialog.show(
+          `<ruby>敵<rt>ㄉㄧˊ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>從<rt>ㄘㄨㄥˊ</rt></ruby><ruby>四<rt>ㄙˋ</rt></ruby><ruby>面<rt>ㄇㄧㄢˋ</rt></ruby><ruby>八<rt>ㄅㄚ</rt></ruby><ruby>方<rt>ㄈㄤ</rt></ruby><ruby>跑<rt>ㄆㄠˇ</rt></ruby><ruby>來<rt>ㄌㄞˊ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`,
+          'assets/mp3/map19-2.mp3'
+        );
+      } else {
+        beginBattleWaves();
+      }
+    }
+
+    function beginBattleWaves() {
+      document.getElementById('battle-hud').style.display = 'block';
+      gamePhase = 'battle_playing';
+      startBattleWave(1);
+    }
+
+    function startBattleWave(n) {
+      battleWave = n;
+      waveRemainingToSpawn = WAVE_ENEMY_COUNTS[n - 1] || (4 + n * 2);
+      spawnCooldown = 0.25;
+      waveGapTimer = 0;
+      updateBattleHUD();
+      addPopup(`💀 第 ${n} 波`, ARENA_CENTER.x, ARENA_CENTER.y - 110, '#ffeb3b', 48);
+    }
+
+    function spawnEnemy() {
+      let doorIdx = Math.floor(Math.random() * ARENA_DOORS.length);
+      if (ARENA_DOORS.length > 1 && doorIdx === lastDoorIdx) {
+        doorIdx = (doorIdx + 1 + Math.floor(Math.random() * (ARENA_DOORS.length - 1))) % ARENA_DOORS.length;
+      }
+      lastDoorIdx = doorIdx;
+      const door = ARENA_DOORS[doorIdx];
+
+      const speed = ENEMY_SPEED_BASE + (battleWave - 1) * ENEMY_SPEED_PER_WAVE + (Math.random() - 0.5) * 20;
+      enemies.push({
+        x: door.x,
+        y: door.y,
+        size: ENEMY_SIZE,
+        speed: speed,
+        walkCycle: Math.random() * 10,
+        isFacingLeft: player.x < door.x,
+        isAttackPose: false,
+        spawnAlpha: 0
+      });
+
+      spawnBurst(door.x, door.y, '#ff8a80', 8, 120, 5);
+    }
+
+    function playSlash() {
+      player.isMoving = false;
+      player.walkCycle = 0;
+      player.isAttacking = true;
+      player.attackTimer = 0;
+      player.attackSlashed = true;
+      player.frame = 1;
+      performSlashHit();
+    }
+
+    function performSlashHit() {
+      const currentOffsetX = player.isFacingLeft ? -player.hitboxOffsetX : player.hitboxOffsetX;
+      const attackCenterX = player.x + currentOffsetX;
+      const attackCenterY = player.y + player.hitboxOffsetY;
+      const attackRadius = Math.max(player.hitboxRadius, 60);
+
+      activeEffects.push({
+        t: 0,
+        duration: 0.25,
+        startX: player.x,
+        startY: player.y - 20,
+        targetX: attackCenterX,
+        targetY: attackCenterY
+      });
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const en = enemies[i];
+        const distCenter = Math.hypot(attackCenterX - en.x, attackCenterY - en.y);
+
+        if (distCenter <= attackRadius + en.size * 0.5) {
+          spawnBurst(en.x, en.y, '#fff59d', 16, 240, 6);
+          spawnBurst(en.x, en.y, '#e2e8f0', 10, 180, 5);
+          addPopup('💥', en.x, en.y - 25, '#ffffff', 46, false);
+          enemies.splice(i, 1);
+        }
+      }
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff6b81', '#eccc68'];
+      for (let i = 0; i < 65; i++) {
+        confetti.push({
+          x: CANVAS_W / 2 + (Math.random() - 0.5) * 550,
+          y: 250 + Math.random() * 320,
+          vx: (Math.random() - 0.5) * 460,
+          vy: -200 - Math.random() * 350,
+          size: 14 + Math.random() * 12,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 10
+        });
+      }
+    }
+
+    function endBattleGame(isWin) {
+      if (gamePhase === 'exiting') return;
+      if (window.RPGDialog) window.RPGDialog.hide();
+      gamePhase = 'battle_result';
+
+      document.getElementById('battle-hud').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+
+      const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      const alreadyCleared = localStorage.getItem('map19_cleared') === 'true';
+      const alreadyOwnedBad19 = localStorage.getItem('owns_bad19') === 'true';
+      const clearedAllWaves = isWin && battleWave >= TOTAL_WAVES;
+
+      let rewardStars = 0;
+      if (clearedAllWaves) {
+        localStorage.setItem('map19_cleared', 'true');
+        localStorage.setItem('owns_bad19', 'true');
+        if (localStorage.getItem('sticker_smap19') !== 'true') {
+          localStorage.setItem('sticker_smap19', 'new');
+        }
+        if (!alreadyCleared) {
+          rewardStars = FIRST_CLEAR_REWARD;
+        }
+      }
+
+      const newTotalCoins = currentCoins + rewardStars;
+      if (rewardStars > 0) {
+        localStorage.setItem('playerCoins', newTotalCoins);
+      }
+
+      if (clearedAllWaves) {
+        document.getElementById('result-title').innerHTML = `<ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`;
+        document.getElementById('result-title').style.color = '#ffeb3b';
+      } else {
+        document.getElementById('result-title').innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>敗<rt>ㄅㄞˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
+        document.getElementById('result-title').style.color = '#ff8a80';
+      }
+
+      document.getElementById('newCoins').innerText = '+' + rewardStars;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      if (rewardStars > 0) {
+        for (let i = 1; i <= rewardStars; i++) {
+          starsHtml += '⭐';
+          if (i % 6 === 0) starsHtml += '<br>';
+        }
+      } else if (clearedAllWaves && alreadyCleared) {
+        starsHtml = `<div class="zh-text" style="color: #b2fef7;">🏆 <ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>已<rt>ㄧˇ</rt></ruby><ruby>經<rt>ㄐㄧㄥ</rt></ruby><ruby>領<rt>ㄌㄧㄥˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>獎<rt>ㄐㄧㄤˇ</rt></ruby><ruby>勵<rt>ㄌㄧˋ</rt></ruby><ruby>囉<rt>˙ㄌㄨㄛ</rt></ruby><span>！</span></div>`;
+      } else {
+        starsHtml = `<div class="zh-text" style="color: #ff8a80;">💀 <ruby>撐<rt>ㄔㄥ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>六<rt>ㄌㄧㄡˋ</rt></ruby><ruby>波<rt>ㄅㄛ</rt></ruby><ruby>才<rt>ㄘㄞˊ</rt></ruby><ruby>能<rt>ㄋㄥˊ</rt></ruby><ruby>拿<rt>ㄋㄚˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>獎<rt>ㄐㄧㄤˇ</rt></ruby><ruby>勵<rt>ㄌㄧˋ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby><span>！</span></div>`;
+      }
+
+      if (clearedAllWaves && !alreadyOwnedBad19) {
+        starsHtml += `<div class="zh-text" style="margin-top: 8px; color: #69f0ae; width: 100%;">💀 <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby><ruby>角<rt>ㄐㄧㄠˇ</rt></ruby><ruby>色<rt>ㄙㄜˋ</rt></ruby><span>！</span></div>`;
+      }
+
+      document.getElementById('star-container').innerHTML = starsHtml;
+
+      if (window.Bopomofo && window.Bopomofo.render) {
+        window.Bopomofo.render();
+      }
+
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    // ===== 粒子、浮動文字與能量路徑計算 =====
+
+    function addPopup(text, x, y, color, size, stroke = true) {
+      popups.push({ text, x, y, color, size, stroke, t: 0, duration: 1.0 });
+    }
+
+    function spawnBurst(x, y, color, count, speed = 220, size = 7) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = speed * (0.35 + Math.random() * 0.75);
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd - 30,
+          size: size * (0.6 + Math.random() * 0.8),
+          color,
+          t: 0,
+          duration: 0.45 + Math.random() * 0.45
+        });
+      }
+    }
+
+    function getPolylineMetrics(pts) {
+      let total = 0;
+      const segs = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const dx = pts[i + 1].x - pts[i].x;
+        const dy = pts[i + 1].y - pts[i].y;
+        const len = Math.hypot(dx, dy);
+        segs.push(len);
+        total += len;
+      }
+      return { total, segs };
+    }
+
+    function samplePolyline(pts, progress) {
+      const p = Math.max(0, Math.min(1, progress));
+      const { total, segs } = getPolylineMetrics(pts);
+      let targetDist = total * p;
+      const out = [pts[0]];
+      let tip = pts[0];
+
+      for (let i = 0; i < segs.length; i++) {
+        const segLen = segs[i];
+        if (targetDist >= segLen) {
+          out.push(pts[i + 1]);
+          tip = pts[i + 1];
+          targetDist -= segLen;
+        } else {
+          const ratio = segLen > 0 ? targetDist / segLen : 0;
+          tip = {
+            x: pts[i].x + (pts[i + 1].x - pts[i].x) * ratio,
+            y: pts[i].y + (pts[i + 1].y - pts[i].y) * ratio
+          };
+          out.push(tip);
+          break;
+        }
+      }
+      return { points: out, tip };
+    }
+
+    // ===== 主迴圈與邏輯更新 =====
+
+    function gameLoop(currentTime) {
+      if (gamePhase === 'exiting') return;
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+
+      update(dt);
+      draw();
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updatePlayerCombatMovement(dt) {
+      if (playerInvincible > 0) {
+        playerInvincible = Math.max(0, playerInvincible - dt);
+      }
+
+      if (player.isMoving) {
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const distance = Math.hypot(dx, dy);
+        const moveDist = player.speed * dt;
+
+        if (distance > moveDist) {
+          player.x += (dx / distance) * moveDist;
+          player.y += (dy / distance) * moveDist;
+          player.walkCycle += 24 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          if (player.slashOnArrive) {
+            player.slashOnArrive = false;
+            playSlash();
+          }
+        }
+        return;
+      }
+
+      if (player.isAttacking) {
+        player.attackTimer += dt;
+        if (player.attackTimer >= 0.12 && player.frame !== 2) {
+          player.frame = 2;
+        }
+        if (player.attackTimer >= 0.25) {
+          player.frame = 0;
+          player.isAttacking = false;
+        }
+      }
+    }
+
+    function update(dt) {
+      animTime += dt;
+
+      if (shakeTime > 0) {
+        shakeTime = Math.max(0, shakeTime - dt);
+      }
+
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].t += dt;
+        if (popups[i].t >= popups[i].duration) popups.splice(i, 1);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.t += dt;
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.vx *= 0.96;
+        pt.vy *= 0.96;
+        if (pt.t >= pt.duration) particles.splice(i, 1);
+      }
+
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        activeEffects[i].t += dt;
+        if (activeEffects[i].t >= activeEffects[i].duration) {
+          activeEffects.splice(i, 1);
+        }
+      }
+
+      // ----- 第一階段：神秘大門 -----
+      if (gamePhase === 'gate') {
+        let allDone = true;
+        KEY_SLOTS.forEach((slot, idx) => {
+          const s = slotStates[idx];
+          if (s.shakeTimer > 0) s.shakeTimer = Math.max(0, s.shakeTimer - dt);
+
+          if (s.activated && !s.beamDone) {
+            s.beamProgress = Math.min(1, s.beamProgress + dt * 1.15);
+
+            if (Math.random() < 0.75) {
+              slot.paths.forEach(path => {
+                const { tip } = samplePolyline(path, s.beamProgress);
+                spawnBurst(tip.x, tip.y, slot.primaryColor, 1, 70, 5);
+              });
+            }
+
+            if (s.beamProgress >= 1) {
+              s.beamDone = true;
+              shakeTime = 0.25;
+              shakeMax = 0.25;
+              spawnBurst(GEAR_CENTER.x, GEAR_CENTER.y, slot.primaryColor, 26, 280, 7);
+              spawnBurst(GEAR_CENTER.x, GEAR_CENTER.y, '#ffffff', 12, 180, 5);
+            }
+          }
+
+          if (!s.beamDone) allDone = false;
+        });
+
+        if (allDone) {
+          localStorage.setItem('map19_gate_cleared', 'true');
+          gamePhase = 'gate_opening';
+          gateOpenTimer = 0;
+          shakeTime = 1.6;
+          shakeMax = 1.6;
+        }
+      } else if (gamePhase === 'gate_opening') {
+        gateOpenTimer += dt;
+        gearAngle += dt * (1.2 + gateOpenTimer * 1.8);
+
+        if (Math.random() < 0.85) {
+          const py = 210 + Math.random() * 520;
+          spawnBurst(GEAR_CENTER.x + (Math.random() - 0.5) * 26, py, '#b9f6ca', 2, 170, 6);
+        }
+
+        if (gateOpenTimer >= 1.2) {
+          whiteFade = Math.min(1, (gateOpenTimer - 1.2) / 0.9);
+          if (whiteFade >= 1) {
+            enterBattleStage();
+          }
+        }
+      }
+
+      // ----- 第二階段：入場演出與戰鬥 -----
+      else if (gamePhase === 'battle_intro_walk') {
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.hypot(dx, dy);
+        const step = 360 * dt;
+        if (dist > step) {
+          player.x += (dx / dist) * step;
+          player.y += (dy / dist) * step;
+          player.walkCycle += 18 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          showIntroDialog1();
+        }
+      } else if (gamePhase === 'battle_intro_flash') {
+        introFlashTimer -= dt;
+        if (introFlashTimer <= 0) {
+          introFlashTimer = 0;
+          showIntroDialog2();
+        }
+      } else if (gamePhase === 'battle_playing') {
+        updatePlayerCombatMovement(dt);
+
+        // 生怪排程
+        if (waveRemainingToSpawn > 0) {
+          spawnCooldown -= dt;
+          if (spawnCooldown <= 0) {
+            spawnEnemy();
+            waveRemainingToSpawn--;
+            spawnCooldown = WAVE_SPAWN_INTERVALS[battleWave - 1] || 0.7;
+          }
+        } else if (enemies.length === 0) {
+          if (battleWave >= TOTAL_WAVES) {
+            gamePhase = 'battle_winning';
+            player.isMoving = false;
+            player.isAttacking = false;
+            spawnConfetti();
+            return;
+          } else {
+            if (waveGapTimer <= 0) {
+              waveGapTimer = 1.3;
+              addPopup(`✨ 第 ${battleWave} 波完成`, player.x, player.y - 90, '#69f0ae', 40);
+            } else {
+              waveGapTimer -= dt;
+              if (waveGapTimer <= 0) {
+                startBattleWave(battleWave + 1);
+              }
+            }
+          }
+        }
+
+        // 更新骷髏人移動與碰撞
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const en = enemies[i];
+          en.spawnAlpha = Math.min(1, en.spawnAlpha + dt * 4);
+
+          const dx = player.x - en.x;
+          const dy = player.y - en.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (Math.abs(dx) > 4) {
+            en.isFacingLeft = dx < 0;
+          }
+
+          en.isAttackPose = dist < 125;
+          if (dist > 1) {
+            en.x += (dx / dist) * en.speed * dt;
+            en.y += (dy / dist) * en.speed * dt;
+            en.walkCycle += 14 * dt;
+          }
+
+          if (dist < 48 && playerInvincible <= 0) {
+            playerHp--;
+            playerInvincible = PLAYER_INVINCIBLE_TIME;
+            shakeTime = 0.35;
+            shakeMax = 0.35;
+            updateBattleHUD();
+            addPopup('-1 ❤️', player.x, player.y - 80, '#ff5252', 44);
+            spawnBurst(en.x, en.y, '#ff5252', 14, 220, 6);
+            enemies.splice(i, 1);
+
+            if (playerHp <= 0) {
+              gamePhase = 'battle_dead';
+              player.isMoving = false;
+              player.isAttacking = false;
+              player.deadTime = 0;
+              player.deadSpin = 0;
+              addPopup('💫', player.x, player.y - 80, '#ffffff', 68, false);
+              endTimeoutId = setTimeout(() => endBattleGame(false), 1200);
+              return;
+            }
+          }
+        }
+      } else if (gamePhase === 'battle_dead') {
+        player.deadTime += dt;
+        player.deadSpin += dt * 12;
+      } else if (gamePhase === 'battle_winning') {
+        for (let c of confetti) {
+          c.vy += 500 * dt;
+          c.x += c.vx * dt;
+          c.y += c.vy * dt;
+          c.rot += c.vRot * dt;
+        }
+        whiteFade += dt * 1.15;
+        if (whiteFade >= 1) {
+          whiteFade = 1;
+          endBattleGame(true);
+        }
+      }
+    }
+
+    // ===== 繪圖 =====
+
+    function drawEnergyPolyline(pts, color, width, alpha) {
+      if (pts.length < 2) return;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSlotVisuals() {
+      KEY_SLOTS.forEach((slot, idx) => {
+        const s = slotStates[idx];
+        const shakeX = s.shakeTimer > 0
+          ? Math.sin(s.shakeTimer * 48) * 10 * (s.shakeTimer / 0.45)
+          : 0;
+        const pulse = 0.5 + 0.5 * Math.sin(animTime * 4 + idx * 1.3);
+
+        if (s.activated && s.beamProgress > 0) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          slot.paths.forEach(path => {
+            const { points, tip } = samplePolyline(path, s.beamProgress);
+            drawEnergyPolyline(points, slot.primaryColor, 18, 0.28 + 0.1 * pulse);
+            drawEnergyPolyline(points, slot.secondaryColor, 9, 0.7);
+            drawEnergyPolyline(points, '#ffffff', 3.5, 0.95);
+
+            if (s.beamProgress < 1) {
+              const g = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, 26);
+              g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+              g.addColorStop(0.4, slot.glowRgba + '0.85)');
+              g.addColorStop(1, slot.glowRgba + '0)');
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.arc(tip.x, tip.y, 26, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          if (s.beamDone) {
+            slot.doorGlowPoints.forEach(pt => {
+              const radius = pt.r * (0.95 + 0.12 * pulse);
+              const rg = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius);
+              rg.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+              rg.addColorStop(0.45, slot.glowRgba + '0.75)');
+              rg.addColorStop(1, slot.glowRgba + '0)');
+              ctx.fillStyle = rg;
+              ctx.beginPath();
+              ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+          ctx.restore();
+        }
+
+        const ir = slot.innerRect;
+        if (!s.owned) {
+          ctx.fillStyle = 'rgba(6, 10, 18, 0.45)';
+          ctx.fillRect(ir.x + shakeX, ir.y, ir.w, ir.h);
+
+          if (keySilhouetteCaches[idx]) {
+            ctx.save();
+            ctx.translate(slot.cx + shakeX, slot.cy - 6);
+            ctx.drawImage(keySilhouetteCaches[idx], -100, -100);
+            ctx.restore();
+          }
+
+          if (lockCacheCanvas) {
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            ctx.drawImage(lockCacheCanvas, slot.cx + shakeX - 40, slot.cy + 24);
+            ctx.restore();
+          }
+        } else if (!s.activated) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          const bgGlow = ctx.createRadialGradient(slot.cx, slot.cy, 10, slot.cx, slot.cy, 105);
+          bgGlow.addColorStop(0, slot.glowRgba + (0.35 + 0.25 * pulse) + ')');
+          bgGlow.addColorStop(1, slot.glowRgba + '0)');
+          ctx.fillStyle = bgGlow;
+          ctx.fillRect(ir.x, ir.y, ir.w, ir.h);
+
+          ctx.strokeStyle = slot.primaryColor;
+          ctx.globalAlpha = 0.45 + 0.45 * pulse;
+          ctx.lineWidth = 5;
+          ctx.strokeRect(ir.x + 3, ir.y + 3, ir.w - 6, ir.h - 6);
+          ctx.restore();
+
+          const floatY = Math.sin(animTime * 3.5 + idx) * 7;
+          if (keyColorCaches[idx]) {
+            ctx.save();
+            ctx.translate(slot.cx, slot.cy + floatY);
+            ctx.drawImage(keyColorCaches[idx], -100, -100);
+            ctx.restore();
+          }
+
+          if (fingerCacheCanvas) {
+            const bounce = Math.abs(Math.sin(animTime * 4.5 + idx)) * 12;
+            ctx.drawImage(fingerCacheCanvas, slot.cx - 44, slot.hitRect.y + slot.hitRect.h - 20 + bounce);
+          }
+        } else {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          const actGlow = ctx.createRadialGradient(slot.cx, slot.cy, 12, slot.cx, slot.cy, 118);
+          actGlow.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+          actGlow.addColorStop(0.45, slot.glowRgba + '0.65)');
+          actGlow.addColorStop(1, slot.glowRgba + '0)');
+          ctx.fillStyle = actGlow;
+          ctx.fillRect(ir.x - 10, ir.y - 10, ir.w + 20, ir.h + 20);
+
+          ctx.strokeStyle = slot.primaryColor;
+          ctx.globalAlpha = 0.85;
+          ctx.lineWidth = 6;
+          ctx.strokeRect(ir.x + 2, ir.y + 2, ir.w - 4, ir.h - 4);
+          ctx.restore();
+
+          if (keyColorCaches[idx]) {
+            const sc = 1.02 + 0.03 * pulse;
+            ctx.save();
+            ctx.translate(slot.cx, slot.cy);
+            ctx.scale(sc, sc);
+            ctx.drawImage(keyColorCaches[idx], -100, -100);
+            ctx.restore();
+          }
+        }
+      });
+    }
+
+    function drawGateOpeningEffects() {
+      if (gamePhase !== 'gate_opening') return;
+      const p = Math.min(1, gateOpenTimer / 1.4);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      ctx.save();
+      ctx.translate(GEAR_CENTER.x, GEAR_CENTER.y);
+      ctx.rotate(gearAngle);
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(Math.PI / 4);
+        const rayLen = 80 + p * 170;
+        const grad = ctx.createLinearGradient(0, 0, rayLen, 0);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        grad.addColorStop(0.5, 'rgba(105, 240, 174, 0.55)');
+        grad.addColorStop(1, 'rgba(105, 240, 174, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(rayLen, -2);
+        ctx.lineTo(rayLen, 2);
+        ctx.lineTo(0, 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      const slitW = 10 + p * 180;
+      const slitGrad = ctx.createLinearGradient(GEAR_CENTER.x - slitW / 2, 0, GEAR_CENTER.x + slitW / 2, 0);
+      slitGrad.addColorStop(0, 'rgba(105, 240, 174, 0)');
+      slitGrad.addColorStop(0.35, 'rgba(105, 240, 174, 0.7)');
+      slitGrad.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
+      slitGrad.addColorStop(0.65, 'rgba(105, 240, 174, 0.7)');
+      slitGrad.addColorStop(1, 'rgba(105, 240, 174, 0)');
+      ctx.fillStyle = slitGrad;
+      ctx.fillRect(GEAR_CENTER.x - slitW / 2, 180, slitW, 575);
+
+      ctx.restore();
+    }
+
+    function drawEnemies() {
+      for (const en of enemies) {
+        ctx.save();
+        ctx.globalAlpha = en.spawnAlpha;
+
+        // 腳底陰影
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+        ctx.beginPath();
+        ctx.ellipse(en.x, en.y + en.size * 0.36, en.size * 0.28, en.size * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const frameIdx = en.isAttackPose
+          ? 1
+          : (Math.floor(en.walkCycle / 3) % 2 === 0 ? 2 : 0);
+        const img = enemyImages[frameIdx];
+
+        if (img && img.complete && img.naturalWidth > 0) {
+          const offsetY = Math.sin(en.walkCycle * 1.5) * 4;
+          const rot = Math.sin(en.walkCycle) * 0.08;
+          ctx.translate(en.x, en.y + offsetY);
+          ctx.rotate(rot);
+          if (en.isFacingLeft) ctx.scale(-1, 1);
+          ctx.drawImage(img, -en.size / 2, -en.size / 2, en.size, en.size);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawBattlePlayer() {
+      if (gamePhase === 'battle_dead' && Math.floor(player.deadTime * 12) % 2 === 1) return;
+      if (playerInvincible > 0 && Math.floor(playerInvincible * 14) % 2 === 1) return;
+
+      // 攻擊目標點指示
+      if (gamePhase === 'battle_playing' && player.isMoving) {
+        const attackX = player.targetX + (player.isFacingLeft ? -player.hitboxOffsetX : player.hitboxOffsetX);
+        const attackY = player.targetY + player.hitboxOffsetY;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(attackX, attackY, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 腳底陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(player.x, player.y + player.size * 0.36, player.size * 0.3, player.size * 0.11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const currentImg = playerImages[player.frame];
+      if (!(currentImg && currentImg.complete && currentImg.naturalWidth > 0)) return;
+
+      ctx.save();
+      if (gamePhase === 'battle_dead') {
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.deadSpin);
+      } else {
+        const offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 6 : 0;
+        const rotationAngle = player.isMoving ? Math.sin(player.walkCycle) * 0.18 : 0;
+        ctx.translate(player.x, player.y + offsetY);
+        ctx.rotate(rotationAngle);
+      }
+      if (player.isFacingLeft) ctx.scale(-1, 1);
+      ctx.drawImage(currentImg, -player.size / 2, -player.size / 2, player.size, player.size);
+      ctx.restore();
+    }
+
+    function drawActiveEffects() {
+      for (const fx of activeEffects) {
+        const progress = Math.min(1, fx.t / fx.duration);
+        charConfig.drawEffect(ctx, progress, fx.startX, fx.startY, fx.targetX, fx.targetY);
+      }
+    }
+
+    function drawParticles() {
+      for (let pt of particles) {
+        const progress = pt.t / pt.duration;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 1 - progress;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.size * (1 - progress * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawPopups() {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let popup of popups) {
+        const progress = popup.t / popup.duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - Math.pow(progress, 3);
+        const floatY = popup.y - progress * 65;
+        ctx.font = `bold ${popup.size}px sans-serif`;
+        ctx.fillStyle = popup.color;
+        if (popup.stroke) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 4;
+          ctx.strokeText(popup.text, popup.x, floatY);
+        }
+        ctx.fillText(popup.text, popup.x, floatY);
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      if (gamePhase === 'exiting') return;
+
+      const isGatePhase = gamePhase === 'gate' || gamePhase === 'gate_opening';
+
+      ctx.save();
+
+      if (shakeTime > 0) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        const amp = 16 * (shakeTime / Math.max(0.01, shakeMax));
+        ctx.translate((Math.random() - 0.5) * amp, (Math.random() - 0.5) * amp);
+      }
+
+      if (isGatePhase) {
+        if (bgCacheCanvas) ctx.drawImage(bgCacheCanvas, 0, 0);
+        drawSlotVisuals();
+        drawGateOpeningEffects();
+        drawParticles();
+        drawPopups();
+      } else {
+        if (arenaBgCacheCanvas) ctx.drawImage(arenaBgCacheCanvas, 0, 0);
+        drawEnemies();
+        drawBattlePlayer();
+        drawActiveEffects();
+        drawParticles();
+        drawPopups();
+
+        // 過關彩帶
+        for (let c of confetti) {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot);
+          ctx.fillStyle = c.color;
+          ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+          ctx.restore();
+        }
+      }
+
+      ctx.restore();
+
+      // 入場灰黑閃爍演出
+      if (gamePhase === 'battle_intro_flash') {
+        const step = Math.floor(introFlashTimer * 18) % 2;
+        ctx.save();
+        ctx.globalCompositeOperation = 'saturation';
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.restore();
+
+        ctx.fillStyle = step === 0 ? 'rgba(130, 130, 130, 0.55)' : 'rgba(0, 0, 0, 0.75)';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+
+      if (whiteFade > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${whiteFade})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+    }
+
+    // ===== 點擊互動與對話框關閉 =====
+
+    function handleDialogDismissed() {
+      if (gamePhase === 'battle_intro_dialog1') {
+        startIntroFlash();
+      } else if (gamePhase === 'battle_intro_dialog2') {
+        beginBattleWaves();
+      }
+    }
+
+    function dismissDialogIfOpen() {
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (!window.RPGDialog.isLocked()) {
+          window.RPGDialog.hide();
+          handleDialogDismissed();
+        }
+        return true;
+      }
+      return false;
+    }
+
+    if (window.RPGDialog && window.RPGDialog.boxElement) {
+      window.RPGDialog.boxElement.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        dismissDialogIfOpen();
+      });
+    }
+
+    function clampArenaX(x) { return Math.max(60, Math.min(840, x)); }
+    function clampArenaY(y) { return Math.max(115, Math.min(1045, y)); }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (dismissDialogIfOpen()) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      // ----- 第一階段：點擊石框 -----
+      if (gamePhase === 'gate') {
+        const hitMargin = 12;
+        const hitIdx = KEY_SLOTS.findIndex(slot => {
+          const r = slot.hitRect;
+          return (
+            clickX >= r.x - hitMargin &&
+            clickX <= r.x + r.w + hitMargin &&
+            clickY >= r.y - hitMargin &&
+            clickY <= r.y + r.h + hitMargin
+          );
+        });
+
+        if (hitIdx === -1) return;
+
+        const slot = KEY_SLOTS[hitIdx];
+        const state = slotStates[hitIdx];
+
+        if (!state.owned) {
+          state.shakeTimer = 0.45;
+          addPopup('🔒', slot.cx, slot.cy - 30, '#ff8a80', 56, false);
+          if (window.RPGDialog) {
+            window.RPGDialog.show(
+              `<div style="width:100%;">` +
+                `<ruby>還<rt>ㄏㄞˊ</rt></ruby><ruby>沒<rt>ㄇㄟˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><span>！</span>` +
+              `</div>` +
+              `<div style="width:100%;">` +
+                `<ruby>快<rt>ㄎㄨㄞˋ</rt></ruby><ruby>去<rt>ㄑㄩˋ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby><ruby>看<rt>ㄎㄢˋ</rt></ruby><ruby>吧<rt>˙ㄅㄚ</rt></ruby><span>！</span>` +
+              `</div>`
+            );
+          }
+          return;
+        }
+
+        if (!state.activated) {
+          state.activated = true;
+          state.beamProgress = 0;
+          state.beamDone = false;
+          spawnBurst(slot.cx, slot.cy, slot.primaryColor, 28, 260, 7);
+          spawnBurst(slot.cx, slot.cy, slot.secondaryColor, 18, 190, 5);
+          addPopup('✨', slot.cx, slot.cy - 60, '#fff59d', 56, false);
+        } else {
+          spawnBurst(slot.cx, slot.cy, slot.primaryColor, 10, 140, 5);
+        }
+        return;
+      }
+
+      // ----- 第二階段：移動與揮擊骷髏人（map1 移動邏輯 + 可打斷攻擊） -----
+      if (gamePhase !== 'battle_playing') return;
+
+      // 若正在攻擊中，點擊可立即打斷收招動畫並進行下一次移動或揮擊
+      if (player.isAttacking) {
+        player.isAttacking = false;
+        player.attackTimer = 0;
+        player.attackSlashed = false;
+        player.frame = 0;
+      }
+
+      player.isFacingLeft = clickX < player.x;
+      player.targetX = clampArenaX(
+        player.isFacingLeft ? clickX + player.hitboxOffsetX : clickX - player.hitboxOffsetX
+      );
+      player.targetY = clampArenaY(clickY - player.hitboxOffsetY);
+
+      if (Math.hypot(player.targetX - player.x, player.targetY - player.y) <= 15) {
+        player.x = player.targetX;
+        player.y = player.targetY;
+        player.isMoving = false;
+        player.slashOnArrive = false;
+        playSlash();
+      } else {
+        player.slashOnArrive = true;
+        player.isMoving = true;
+      }
+    });
+  </script>
+</body>
+</html>

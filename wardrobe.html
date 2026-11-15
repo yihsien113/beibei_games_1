@@ -238,7 +238,7 @@
 
   <div id="game-container">
     <div class="top-bar">
-      <button class="btn-back" onclick="location.href='index.html'">🔙 EXIT</button>
+      <button class="btn-back" onclick="window.location.replace('index.html')">🔙 EXIT</button>
       <div class="coin-display"><span id="myCoins">0</span> ⭐</div>
     </div>
 
@@ -301,8 +301,14 @@
           <div class="char-name"><ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby><ruby>男<rt>ㄋㄢˊ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby></div>
           <button class="btn btn-buy" data-btn="chih2" onclick="buyOrEquip('chih2', 40)"></button>
         </div>
-      </div>
 
+        <!-- 角色 9：骷髏士兵 -->
+        <div class="char-card" data-char="bad19">
+          <img src="assets/bad/bad19-2.webp" alt="骷髏士兵">
+          <div class="char-name"><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby></div>
+          <button class="btn btn-buy" data-btn="bad19" onclick="buyOrEquip('bad19', 0)"></button>
+        </div>
+      </div>
       <div class="scroll-arrow right-arrow" id="rightArrow">▶</div>
     </div>
 
@@ -333,6 +339,10 @@
     let ownsHan6 = localStorage.getItem('owns_han6') === 'true';
     let ownsChih1 = localStorage.getItem('owns_chih1') === 'true';
     let ownsChih2 = localStorage.getItem('owns_chih2') === 'true';
+    let ownsBad19 = localStorage.getItem('owns_bad19') === 'true' || localStorage.getItem('map19_cleared') === 'true';
+    if (ownsBad19 && localStorage.getItem('owns_bad19') !== 'true') {
+      localStorage.setItem('owns_bad19', 'true');
+    }
 
     if (!localStorage.getItem('sticker_shan1')) {
       localStorage.setItem('sticker_shan1', 'new');
@@ -344,6 +354,7 @@
     const TEXT_EQUIP = '<ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby>';
     const TEXT_BUY_5 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (5⭐)';
     const TEXT_BUY_40 = '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby> (40⭐)';
+    const TEXT_GET = '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>';
 
     const player = {
       x: 449, y: 988, targetX: 449, size: 400,
@@ -357,7 +368,7 @@
     const charImages = {
       han1: new Image(), han2: new Image(), han3: new Image(),
       han4: new Image(), han5: new Image(), han6: new Image(),
-      chih1: new Image(), chih2: new Image()
+      chih1: new Image(), chih2: new Image(), bad19: new Image()
     };
     charImages.han1.src = 'assets/player/han1-1.webp';
     charImages.han2.src = 'assets/player/han2-1.webp';
@@ -367,6 +378,7 @@
     charImages.han6.src = 'assets/player/han6-1.webp';
     charImages.chih1.src = 'assets/player/chih1-1.webp';
     charImages.chih2.src = 'assets/player/chih2-1.webp';
+    charImages.bad19.src = 'assets/bad/bad19-2.webp';
 
     let lastTime = performance.now();
 
@@ -476,6 +488,7 @@
       updateCardState('han6', equipped === 'han6', ownsHan6, TEXT_BUY_40);
       updateCardState('chih1', equipped === 'chih1', ownsChih1, TEXT_BUY_5);
       updateCardState('chih2', equipped === 'chih2', ownsChih2, TEXT_BUY_40);
+      updateCardState('bad19', equipped === 'bad19', ownsBad19, TEXT_GET);
       if (window.Bopomofo && typeof window.Bopomofo.render === 'function') window.Bopomofo.render();
     }
 
@@ -486,6 +499,33 @@
     }
 
     function buyOrEquip(charKey, cost) {
+      if (charKey === 'bad19') {
+        ownsBad19 = localStorage.getItem('owns_bad19') === 'true' || localStorage.getItem('map19_cleared') === 'true';
+        if (ownsBad19) {
+          if (localStorage.getItem('owns_bad19') !== 'true') {
+            localStorage.setItem('owns_bad19', 'true');
+          }
+          equipChar('bad19');
+        } else {
+          showBopoAlert(
+            '<ruby>開<rt>ㄎㄞ</rt></ruby>' +
+            '<ruby>啟<rt>ㄑㄧˇ</rt></ruby>' +
+            '<ruby>神<rt>ㄕㄣˊ</rt></ruby>' +
+            '<ruby>秘<rt>ㄇㄧˋ</rt></ruby>' +
+            '<ruby>大<rt>ㄉㄚˋ</rt></ruby>' +
+            '<ruby>門<rt>ㄇㄣˊ</rt></ruby>' +
+            '<ruby>並<rt>ㄅㄧㄥˋ</rt></ruby>' +
+            '<ruby>擊<rt>ㄐㄧˊ</rt></ruby>' +
+            '<ruby>敗<rt>ㄅㄞˋ</rt></ruby>' +
+            '<ruby>骷<rt>ㄎㄨ</rt></ruby>' +
+            '<ruby>髏<rt>ㄌㄡˊ</rt></ruby>' +
+            '<ruby>士<rt>ㄕˋ</rt></ruby>' +
+            '<ruby>兵<rt>ㄅㄧㄥ</rt></ruby>'
+          );
+        }
+        return;
+      }
+
       let ownsProp = 'owns_' + charKey;
       let owns = localStorage.getItem(ownsProp) === 'true';
 

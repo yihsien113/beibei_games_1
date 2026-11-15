@@ -350,4 +350,102 @@ const PLAYER_CHARACTERS = {
       }
     }
   },
+  'bad19': {
+    name: '骷髏士兵', prefix: '../bad/bad19', size: 165, hitboxOffsetX: 110, hitboxOffsetY: 0, hitboxRadius: 48,
+    drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      const isFacingRight = targetX >= startX;
+
+      // 1. 幽冥暗影軌跡 (從起點延伸到目標的微弱黑紫氣息)
+      if (p < 0.7) {
+        ctx.save();
+        const trailP = p / 0.7;
+        ctx.strokeStyle = `rgba(75, 0, 130, ${0.6 * (1 - trailP)})`;
+        ctx.shadowColor = '#9400d3';
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 18 * (1 - trailP);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(startX + (targetX - startX) * (trailP * 0.4), startY + (targetY - startY) * (trailP * 0.4));
+        ctx.lineTo(startX + (targetX - startX) * trailP, startY + (targetY - startY) * trailP);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 2. 邪惡雙層半月刀氣 (外層毒紫光暈 + 內層深黑裂痕)
+      ctx.save();
+      const slashRadius = 35 + p * 55;
+      const startAngle = isFacingRight ? -Math.PI * 0.55 : Math.PI * 0.45;
+      const endAngle = isFacingRight ? Math.PI * 0.55 : Math.PI * 1.55;
+
+      // 外層紫光刀芒
+      ctx.strokeStyle = `rgba(186, 85, 211, ${1 - p})`;
+      ctx.shadowColor = '#8a2be2';
+      ctx.shadowBlur = 22;
+      ctx.lineWidth = 16 * (1 - p);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, slashRadius, startAngle, endAngle);
+      ctx.stroke();
+
+      // 內層漆黑刀芯 (讓刀氣更有反派的壓迫感)
+      ctx.strokeStyle = `rgba(25, 0, 40, ${1 - p})`;
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 6 * (1 - p);
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, slashRadius - 3, startAngle, endAngle);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. 劈砍迸發的旋轉白骨 (4 根骨頭隨刀氣向外高速旋轉飛散)
+      ctx.save();
+      ctx.translate(targetX, targetY);
+      const boneCount = 4;
+      for (let i = 0; i < boneCount; i++) {
+        const baseAngle = isFacingRight
+          ? -Math.PI * 0.4 + (i * Math.PI * 0.8) / (boneCount - 1)
+          : Math.PI * 0.6 + (i * Math.PI * 0.8) / (boneCount - 1);
+        const dist = 15 + p * 85;
+        const bx = Math.cos(baseAngle) * dist;
+        const by = Math.sin(baseAngle) * dist;
+
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(p * Math.PI * 5 + i); // 高速自轉
+        ctx.globalAlpha = Math.max(0, 1 - p * 1.1);
+        ctx.font = `${32 * (1 - p * 0.3)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🦴', 0, 0);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // 4. 終點「亡靈骷髏」浮現與綠火衝擊 (p > 0.35 開始觸發)
+      if (p > 0.35) {
+        const skullP = (p - 0.35) / 0.65;
+        ctx.save();
+        // 骷髏頭在目標上方微微往上飄起
+        ctx.translate(targetX, targetY - skullP * 35);
+        ctx.globalAlpha = skullP < 0.3 ? skullP / 0.3 : 1 - ((skullP - 0.3) / 0.7);
+
+        // 詭異的幽冥綠光特效
+        ctx.shadowColor = '#00ff66';
+        ctx.shadowBlur = 20;
+        const skullScale = 45 + skullP * 35;
+        ctx.font = `${skullScale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💀', 0, 0);
+
+        // 底部擴散的暗綠詛咒光圈
+        ctx.beginPath();
+        ctx.arc(0, skullP * 35, skullP * 65, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(50, 255, 126, ${(1 - skullP) * 0.7})`;
+        ctx.lineWidth = 4 * (1 - skullP);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+    }
+  },
 };

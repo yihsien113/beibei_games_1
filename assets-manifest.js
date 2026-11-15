@@ -16,7 +16,7 @@
 
 
 // 素材清單
-const CACHE_NAME = 'dollhouse-game-v3.1.3';
+const CACHE_NAME = 'dollhouse-game-v3.1.0';
 //              有擴充時更新版本數字↑↑↑↑
 
 const GAME_ASSETS = [
@@ -40,6 +40,7 @@ const GAME_ASSETS = [
   'map14.html',
   'map15.html',
   'map16.html',
+  'map19.html',
   'bopomofo.js',
   'password.js', // 帳號密碼模組
   'OrbitControls.js',
@@ -71,6 +72,8 @@ const GAME_ASSETS = [
   'assets/map/map15-1.webp',
   'assets/map/map15-2.webp',
   'assets/map/map16.webp',
+  'assets/map/map19-1.webp',
+  'assets/map/map19-2.webp',
   'assets/player/han1-1.webp',
   'assets/player/han1-2.webp',
   'assets/player/han1-3.webp',
@@ -100,6 +103,9 @@ const GAME_ASSETS = [
   'assets/bad/bad1-3.webp',
   'assets/bad/bad2.webp',
   'assets/bad/bad12.webp',
+  'assets/bad/bad19-1.webp',
+  'assets/bad/bad19-2.webp',
+  'assets/bad/bad19-3.webp',
   'assets/sticker/map3.webp',
   'assets/sticker/map4.webp',
   'assets/sticker/map5.webp',
@@ -118,6 +124,8 @@ const GAME_ASSETS = [
   'assets/sticker/lobby2.webp',
   'assets/sticker/lobby3.webp',
   'assets/sticker/key1.webp',
+  'assets/sticker/key2.webp',
+  'assets/sticker/key3.webp',
   'assets/sticker/1.webp',
   'assets/sticker/2.webp',
   'assets/sticker/3.webp',
@@ -155,4 +163,6 @@ const GAME_ASSETS = [
   'assets/mp3/map11-1.mp3',
   'assets/mp3/map11-2.mp3',
   'assets/mp3/map11-3.mp3',
+  'assets/mp3/map19-1.mp3',
+  'assets/mp3/map19-2.mp3',
 ];

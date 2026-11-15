@@ -545,7 +545,8 @@
 
     function exitToLobby() {
       cleanupMemory();
-      window.location.href = 'index.html';
+      sessionStorage.setItem('returning_from_subpage', '1');
+      window.location.replace('lobby1.html');
     }
 
     // 若使用者按瀏覽器自帶的上一頁離開，同樣觸發記憶體釋放

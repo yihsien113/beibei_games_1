@@ -132,7 +132,7 @@
 
   <div id="game-container">
     
-    <button id="back-btn" onclick="window.location.href='index.html'">🔙 EXIT</button>
+    <button id="back-btn" onclick="window.location.replace('index.html')">🔙 EXIT</button>
     <button id="skip-btn" onclick="endTutorial()">⏭️ 跳過教學</button>
     
     <!-- 題號顯示器置中 -->
@@ -145,7 +145,7 @@
 
     <!-- 初始開始畫面 -->
     <div id="start-screen" class="overlay" style="display: none;">
-      <button style="position: absolute; top: 15px; left: 15px; padding: 8px 16px; font-size: 18px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onclick="window.location.href='index.html'">🔙 EXIT</button>
+      <button style="position: absolute; top: 15px; left: 15px; padding: 8px 16px; font-size: 18px; background-color: #333; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5);" onclick="window.location.replace('index.html')">🔙 EXIT</button>
 
       <div class="intro-copy">
         <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 15px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
@@ -186,7 +186,7 @@
         <button class="btn btn-normal" style="font-size: 34px; padding: 15px; flex-direction: row;" onclick="playAgain()">
           <ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>次<rt>ㄘˋ</rt></ruby>
         </button>
-        <button class="btn btn-easy" style="font-size: 34px; padding: 15px; flex-direction: row; background-color: #e17055; box-shadow: 0 8px 0 #c25e46;" onclick="window.location.href='index.html'">
+        <button class="btn btn-easy" style="font-size: 34px; padding: 15px; flex-direction: row; background-color: #e17055; box-shadow: 0 8px 0 #c25e46;" onclick="window.location.replace('index.html')">
           <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
         </button>
       </div>

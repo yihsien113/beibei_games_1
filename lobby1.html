@@ -710,6 +710,8 @@
         }
       }
 
+      window.LATEST_CACHE_NAME = cacheName;
+
       if ('caches' in window) {
         // 清理與最新版本不符的舊快取（不影響 localStorage 遊戲進度）
         try {
@@ -1037,6 +1039,32 @@
       sCtx.fillText('🌟', starSize / 2, starSize / 2);
     }
 
+    const lockCache = document.createElement('canvas');
+    lockCache.width = starSize;
+    lockCache.height = starSize;
+    const lCtx = lockCache.getContext('2d');
+    if (lCtx) {
+      lCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      lCtx.textAlign = 'center';
+      lCtx.textBaseline = 'middle';
+      lCtx.shadowColor = 'rgba(105, 240, 174, 0.95)';
+      lCtx.shadowBlur = 25;
+      lCtx.fillText('🔒', starSize / 2, starSize / 2);
+    }
+
+    const unlockCache = document.createElement('canvas');
+    unlockCache.width = starSize;
+    unlockCache.height = starSize;
+    const uCtx = unlockCache.getContext('2d');
+    if (uCtx) {
+      uCtx.font = '120px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      uCtx.textAlign = 'center';
+      uCtx.textBaseline = 'middle';
+      uCtx.shadowColor = 'rgba(255, 235, 59, 0.95)';
+      uCtx.shadowBlur = 25;
+      uCtx.fillText('🔓', starSize / 2, starSize / 2);
+    }
+
     let playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
     document.getElementById('coinDisplay').innerText = playerCoins;
     let equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
@@ -1045,7 +1073,9 @@
     bgImg.src = 'assets/lobby/lobby1.webp';
 
     const playerImg = new Image();
-    playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+    playerImg.src = equippedCharKey === 'bad19'
+      ? 'assets/bad/bad19-2.webp'
+      : `assets/player/${equippedCharKey}-1.webp`;
 
     // ---------- 玩家位置 (與第一大廳分開儲存) ----------
     const savedX = localStorage.getItem('lobby1PlayerX');
@@ -1083,6 +1113,16 @@
         starCache.width = 1;
         starCache.height = 1;
       }
+      if (lockCache) {
+        if (lCtx) lCtx.clearRect(0, 0, lockCache.width, lockCache.height);
+        lockCache.width = 1;
+        lockCache.height = 1;
+      }
+      if (unlockCache) {
+        if (uCtx) uCtx.clearRect(0, 0, unlockCache.width, unlockCache.height);
+        unlockCache.width = 1;
+        unlockCache.height = 1;
+      }
       if (window.portalGradCache && window.portalGradCache !== 'fallback') {
         window.portalGradCache.width = 1;
         window.portalGradCache.height = 1;
@@ -1099,7 +1139,7 @@
       sessionStorage.setItem('returning_from_subpage', '1');
       savePlayerPosition();
       cleanupLobbyMemory();
-      window.location.href = targetUrl;
+      window.location.replace(targetUrl);
     }
 
     window.addEventListener('pageshow', (e) => {
@@ -1137,6 +1177,7 @@
     // 注意：id 不可與第一大廳重複 (領取狀態以 'blindbox_' + id 儲存)。
     const zones = [
       { id: 'map16', type: '關卡', x: 796, y: 2633, w: 225, h: 300, starX: 864, starY: 2720, targetUrl: 'map16.html', clearKey: 'map16_cleared', color: '#2196f3', imgSrc: 'assets/map/map16.webp' },
+      { id: 'map19', type: '關卡', x: 1376, y: 2618, w: 225, h: 300, starX: 1501, starY: 2885, targetUrl: 'map19.html', clearKey: 'map19_cleared', gateKey: 'map19_gate_cleared', color: '#7c4dff', imgSrc: 'assets/map/map19-2.webp' },
       { id: 'star13', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 721, starY: 2080, rewardAmount: 5 },
     ];
 
@@ -1223,27 +1264,154 @@
     // 🌟 遊戲版本與更新公告設定 🌟
     // ==========================================
     // 版本號自動取自 assets-manifest.js 的 CACHE_NAME
-    const GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?";
-    const AUTO_SHOW_NOTICE = true;
-    const UPDATE_LOG = `
-      <p>✨ <b>
-        <ruby>增<rt>ㄗㄥ</rt></ruby>
-        <ruby>加<rt>ㄐㄧㄚ</rt></ruby>
-        <ruby>帳<rt>ㄓㄤˋ</rt></ruby>
-        <ruby>號<rt>ㄏㄠˋ</rt></ruby>
-        <ruby>系<rt>ㄒㄧˋ</rt></ruby>
-        <ruby>統<rt>ㄊㄨㄥˇ</rt></ruby>
-        <ruby>方<rt>ㄈㄤ</rt></ruby>
-        <ruby>便<rt>ㄅㄧㄢˋ</rt></ruby>
-        <ruby>記<rt>ㄐㄧˋ</rt></ruby>
-        <ruby>錄<rt>ㄌㄨˋ</rt></ruby>
-        <ruby>遊<rt>ㄧㄡˊ</rt></ruby>
-        <ruby>戲<rt>ㄒㄧˋ</rt></ruby>
-        <ruby>進<rt>ㄐㄧㄣˋ</rt></ruby>
-        <ruby>度<rt>ㄉㄨˋ</rt></ruby>
-        `;
+    let GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?";
 
-    function showUpdateNotice() {
+    function refreshGameVersion() {
+      const latestName = window.LATEST_CACHE_NAME || (typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : '');
+      const verMatch = latestName.match(/v\d+(\.\d+)*$/);
+      if (verMatch) {
+        GAME_VERSION = verMatch[0];
+      }
+      const verEl = document.getElementById('version-display');
+      if (verEl) verEl.innerText = GAME_VERSION;
+    }
+
+    let AUTO_SHOW_NOTICE = true;
+    let UPDATE_LOG = `
+      <p>✨ <b>
+        <ruby>新<rt>ㄒㄧㄣ</rt></ruby>
+<ruby>地<rt>ㄉㄧˋ</rt></ruby>
+<ruby>圖<rt>ㄊㄨˊ</rt></ruby>
+<ruby>"<rt></rt></ruby>
+<ruby>魔<rt>ㄇㄛˊ</rt></ruby>
+<ruby>法<rt>ㄈㄚˇ</rt></ruby>
+<ruby>森<rt>ㄙㄣ</rt></ruby>
+<ruby>林<rt>ㄌㄧㄣˊ</rt></ruby>
+<ruby>"<rt></rt></ruby>
+<ruby>開<rt>ㄎㄞ</rt></ruby>
+<ruby>放<rt>ㄈㄤˋ</rt></ruby>
+<ruby>囉<rt>ㄌㄨㄛˊ</rt></ruby>
+<span>!</span>
+        `;
+    try {
+      const savedAutoShow = localStorage.getItem('shared_auto_show_notice');
+      if (savedAutoShow === 'true' || savedAutoShow === 'false') {
+        AUTO_SHOW_NOTICE = (savedAutoShow === 'true');
+      }
+      const savedUpdateLog = localStorage.getItem('shared_update_log');
+      if (savedUpdateLog !== null) {
+        UPDATE_LOG = savedUpdateLog;
+      }
+    } catch (e) {}
+
+    function parseNoticeFromIndexHtml(html) {
+      if (!html) return false;
+      let updated = false;
+
+      const autoMatch = html.match(/^\s*(?:const|let|var)\s+AUTO_SHOW_NOTICE\s*=\s*(true|false)\b/m);
+      if (autoMatch) {
+        AUTO_SHOW_NOTICE = (autoMatch[1] === 'true');
+        try {
+          localStorage.setItem('shared_auto_show_notice', String(AUTO_SHOW_NOTICE));
+        } catch (e) {}
+        updated = true;
+      }
+
+      const logMatch = html.match(/^\s*(?:const|let|var)\s+UPDATE_LOG\s*=\s*`((?:\\[\s\S]|[^`\\])*)`\s*;?/m)
+        || html.match(/^\s*(?:const|let|var)\s+UPDATE_LOG\s*=\s*(["'])((?:\\.|(?!\1)[^\\\r\n])*)\1\s*;?/m);
+      if (logMatch) {
+        const rawLog = logMatch.length === 3 ? logMatch[2] : logMatch[1];
+        UPDATE_LOG = rawLog.replace(/\\`/g, '`').replace(/\\\$/g, '$');
+        try {
+          localStorage.setItem('shared_update_log', UPDATE_LOG);
+        } catch (e) {}
+        updated = true;
+      }
+
+      return updated;
+    }
+
+    let noticeSyncPromise = null;
+    let isNoticeSynced = false;
+
+    async function syncNoticeFromIndex() {
+      let html = '';
+
+      if (navigator.onLine) {
+        try {
+          const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
+          try {
+            const res = await fetch('index.html?bypass=sw.js&t=' + Date.now(), {
+              cache: 'no-store',
+              signal: controller ? controller.signal : undefined
+            });
+            if (res.ok) {
+              html = await res.text();
+            }
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        } catch (err) {
+          // 網路異常或逾時，改由快取讀取
+        }
+      }
+
+      if (!html && 'caches' in window) {
+        try {
+          const cachedName = window.LATEST_CACHE_NAME || (typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : '');
+          let match = null;
+          if (cachedName) {
+            const cache = await caches.open(cachedName);
+            match = await cache.match('index.html');
+          }
+          if (!match) {
+            match = await caches.match('index.html');
+          }
+          if (match && match.ok) {
+            html = await match.text();
+          }
+        } catch (err) {
+          // 讀取快取失敗時退回 fetch('index.html')
+        }
+      }
+
+      if (!html) {
+        try {
+          const res = await fetch('index.html');
+          if (res.ok) {
+            html = await res.text();
+          }
+        } catch (err) {
+          // 離線且無快取時沿用 localStorage 或預設值
+        }
+      }
+
+      if (parseNoticeFromIndexHtml(html)) {
+        const modal = document.getElementById('update-modal');
+        if (modal && modal.classList.contains('active')) {
+          const contentDiv = document.getElementById('update-log-content');
+          if (contentDiv) {
+            contentDiv.innerHTML = UPDATE_LOG;
+            if (window.Bopomofo) window.Bopomofo.render();
+          }
+        }
+      }
+      isNoticeSynced = true;
+    }
+
+    function ensureNoticeSynced() {
+      if (isNoticeSynced) return Promise.resolve();
+      if (!noticeSyncPromise) {
+        noticeSyncPromise = syncNoticeFromIndex().finally(() => {
+          noticeSyncPromise = null;
+        });
+      }
+      return noticeSyncPromise;
+    }
+
+    async function showUpdateNotice() {
+      await ensureNoticeSynced();
       const contentDiv = document.getElementById('update-log-content');
       contentDiv.innerHTML = UPDATE_LOG;
       if (window.Bopomofo) window.Bopomofo.render();
@@ -1255,6 +1423,7 @@
     }
 
     function checkUpdateAndTutorial() {
+      refreshGameVersion();
       // 同步後若未解鎖魔法森林，或帳號雲端紀錄上次在第一大廳，導回 index.html
       if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
         sessionStorage.setItem('current_lobby', 'index');
@@ -1265,8 +1434,6 @@
       if (localStorage.getItem('last_lobby') !== 'lobby1') {
         localStorage.setItem('last_lobby', 'lobby1');
       }
-
-      document.getElementById('version-display').innerText = GAME_VERSION;
 
       const savedVersion = localStorage.getItem('game_version');
       const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
@@ -1309,7 +1476,9 @@
       const newCharKey = localStorage.getItem('equippedCharacter') || 'han1';
       if (newCharKey !== equippedCharKey) {
         equippedCharKey = newCharKey;
-        playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+        playerImg.src = equippedCharKey === 'bad19'
+          ? 'assets/bad/bad19-2.webp'
+          : `assets/player/${equippedCharKey}-1.webp`;
       }
       applySavedPosition();
       loadClearedImages();
@@ -1322,13 +1491,15 @@
     });
 
     async function initCloudAndStartLobby() {
-      document.getElementById('version-display').innerText = GAME_VERSION;
+      refreshGameVersion();
       updateAccountButtonLabel();
+      ensureNoticeSynced();
 
       const isReturningFromSubpage = sessionStorage.getItem('returning_from_subpage') === '1';
       sessionStorage.removeItem('returning_from_subpage');
 
       if (!window.CloudSync) {
+        await ensureNoticeSynced();
         checkUpdateAndTutorial();
         return;
       }
@@ -1342,6 +1513,7 @@
             new Promise(r => setTimeout(r, 1200))
           ]);
           refreshFromStorage();
+          await ensureNoticeSynced();
           checkUpdateAndTutorial();
         } else {
           // 剛開啟遊戲：彈出「是否為 <帳號>？」確認視窗
@@ -1350,6 +1522,7 @@
       } else if (!window.CloudSync.isSkipped()) {
         openAccountModal(true);
       } else {
+        await ensureNoticeSynced();
         checkUpdateAndTutorial();
       }
     }
@@ -1425,11 +1598,12 @@
       document.getElementById('account-modal').classList.add('active');
     }
 
-    function closeAccountModal() {
+    async function closeAccountModal() {
       document.getElementById('account-modal').classList.remove('active');
       isModalOpen = false;
       if (isInitialAuthPrompt) {
         isInitialAuthPrompt = false;
+        await ensureNoticeSynced();
         checkUpdateAndTutorial();
       } else if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
         sessionStorage.setItem('current_lobby', 'index');
@@ -1709,12 +1883,17 @@
           if (sx < cameraX - 150 || sx > cameraX + viewW + 150 ||
               sy < cameraY - 150 || sy > cameraY + viewH + 150) continue;
 
+          let iconCanvas = starCache;
+          if (z.gateKey) {
+            iconCanvas = localStorage.getItem(z.gateKey) === 'true' ? unlockCache : lockCache;
+          }
+
           ctx.save();
           let floatOffsetY = Math.sin(time / 300 + sx) * 16;
           let pulseScale = 1 + Math.sin(time / 400 + sy) * 0.08;
           ctx.translate(sx, sy + floatOffsetY);
           ctx.scale(pulseScale, pulseScale);
-          ctx.drawImage(starCache, -starSize / 2, -starSize / 2);
+          ctx.drawImage(iconCanvas, -starSize / 2, -starSize / 2);
           ctx.restore();
         }
       }

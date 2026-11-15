@@ -748,6 +748,8 @@
         }
       }
 
+      window.LATEST_CACHE_NAME = cacheName;
+
       if ('caches' in window) {
         // 清理與最新版本不符的舊快取（不影響 localStorage 遊戲進度）
         try {
@@ -911,7 +913,17 @@
     
     // 👇 1. 每次更新時請修改這個版本號碼
     // 版本號自動取自 assets-manifest.js 的 CACHE_NAME (例如 dollhouse-game-v3.1.2 → v3.1.2)
-    const GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?"; 
+    let GAME_VERSION = (typeof CACHE_NAME !== 'undefined' && (CACHE_NAME.match(/v\d+(\.\d+)*$/) || [])[0]) || "v?";
+
+    function refreshGameVersion() {
+      const latestName = window.LATEST_CACHE_NAME || (typeof CACHE_NAME !== 'undefined' ? CACHE_NAME : '');
+      const verMatch = latestName.match(/v\d+(\.\d+)*$/);
+      if (verMatch) {
+        GAME_VERSION = verMatch[0];
+      }
+      const verEl = document.getElementById('version-display');
+      if (verEl) verEl.innerText = GAME_VERSION;
+    }
     
     // 👇 2. 【這是公告開關】
     const AUTO_SHOW_NOTICE = true; 
@@ -934,6 +946,11 @@
 <span>!</span>
         `;
 
+    try {
+      localStorage.setItem('shared_auto_show_notice', String(AUTO_SHOW_NOTICE));
+      localStorage.setItem('shared_update_log', UPDATE_LOG);
+    } catch (e) {}
+
     function showUpdateNotice() {
       const contentDiv = document.getElementById('update-log-content');
       contentDiv.innerHTML = UPDATE_LOG;
@@ -951,6 +968,7 @@
     let hasCheckedInitialLobby = false;
 
     function checkUpdateAndTutorial() {
+      refreshGameVersion();
       // 上次是在魔法森林(第二大廳)離開的：開啟遊戲 / 換裝置登入後回到那裡
       if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen() && isForestPortalIntroDone()) {
         sessionStorage.setItem('returning_from_subpage', '1');
@@ -962,8 +980,6 @@
         localStorage.setItem('last_lobby', 'index');
       }
 
-      document.getElementById('version-display').innerText = GAME_VERSION;
-      
       const savedVersion = localStorage.getItem('game_version');
       const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
 
@@ -1002,7 +1018,11 @@
       const newCharKey = localStorage.getItem('equippedCharacter') || 'han1';
       if (newCharKey !== equippedCharKey) {
         equippedCharKey = newCharKey;
-        if (playerImg) playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+        if (playerImg) {
+          playerImg.src = equippedCharKey === 'bad19'
+            ? 'assets/bad/bad19-2.webp'
+            : `assets/player/${equippedCharKey}-1.webp`;
+        }
       }
 
       if (typeof zones !== 'undefined') {
@@ -1042,7 +1062,7 @@
     });
 
     async function initCloudAndStartLobby() {
-      document.getElementById('version-display').innerText = GAME_VERSION;
+      refreshGameVersion();
       updateAccountButtonLabel();
 
       const isReturningFromSubpage = sessionStorage.getItem('returning_from_subpage') === '1';
@@ -1481,7 +1501,9 @@
     bgImg.src = 'assets/lobby/lobby.webp';
 
     const playerImg = new Image();
-    playerImg.src = `assets/player/${equippedCharKey}-1.webp`;
+    playerImg.src = equippedCharKey === 'bad19'
+      ? 'assets/bad/bad19-2.webp'
+      : `assets/player/${equippedCharKey}-1.webp`;
 
     const DEFAULT_PLAYER_X = 943;
     const DEFAULT_PLAYER_Y = 1051;
@@ -1549,7 +1571,7 @@
       sessionStorage.setItem('returning_from_subpage', '1');
       savePlayerPosition();
       cleanupLobbyMemory();
-      window.location.href = targetUrl;
+      window.location.replace(targetUrl);
     }
 
     // 🌟 優化 3：若手機瀏覽器從 BFCache 快取喚醒此頁面（而圖片已被我們清空），自動重整以確保乾淨狀態
