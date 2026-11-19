@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>冒險小遊戲 - 地下城跑酷</title>
+  
+  <!-- 引入外部注音模組與帳號密碼模組 (不需要 player.js) -->
+  <script src="bopomofo.js"></script>
+  <script src="password.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      outline: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      height: 100dvh;
+      width: 100%;
+      position: fixed;
+      overscroll-behavior: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ffeb3b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none;
+      background-color: #1a1a2e;
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(8, 12, 24, 0.85);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101;
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 8px 20px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    /* 結算畫面 */
+    .math-box {
+      background: rgba(43, 39, 39, 0.88);
+      padding: 15px 25px;
+      border-radius: 14px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+      border: 2px solid rgba(255,255,255,0.18);
+    }
+
+    #star-container {
+      font-size: 26px;
+      margin-top: 10px;
+      width: 100%;
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 (確保 iPhone/iPad 滿版一致) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+      }
+      #game-container {
+        width: 100vw !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+      #back-btn {
+        top: 10px !important;
+        left: 10px !important;
+        padding: 6px 12px !important;
+        font-size: 14px !important;
+      }
+      #hud {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 18px !important;
+        padding: 6px 14px !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      
+      #result-screen h1 { font-size: 32px !important; margin-bottom: 6px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 19px !important; margin-top: 6px !important; }
+      
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 24px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">地城跑酷載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="window.location.replace('index.html')">🔙 EXIT</button>
+    <div id="hud">🏃 <span id="distanceDisplay">0</span>m | ⭐ <span id="coinDisplay">0</span></div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.replace('index.html')">🔙 EXIT</button>
+      
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 54px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #ffeb3b;">
+          <ruby>地<rt>ㄉㄧˋ</rt></ruby>
+          <ruby>下<rt>ㄒㄧㄚˋ</rt></ruby>
+          <ruby>城<rt>ㄔㄥˊ</rt></ruby>
+          <ruby>逃<rt>ㄊㄠˊ</rt></ruby>
+          <ruby>脫<rt>ㄊㄨㄛ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 36px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby>
+          <ruby>擊<rt>ㄐㄧˊ</rt></ruby>
+          <ruby>螢<rt>ㄧㄥˊ</rt></ruby>
+          <ruby>幕<rt>ㄇㄨˋ</rt></ruby>
+          <ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
+          <ruby>躍<rt>ㄩㄝˋ</rt></ruby>
+          <span>！</span>
+          <br>
+          <ruby>小<rt>ㄒㄧㄠˇ</rt></ruby>
+          <ruby>心<rt>ㄒㄧㄣ</rt></ruby>
+          <ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby>
+          <ruby>物<rt>ㄨˋ</rt></ruby>
+          <ruby>追<rt>ㄓㄨㄟ</rt></ruby>
+          <ruby>上<rt>ㄕㄤˋ</rt></ruby>
+          <ruby>來<rt>ㄌㄞˊ</rt></ruby>
+          <span>！</span>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px; background-color: #ffeb3b; color: #000;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+        <ruby>跑<rt>ㄆㄠˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 class="zh-text" style="font-size: 42px; color: #ff5252; margin: 0 0 10px 0;">
+        <ruby>被<rt>ㄅㄟˋ</rt></ruby>
+        <ruby>抓<rt>ㄓㄨㄚ</rt></ruby>
+        <ruby>到<rt>ㄉㄠˋ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>...</span>
+      </h1>
+      
+      <div class="math-box">
+        🏃: <span id="finalDistance">0</span>m <br>
+        ⭐: <span id="newCoins" style="color:#60ff40;">+0</span> <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+      
+      <div id="star-container"></div>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 15px; width: 100%; max-width: 340px;">
+        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0;" onclick="startGame()">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>跑<rt>ㄆㄠˇ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.replace('index.html')">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // =========================================
+    // 參數設定區 (可微調物理與難度)
+    // =========================================
+    const CANVAS_W = 900;
+    const CANVAS_H = 1200;
+    const GROUND_Y = 950;       // 地板的 Y 座標 (腳底位置)
+    
+    // 角色物理參數
+    const GRAVITY = 4200;       // 重力 (數值越大掉越快)
+    const JUMP_FORCE = -2000;   // 跳躍力道 (負值，越小跳越高)
+    const PLAYER_X = 220;       // 角色固定在畫面左側的 X 座標
+    const PLAYER_SIZE = 160;    // 角色繪製大小 (比平常稍小以增加反應空間)
+    const HITBOX_RADIUS = 50;   // 碰撞判定半徑
+
+    // 遊戲參數
+    const BASE_SPEED = 450;     // 初始跑動速度 (px/sec)
+    const SPEED_INC = 15;       // 每秒增加的速度
+    const MAX_SPEED = 900;      // 最高速度極限
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let isPlaying = false;
+    let lastTime = 0; 
+    let animationFrameId = null;
+
+    // 遊戲狀態變數
+    let gameSpeed = BASE_SPEED;
+    let distance = 0;
+    let coins = 0;
+    let bgOffsetX = 0;
+    
+    // 角色狀態
+    let player = {
+      y: GROUND_Y,
+      vy: 0,
+      isJumping: false,
+      walkTimer: 0
+    };
+
+    // 怪物狀態 (固定在左側邊緣)
+    let monster = {
+      x: 30, // 稍微露出一點點身體
+      y: GROUND_Y,
+      walkTimer: 0
+    };
+
+    // 障礙物陣列
+    let obstacles = [];
+    let spawnTimer = 0;
+
+    // 資源載入
+    const assets = {
+      bg: new Image(),
+      p1: new Image(), // han7-1.webp
+      p2: new Image(), // han7-2.webp
+      p3: new Image(), // han7-3.webp
+      m1: new Image(), // bad19-1.webp
+      m2: new Image()  // bad19-2.webp
+    };
+
+    let loadedCount = 0;
+    const totalAssets = 6;
+
+    function checkLoad() {
+      loadedCount++;
+      document.getElementById('loading-text').innerText = `地城跑酷載入中 (${loadedCount}/${totalAssets})...`;
+      if (loadedCount >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+        
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+        drawInitial(); 
+      }
+    }
+
+    // ★ 請確保專案中有這些圖檔，若無圖檔會顯示空白但邏輯仍會運作
+    assets.bg.src = 'assets/map/map17.webp'; // 建議準備一張橫向連續的地城背景
+    assets.p1.src = 'assets/player/han7-1.webp';
+    assets.p2.src = 'assets/player/han7-2.webp';
+    assets.p3.src = 'assets/player/han7-3.webp';
+    assets.m1.src = 'assets/bad/bad17-1.webp';
+    assets.m2.src = 'assets/bad/bad17-2.webp';
+
+    for (let key in assets) {
+      assets[key].onload = checkLoad;
+      assets[key].onerror = checkLoad; // 容錯處理，找不到圖也進遊戲
+    }
+
+    // =========================================
+    // 遊戲流程控制
+    // =========================================
+    function startGame() {
+      isPlaying = true;
+      gameSpeed = BASE_SPEED;
+      distance = 0;
+      coins = 0;
+      bgOffsetX = 0;
+      obstacles = [];
+      spawnTimer = 0;
+
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.isJumping = false;
+      player.walkTimer = 0;
+
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('hud').style.display = 'block';
+      document.getElementById('back-btn').style.display = 'block';
+      
+      updateHUD();
+      lastTime = performance.now();
+      
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      isPlaying = false;
+      document.getElementById('hud').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'none';
+      
+      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      let newTotalCoins = currentCoins + coins;
+      localStorage.setItem('playerCoins', newTotalCoins);
+      
+      document.getElementById('finalDistance').innerText = Math.floor(distance);
+      document.getElementById('newCoins').innerText = "+" + coins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+      
+      let starsHtml = '';
+      for (let i = 1; i <= coins; i++) {
+        starsHtml += '⭐';
+        if (i % 6 === 0) starsHtml += '<br>';
+      }
+      document.getElementById('star-container').innerHTML = starsHtml || '<span style="color:#777;">再接再厲！</span>';
+      
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      // 加入震動特效 (畫面晃動)
+      canvas.style.transform = 'translate(10px, 10px)';
+      setTimeout(() => canvas.style.transform = 'translate(-10px, -10px)', 50);
+      setTimeout(() => canvas.style.transform = 'translate(10px, -10px)', 100);
+      setTimeout(() => canvas.style.transform = 'translate(0, 0)', 150);
+
+      setTimeout(() => {
+        document.getElementById('result-screen').style.display = 'flex';
+      }, 500);
+    }
+
+    function updateHUD() {
+      document.getElementById('distanceDisplay').innerText = Math.floor(distance);
+      document.getElementById('coinDisplay').innerText = coins;
+    }
+
+    // =========================================
+    // 遊戲主迴圈
+    // =========================================
+    function gameLoop(currentTime) {
+      if (!isPlaying) return;
+      
+      // 限制最大 dt 避免切換分頁回來產生大跳躍
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05); 
+      lastTime = currentTime;
+
+      update(dt);
+      draw();
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      // 1. 更新速度與距離
+      gameSpeed = Math.min(MAX_SPEED, gameSpeed + SPEED_INC * dt);
+      distance += (gameSpeed * dt) / 50; // 每 50px 算 1m
+      
+      // 每 50m 獎勵一星
+      let expectedCoins = Math.floor(distance / 50);
+      if (expectedCoins > coins) {
+        coins = expectedCoins;
+      }
+      updateHUD();
+
+      // 2. 更新背景滾動
+      bgOffsetX -= gameSpeed * dt * 0.5; // 背景視差 (比前景慢)
+      if (bgOffsetX <= -CANVAS_W) {
+        bgOffsetX += CANVAS_W;
+      }
+
+      // 3. 角色物理 (重力與跳躍)
+      if (player.isJumping) {
+        player.vy += GRAVITY * dt;
+        player.y += player.vy * dt;
+        
+        if (player.y >= GROUND_Y) {
+          player.y = GROUND_Y;
+          player.isJumping = false;
+          player.vy = 0;
+        }
+      } else {
+        player.walkTimer += dt * (gameSpeed / 300); // 隨車速加快擺動腳步
+      }
+      monster.walkTimer += dt * (gameSpeed / 300);
+
+      // 4. 障礙物生成與移動
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        // 隨機生成障礙物
+        obstacles.push({
+          x: CANVAS_W + 50,
+          y: GROUND_Y,
+          size: 80 + Math.random() * 40, // 大小隨機 80~120
+          passed: false
+        });
+        // 根據目前速度動態調整生成間隔 (速度越快，間隔越短，但不小於 0.8秒)
+        spawnTimer = Math.max(0.8, (1200 / gameSpeed) + Math.random() * 1.5);
+      }
+
+      // 5. 更新障礙物並進行碰撞偵測
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obs = obstacles[i];
+        obs.x -= gameSpeed * dt;
+
+        // 碰撞偵測 (圓形判定法)
+        let dx = PLAYER_X - obs.x;
+        let dy = (player.y - PLAYER_SIZE*0.3) - (obs.y - obs.size*0.4); 
+        let dist = Math.hypot(dx, dy);
+        
+        // 如果距離小於兩者半徑相加，即為碰到
+        if (dist < HITBOX_RADIUS + (obs.size * 0.4)) {
+          endGame();
+          return;
+        }
+
+        // 移除超出畫面的障礙物
+        if (obs.x < -200) {
+          obstacles.splice(i, 1);
+        }
+      }
+    }
+
+    // =========================================
+    // 繪圖處理
+    // =========================================
+    function drawInitial() {
+      // 初始畫面只畫一次背景與角色站立
+      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
+        ctx.drawImage(assets.bg, 0, 0, CANVAS_W, CANVAS_H);
+      } else {
+        ctx.fillStyle = '#2b2433';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+      if (assets.p1.complete && assets.p1.naturalWidth > 0) {
+        ctx.drawImage(assets.p1, PLAYER_X - PLAYER_SIZE/2, GROUND_Y - PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+      }
+    }
+
+    function draw() {
+      // 1. 畫背景 (兩張拼接達成無限滾動)
+      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
+        ctx.drawImage(assets.bg, bgOffsetX, 0, CANVAS_W, CANVAS_H);
+        ctx.drawImage(assets.bg, bgOffsetX + CANVAS_W, 0, CANVAS_W, CANVAS_H);
+      } else {
+        // 如果沒有背景圖，畫一個漸層代替
+        let grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        grad.addColorStop(0, '#2b2433');
+        grad.addColorStop(1, '#120e18');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        // 畫地板線
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+      }
+
+      // 2. 畫障礙物 (如果在素材準備好前，預設先用 Canvas 畫出幾何圖形代替)
+      for (let obs of obstacles) {
+        ctx.save();
+        ctx.translate(obs.x, obs.y);
+        // 畫一個簡單的尖刺或木箱
+        ctx.fillStyle = '#ff5252';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-obs.size/2, 0);
+        ctx.lineTo(0, -obs.size);
+        ctx.lineTo(obs.size/2, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#2b0000';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. 畫怪物 (追趕者)
+      let mImg = (Math.floor(monster.walkTimer * 4) % 2 === 0) ? assets.m1 : assets.m2;
+      let mSize = PLAYER_SIZE * 1.8; // 怪物稍微大一點比較有壓迫感
+      if (mImg && mImg.complete && mImg.naturalWidth > 0) {
+        ctx.save();
+        let mOffsetY = Math.sin(monster.walkTimer * 8) * 5;
+        ctx.translate(monster.x, monster.y + mOffsetY);
+        ctx.drawImage(mImg, -mSize/2, -mSize, mSize, mSize);
+        ctx.restore();
+      }
+
+      // 4. 畫玩家 (粢涵)
+      let pImg;
+      if (player.isJumping) {
+        pImg = assets.p3; // 跳躍圖 han7-3
+      } else {
+        // 跑步交替圖 han7-1, han7-2
+        pImg = (Math.floor(player.walkTimer * 8) % 2 === 0) ? assets.p1 : assets.p2;
+      }
+      
+      if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+        ctx.save();
+        let pOffsetY = player.isJumping ? 0 : Math.sin(player.walkTimer * 16) * 4;
+        ctx.translate(PLAYER_X, player.y + pOffsetY);
+        // 如果圖檔本來是朝右則不需翻轉；如果是朝左，可以使用 ctx.scale(-1, 1) 來翻轉
+        // ctx.scale(-1, 1); 
+        ctx.drawImage(pImg, -PLAYER_SIZE/2, -PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+        ctx.restore();
+      }
+    }
+
+    // =========================================
+    // 點擊觸發跳躍
+    // =========================================
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!isPlaying) return;
+      if (e.cancelable) e.preventDefault();
+      
+      // 只有在地面上才可以起跳 (避免無限二段跳)
+      if (!player.isJumping) {
+        player.isJumping = true;
+        player.vy = JUMP_FORCE;
+      }
+    });
+
+  </script>
+</body>
+</html>
