@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>冒險小遊戲 - 地下城跑酷</title>
-  
+  <title>冒險小遊戲 - 地下城逃脫</title>
+
   <!-- 引入外部注音模組與帳號密碼模組 (不需要 player.js) -->
   <script src="bopomofo.js"></script>
   <script src="password.js"></script>
@@ -54,7 +54,7 @@
       margin-bottom: 20px;
       width: 40px; height: 40px;
       border: 4px solid rgba(255,255,255,0.2);
-      border-top: 4px solid #ffeb3b;
+      border-top: 4px solid #4cd137;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -83,16 +83,14 @@
     .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background-color: rgba(8, 12, 24, 0.85);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      background-color: rgba(0, 0, 0, 0.85);
       color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      padding: 24px;
+      padding: 20px;
       text-align: center;
     }
 
@@ -119,7 +117,6 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
     }
     .btn:active { transform: scale(0.95); }
 
@@ -144,7 +141,7 @@
       font-size: 24px;
       font-weight: bold;
       background: rgba(0, 0, 0, 0.65);
-      padding: 8px 20px;
+      padding: 8px 16px;
       border-radius: 15px;
       pointer-events: none;
       z-index: 100;
@@ -197,17 +194,17 @@
         top: 10px !important;
         right: 10px !important;
         font-size: 18px !important;
-        padding: 6px 14px !important;
+        padding: 6px 12px !important;
       }
       #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
       #start-screen .intro-copy p { font-size: 24px !important; }
       #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
-      
+
       #result-screen h1 { font-size: 32px !important; margin-bottom: 6px !important; }
       .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
       #totalCoins { font-size: 26px !important; }
       #star-container { font-size: 19px !important; margin-top: 6px !important; }
-      
+
       #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
       #result-screen div[style*="flex-direction: column"] .btn { font-size: 24px !important; padding: 10px 0 !important; }
     }
@@ -221,61 +218,51 @@
   </div>
 
   <div id="game-container">
-    <button id="back-btn" class="btn" onclick="window.location.replace('index.html')">🔙 EXIT</button>
-    <div id="hud">🏃 <span id="distanceDisplay">0</span>m | ⭐ <span id="coinDisplay">0</span></div>
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+    <div id="hud">🔑</div>
 
     <!-- 開始畫面 -->
     <div id="start-screen" class="overlay" style="display: none;">
-      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="window.location.replace('index.html')">🔙 EXIT</button>
-      
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="exitToLobby()">🔙 EXIT</button>
+
       <div class="intro-copy">
-        <h1 class="zh-text" style="display: block; font-size: 54px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #ffeb3b;">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
           <ruby>地<rt>ㄉㄧˋ</rt></ruby>
           <ruby>下<rt>ㄒㄧㄚˋ</rt></ruby>
           <ruby>城<rt>ㄔㄥˊ</rt></ruby>
           <ruby>逃<rt>ㄊㄠˊ</rt></ruby>
           <ruby>脫<rt>ㄊㄨㄛ</rt></ruby>
         </h1>
-        <p class="zh-text" style="display: block; font-size: 36px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">
-          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby>
-          <ruby>擊<rt>ㄐㄧˊ</rt></ruby>
-          <ruby>螢<rt>ㄧㄥˊ</rt></ruby>
-          <ruby>幕<rt>ㄇㄨˋ</rt></ruby>
-          <ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
-          <ruby>躍<rt>ㄩㄝˋ</rt></ruby>
-          <span>！</span>
+        <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
+          <ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby><ruby>躍<rt>ㄩㄝˋ</rt></ruby><ruby>閃<rt>ㄕㄢˇ</rt></ruby><ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>焰<rt>ㄧㄢˋ</rt></ruby><span>（</span><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>二<rt>ㄦˋ</rt></ruby><ruby>段<rt>ㄉㄨㄢˋ</rt></ruby><ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby><span>）</span>
           <br>
-          <ruby>小<rt>ㄒㄧㄠˇ</rt></ruby>
-          <ruby>心<rt>ㄒㄧㄣ</rt></ruby>
-          <ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby>
-          <ruby>物<rt>ㄨˋ</rt></ruby>
-          <ruby>追<rt>ㄓㄨㄟ</rt></ruby>
-          <ruby>上<rt>ㄕㄤˋ</rt></ruby>
-          <ruby>來<rt>ㄌㄞˊ</rt></ruby>
-          <span>！</span>
+          <ruby>吃<rt>ㄔ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>石<rt>ㄕˊ</rt></ruby><ruby>攻<rt>ㄍㄨㄥ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><span>！</span>
         </p>
       </div>
 
-      <button class="btn" style="font-size: 32px; padding: 15px 55px; background-color: #ffeb3b; color: #000;" onclick="startGame()">
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
         <ruby>開<rt>ㄎㄞ</rt></ruby>
         <ruby>始<rt>ㄕˇ</rt></ruby>
-        <ruby>跑<rt>ㄆㄠˇ</rt></ruby>
       </button>
     </div>
 
     <!-- 結算畫面 -->
     <div id="result-screen" class="overlay" style="display: none;">
-      <h1 class="zh-text" style="font-size: 42px; color: #ff5252; margin: 0 0 10px 0;">
+      <h1 id="result-title" class="zh-text" style="font-size: 42px; color: #ff5252; margin: 0 0 10px 0;">
         <ruby>被<rt>ㄅㄟˋ</rt></ruby>
         <ruby>抓<rt>ㄓㄨㄚ</rt></ruby>
         <ruby>到<rt>ㄉㄠˋ</rt></ruby>
         <ruby>了<rt>˙ㄌㄜ</rt></ruby>
         <span>...</span>
       </h1>
-      
+
       <div class="math-box">
-        🏃: <span id="finalDistance">0</span>m <br>
-        ⭐: <span id="newCoins" style="color:#60ff40;">+0</span> <br>
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
         <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
         <span class="zh-text" style="vertical-align: middle;">
           <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
@@ -286,9 +273,9 @@
         </span>
         <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
       </div>
-      
+
       <div id="star-container"></div>
-      
+
       <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 15px; width: 100%; max-width: 340px;">
         <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0;" onclick="startGame()">
           <ruby>再<rt>ㄗㄞˋ</rt></ruby>
@@ -296,7 +283,7 @@
           <ruby>一<rt>ㄧ</rt></ruby>
           <ruby>次<rt>ㄘˋ</rt></ruby>
         </button>
-        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0; background-color: #2196F3;" onclick="window.location.replace('index.html')">
+        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0; background-color: #2196F3;" onclick="exitToLobby()">
           <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
           <ruby>大<rt>ㄉㄚˋ</rt></ruby>
           <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
@@ -313,64 +300,192 @@
     // =========================================
     const CANVAS_W = 900;
     const CANVAS_H = 1200;
-    const GROUND_Y = 950;       // 地板的 Y 座標 (腳底位置)
-    
-    // 角色物理參數
-    const GRAVITY = 4200;       // 重力 (數值越大掉越快)
-    const JUMP_FORCE = -2000;   // 跳躍力道 (負值，越小跳越高)
-    const PLAYER_X = 220;       // 角色固定在畫面左側的 X 座標
-    const PLAYER_SIZE = 160;    // 角色繪製大小 (比平常稍小以增加反應空間)
-    const HITBOX_RADIUS = 50;   // 碰撞判定半徑
+    const GROUND_Y = 965;              // 石板走道上緣位置 (腳底位置)
+    const FLOOR_SPLIT_Y = 946;         // 雙層視差切割線 (牆壁慢、地板快)
 
-    // 遊戲參數
-    const BASE_SPEED = 450;     // 初始跑動速度 (px/sec)
-    const SPEED_INC = 15;       // 每秒增加的速度
-    const MAX_SPEED = 900;      // 最高速度極限
+    // 角色物理參數 (二段跳)
+    const GRAVITY = 4200;              // 重力
+    const JUMP_FORCE = -1700;          // 第一段跳躍力道
+    const DOUBLE_JUMP_FORCE = -1520;   // 第二段跳躍力道
+    const MAX_JUMPS = 2;               // 最大跳躍次數 (二段跳)
+    const PLAYER_X = 280;              // 角色起始 X 座標
+    const PLAYER_SIZE = 160;           // 角色繪製大小
+    const HITBOX_RADIUS = 42;          // 玩家碰撞判定半徑
+
+    // 怪物距離代表兩條命 (不顯示愛心)
+    const MONSTER_SAFE_X = -15;        // 安全距離 (只露出一點點身體)
+    const MONSTER_DANGER_X = 130;      // 第一次撞火焰後追近到身後
+    const MONSTER_CAUGHT_X = 235;      // 第二次撞火焰撲抓上來
+    const SAFE_PASSES_TO_RECOVER = 4;  // 連續安全閃過幾團火焰可甩開怪物
+
+    // 通關與獎勵設定
+    const MONSTER_MAX_HITS = 5;        // 寶石魔法命中 5 次打敗怪物
+    const FINISH_DISTANCE = 370;       // 跑到內部目標距離即觸發坍塌逃脫
+    const WIN_REWARD_COINS = 10;       // 只有成功通關才給 10 顆星
+
+    // 遊戲速度參數
+    const BASE_SPEED = 450;            // 初始跑動速度 (px/sec)
+    const SPEED_INC = 10;              // 每秒增加的速度
+    const MAX_SPEED = 800;             // 最高速度極限
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
-    let isPlaying = false;
-    let lastTime = 0; 
-    let animationFrameId = null;
 
-    // 遊戲狀態變數
+    // 遊戲狀態: 'ready' | 'playing' | 'victory_anim' | 'caught_anim' | 'result' | 'exiting'
+    let gameState = 'ready';
+    let lastTime = 0;
+    let animationFrameId = null;
+    let endTimeoutId = null;
+
+    // 遊戲進行變數
     let gameSpeed = BASE_SPEED;
-    let distance = 0;
-    let coins = 0;
+    let distance = 0;                  // 內部節奏與終點觸發用，畫面不顯示
     let bgOffsetX = 0;
-    
+    let floorOffsetX = 0;
+    let gameTime = 0;
+    let shakeTimer = 0;
+    let shakeIntensity = 0;
+
+    // 通關演出狀態
+    let victoryReason = '';
+    let victoryTimer = 0;
+    let victoryConfettiSpawned = false;
+    let collapseRocks = [];
+
     // 角色狀態
     let player = {
+      x: PLAYER_X,
       y: GROUND_Y,
       vy: 0,
       isJumping: false,
-      walkTimer: 0
+      jumpCount: 0,
+      walkTimer: 0,
+      invincibleTimer: 0,
+      flipAngle: 0,
+      isFlipping: false,
+      stopped: false
     };
 
-    // 怪物狀態 (固定在左側邊緣)
+    // 怪物狀態
     let monster = {
-      x: 30, // 稍微露出一點點身體
+      x: MONSTER_SAFE_X,
+      targetX: MONSTER_SAFE_X,
       y: GROUND_Y,
-      walkTimer: 0
+      walkTimer: 0,
+      dangerLevel: 0, // 0: 安全(兩條命), 1: 貼身危險(剩最後一條命), 2: 抓到
+      safePasses: 0,
+      hits: 0,
+      hitFlashTimer: 0,
+      recoilOffset: 0,
+      isKnockedOut: false
     };
 
-    // 障礙物陣列
+    // 場上物件與特效
     let obstacles = [];
+    let gems = [];
+    let magicBolts = [];
+    let particles = [];
+    let floatingTexts = [];
+    let confetti = [];
     let spawnTimer = 0;
+    let gemSpawnTimer = 0;
 
+    // 神秘鑰匙 2 (skey2)
+    let keyItem = null;
+    let keySpawnDistance = 0;
+    let keySpawnedThisRun = false;
+    let keyPickedThisRun = false;
+
+    // =========================================
+    // 輕量 Web Audio 合成音效 (無需外部音檔)
+    // =========================================
+    let audioCtx = null;
+
+    function getAudioCtx() {
+      try {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) audioCtx = new AC();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      } catch (e) {}
+      return audioCtx;
+    }
+
+    function playTone(freqStart, freqEnd, duration, type = 'sine', volume = 0.14, delay = 0) {
+      try {
+        const ac = getAudioCtx();
+        if (!ac) return;
+        const now = ac.currentTime + delay;
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freqStart, now);
+        if (freqEnd !== freqStart) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + duration);
+        }
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      } catch (e) {}
+    }
+
+    function playSfx(type) {
+      if (type === 'jump') {
+        playTone(280, 540, 0.12, 'sine', 0.14);
+      } else if (type === 'double_jump') {
+        playTone(440, 880, 0.14, 'triangle', 0.14);
+      } else if (type === 'gem') {
+        playTone(660, 880, 0.09, 'sine', 0.14, 0);
+        playTone(880, 1180, 0.12, 'sine', 0.14, 0.06);
+      } else if (type === 'magic_hit') {
+        playTone(180, 75, 0.18, 'triangle', 0.22, 0);
+        playTone(520, 780, 0.16, 'sine', 0.15, 0.02);
+      } else if (type === 'hurt') {
+        playTone(210, 95, 0.24, 'sawtooth', 0.14);
+      } else if (type === 'key') {
+        playTone(523, 523, 0.10, 'triangle', 0.16, 0);
+        playTone(659, 659, 0.10, 'triangle', 0.16, 0.08);
+        playTone(784, 784, 0.10, 'triangle', 0.16, 0.16);
+        playTone(1046, 1046, 0.22, 'triangle', 0.18, 0.24);
+      } else if (type === 'collapse') {
+        playTone(130, 42, 0.35, 'sawtooth', 0.18, 0);
+        playTone(95, 36, 0.40, 'triangle', 0.22, 0.08);
+        playTone(115, 38, 0.38, 'sawtooth', 0.16, 0.22);
+        playTone(85, 32, 0.45, 'triangle', 0.20, 0.36);
+      } else if (type === 'win') {
+        playTone(523, 523, 0.11, 'sine', 0.16, 0);
+        playTone(659, 659, 0.11, 'sine', 0.16, 0.09);
+        playTone(784, 784, 0.11, 'sine', 0.16, 0.18);
+        playTone(1046, 1046, 0.28, 'sine', 0.20, 0.27);
+      } else if (type === 'lose') {
+        playTone(320, 220, 0.15, 'sawtooth', 0.13, 0);
+        playTone(220, 130, 0.26, 'sawtooth', 0.13, 0.12);
+      }
+    }
+
+    // =========================================
     // 資源載入
+    // =========================================
     const assets = {
       bg: new Image(),
-      p1: new Image(), // han7-1.webp
-      p2: new Image(), // han7-2.webp
-      p3: new Image(), // han7-3.webp
-      m1: new Image(), // bad19-1.webp
-      m2: new Image()  // bad19-2.webp
+      p1: new Image(),  // han7-1.webp
+      p2: new Image(),  // han7-2.webp
+      p3: new Image(),  // han7-3.webp
+      m1: new Image(),  // bad17-1.webp
+      m2: new Image(),  // bad17-2.webp
+      m3: new Image(),  // bad17-3.webp
+      key: new Image()  // key2.webp
     };
 
     let loadedCount = 0;
-    const totalAssets = 6;
+    const totalAssets = 8;
 
     function checkLoad() {
       loadedCount++;
@@ -379,278 +494,1474 @@
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-container').style.display = 'block';
         document.getElementById('start-screen').style.display = 'flex';
-        
+
         canvas.width = CANVAS_W;
         canvas.height = CANVAS_H;
-        drawInitial(); 
+        drawInitial();
       }
     }
 
-    // ★ 請確保專案中有這些圖檔，若無圖檔會顯示空白但邏輯仍會運作
-    assets.bg.src = 'assets/map/map17.webp'; // 建議準備一張橫向連續的地城背景
+    assets.bg.src = 'assets/map/map17.webp';
     assets.p1.src = 'assets/player/han7-1.webp';
     assets.p2.src = 'assets/player/han7-2.webp';
     assets.p3.src = 'assets/player/han7-3.webp';
     assets.m1.src = 'assets/bad/bad17-1.webp';
     assets.m2.src = 'assets/bad/bad17-2.webp';
+    assets.m3.src = 'assets/bad/bad17-3.webp';
+    assets.key.src = 'assets/sticker/key2.webp';
 
     for (let key in assets) {
       assets[key].onload = checkLoad;
-      assets[key].onerror = checkLoad; // 容錯處理，找不到圖也進遊戲
+      assets[key].onerror = checkLoad;
+    }
+
+    // =========================================
+    // 鑰匙貼紙與輔助特效函式
+    // =========================================
+    function hasKeySticker() {
+      const val = localStorage.getItem('sticker_skey2');
+      return val === 'true' || val === 'new';
+    }
+
+    function addShake(duration, intensity) {
+      shakeTimer = Math.max(shakeTimer, duration);
+      shakeIntensity = Math.max(shakeIntensity, intensity);
+    }
+
+    function spawnParticles(x, y, color, count, speedRange, sizeRange) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);
+        const life = 0.35 + Math.random() * 0.25;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 60,
+          size: sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]),
+          color: color,
+          life: life,
+          maxLife: life
+        });
+      }
+    }
+
+    function spawnFloatingText(x, y, text, color) {
+      floatingTexts.push({
+        x: x,
+        y: y,
+        text: text,
+        color: color,
+        life: 0.95,
+        maxLife: 0.95
+      });
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ffeb3b', '#ff4081', '#00e5ff', '#69f0ae', '#ff9100', '#e040fb'];
+      for (let i = 0; i < 65; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.1;
+        const speed = 260 + Math.random() * 520;
+        confetti.push({
+          x: CANVAS_W * (0.25 + Math.random() * 0.5),
+          y: CANVAS_H * (0.3 + Math.random() * 0.25),
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          w: 10 + Math.random() * 10,
+          h: 6 + Math.random() * 6,
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 14,
+          color: colors[i % colors.length],
+          life: 1.6 + Math.random() * 0.8
+        });
+      }
+    }
+
+    function createRockVertices(size) {
+      const count = 6 + Math.floor(Math.random() * 2);
+      const pts = [];
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+        const r = size * (0.72 + Math.random() * 0.38);
+        pts.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+      }
+      return pts;
+    }
+
+    function spawnCollapseRocks() {
+      collapseRocks = [];
+      const rockColors = ['#4d4559', '#3d3647', '#5a5068', '#332d3d'];
+
+      // 通道區坍塌大石堆 (14 塊，堆積在玩家與怪物之間的走廊)
+      for (let i = 0; i < 14; i++) {
+        const size = 34 + Math.random() * 26;
+        collapseRocks.push({
+          x: 270 + Math.random() * 200,
+          y: -80 - Math.random() * 440,
+          vx: (Math.random() - 0.5) * 90,
+          vy: 160 + Math.random() * 220,
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 8,
+          size: size,
+          landY: GROUND_Y - (i < 7 ? Math.random() * 16 : 24 + Math.random() * 44),
+          landed: false,
+          bounceCount: 0,
+          layer: 'front',
+          color: rockColors[i % rockColors.length],
+          points: createRockVertices(size)
+        });
+      }
+
+      // 怪物上方／後方落石 (6 塊，部分在怪物後方以免遮住倒下的 bad17-3)
+      for (let i = 0; i < 6; i++) {
+        const size = 26 + Math.random() * 20;
+        collapseRocks.push({
+          x: 80 + Math.random() * 130,
+          y: -120 - Math.random() * 340,
+          vx: (Math.random() - 0.5) * 70,
+          vy: 180 + Math.random() * 200,
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 9,
+          size: size,
+          landY: GROUND_Y - Math.random() * 25,
+          landed: false,
+          bounceCount: 0,
+          layer: 'back',
+          color: rockColors[(i + 1) % rockColors.length],
+          points: createRockVertices(size)
+        });
+      }
+
+      // 頂部揚塵碎屑
+      for (let i = 0; i < 24; i++) {
+        spawnParticles(80 + Math.random() * 440, 20 + Math.random() * 80, 'rgba(195, 185, 205, 0.75)', 1, [40, 140], [5, 11]);
+      }
     }
 
     // =========================================
     // 遊戲流程控制
     // =========================================
+    function exitToLobby() {
+      gameState = 'exiting';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      sessionStorage.setItem('returning_from_subpage', '1');
+      window.location.replace('lobby1.html');
+    }
+
     function startGame() {
-      isPlaying = true;
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      getAudioCtx();
+
+      gameState = 'playing';
       gameSpeed = BASE_SPEED;
       distance = 0;
-      coins = 0;
       bgOffsetX = 0;
-      obstacles = [];
-      spawnTimer = 0;
+      floorOffsetX = 0;
+      gameTime = 0;
+      shakeTimer = 0;
+      shakeIntensity = 0;
 
+      victoryReason = '';
+      victoryTimer = 0;
+      victoryConfettiSpawned = false;
+      collapseRocks = [];
+
+      obstacles = [];
+      gems = [];
+      magicBolts = [];
+      particles = [];
+      floatingTexts = [];
+      confetti = [];
+      spawnTimer = 0.85;
+      gemSpawnTimer = 3.2;
+
+      keyItem = null;
+      keyPickedThisRun = false;
+      keySpawnedThisRun = false;
+      keySpawnDistance = hasKeySticker() ? 0 : (90 + Math.random() * 90);
+
+      player.x = PLAYER_X;
       player.y = GROUND_Y;
       player.vy = 0;
       player.isJumping = false;
+      player.jumpCount = 0;
       player.walkTimer = 0;
+      player.invincibleTimer = 0;
+      player.flipAngle = 0;
+      player.isFlipping = false;
+      player.stopped = false;
+
+      monster.x = MONSTER_SAFE_X;
+      monster.targetX = MONSTER_SAFE_X;
+      monster.y = GROUND_Y;
+      monster.walkTimer = 0;
+      monster.dangerLevel = 0;
+      monster.safePasses = 0;
+      monster.hits = 0;
+      monster.hitFlashTimer = 0;
+      monster.recoilOffset = 0;
+      monster.isKnockedOut = false;
 
       document.getElementById('start-screen').style.display = 'none';
       document.getElementById('result-screen').style.display = 'none';
-      document.getElementById('hud').style.display = 'block';
+      document.getElementById('hud').style.display = 'none';
       document.getElementById('back-btn').style.display = 'block';
-      
+
       updateHUD();
       lastTime = performance.now();
-      
+
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(gameLoop);
     }
 
-    function endGame() {
-      isPlaying = false;
+    function triggerVictory(reason) {
+      if (gameState !== 'playing') return;
+      gameState = 'victory_anim';
+      victoryReason = reason;
+      victoryTimer = 0;
+      victoryConfettiSpawned = false;
+      player.invincibleTimer = 0;
+
+      // 場上殘留火焰與寶石散成小粒子後清空
+      for (let obs of obstacles) {
+        spawnParticles(obs.x, obs.y - 45, '#ffab00', 8, [60, 180], [4, 8]);
+      }
+      for (let g of gems) {
+        spawnParticles(g.x, g.y, '#80f8ff', 8, [60, 180], [4, 8]);
+      }
+      obstacles = [];
+      gems = [];
+      magicBolts = [];
+      keyItem = null;
+
+      if (reason === 'defeat') {
+        gameSpeed = 0;
+        monster.isKnockedOut = true;
+        monster.recoilOffset = 0;
+        monster.targetX = Math.max(monster.x, 145);
+        if (!player.isJumping) {
+          player.stopped = true;
+        }
+        updateHUD();
+
+        spawnParticles(Math.max(120, monster.x + 20), monster.y - 120, '#e040fb', 28, [150, 420], [6, 13]);
+        spawnFloatingText(CANVAS_W / 2, 420, '🎉 打敗怪物了！', '#ffeb3b');
+        spawnConfetti();
+        victoryConfettiSpawned = true;
+        playSfx('win');
+
+        if (endTimeoutId) clearTimeout(endTimeoutId);
+        endTimeoutId = setTimeout(() => endGame(true, 'defeat'), 1500);
+      } else {
+        // 跑到終點：地城坍塌、落石砸倒怪物、人偶跑出螢幕外
+        addShake(0.85, 16);
+        playSfx('collapse');
+        spawnCollapseRocks();
+        monster.targetX = 165;
+
+        if (endTimeoutId) clearTimeout(endTimeoutId);
+        endTimeoutId = setTimeout(() => endGame(true, 'escape'), 1950);
+      }
+    }
+
+    function endGame(isWin, reason) {
+      if (gameState === 'exiting' || gameState === 'result') return;
+      gameState = 'result';
+      endTimeoutId = null;
+
+      const earnedCoins = isWin ? WIN_REWARD_COINS : 0;
+      if (isWin) {
+        localStorage.setItem('map17_cleared', 'true');
+      }
+
       document.getElementById('hud').style.display = 'none';
       document.getElementById('back-btn').style.display = 'none';
-      
-      let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
-      let newTotalCoins = currentCoins + coins;
-      localStorage.setItem('playerCoins', newTotalCoins);
-      
-      document.getElementById('finalDistance').innerText = Math.floor(distance);
-      document.getElementById('newCoins').innerText = "+" + coins;
-      document.getElementById('totalCoins').innerText = newTotalCoins;
-      
-      let starsHtml = '';
-      for (let i = 1; i <= coins; i++) {
-        starsHtml += '⭐';
-        if (i % 6 === 0) starsHtml += '<br>';
+
+      const titleEl = document.getElementById('result-title');
+      if (reason === 'defeat') {
+        titleEl.style.color = '#ffeb3b';
+        titleEl.innerHTML = '<ruby>打<rt>ㄉㄚˇ</rt></ruby><ruby>敗<rt>ㄅㄞˋ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>';
+      } else if (reason === 'escape') {
+        titleEl.style.color = '#ffeb3b';
+        titleEl.innerHTML = '<ruby>逃<rt>ㄊㄠˊ</rt></ruby><ruby>脫<rt>ㄊㄨㄛ</rt></ruby><ruby>成<rt>ㄔㄥˊ</rt></ruby><ruby>功<rt>ㄍㄨㄥ</rt></ruby><span>！</span>';
+      } else {
+        titleEl.style.color = '#ff5252';
+        titleEl.innerHTML = '<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>抓<rt>ㄓㄨㄚ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>';
       }
-      document.getElementById('star-container').innerHTML = starsHtml || '<span style="color:#777;">再接再厲！</span>';
-      
+
+      const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      const newTotalCoins = currentCoins + earnedCoins;
+      localStorage.setItem('playerCoins', newTotalCoins);
+
+      document.getElementById('newCoins').innerText = '+' + earnedCoins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= earnedCoins; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0 && i < earnedCoins) starsHtml += '<br>';
+      }
+      if (earnedCoins === 0 && !keyPickedThisRun) {
+        starsHtml = '<span style="color:#777;">再接再厲！</span>';
+      }
+      if (keyPickedThisRun) {
+        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+
       if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
         window.Bopomofo.render();
       }
 
-      // 加入震動特效 (畫面晃動)
-      canvas.style.transform = 'translate(10px, 10px)';
-      setTimeout(() => canvas.style.transform = 'translate(-10px, -10px)', 50);
-      setTimeout(() => canvas.style.transform = 'translate(10px, -10px)', 100);
-      setTimeout(() => canvas.style.transform = 'translate(0, 0)', 150);
-
-      setTimeout(() => {
-        document.getElementById('result-screen').style.display = 'flex';
-      }, 500);
+      document.getElementById('result-screen').style.display = 'flex';
     }
 
     function updateHUD() {
-      document.getElementById('distanceDisplay').innerText = Math.floor(distance);
-      document.getElementById('coinDisplay').innerText = coins;
+      const hudEl = document.getElementById('hud');
+      hudEl.style.display = (keyPickedThisRun && gameState === 'playing') ? 'block' : 'none';
+    }
+
+    // =========================================
+    // 火焰障礙物與天空寶石生成
+    // =========================================
+    function spawnObstacle() {
+      const spawnX = CANVAS_W + 90;
+      const roll = Math.random();
+      let type = 'flame';
+
+      if (distance >= 45 && roll >= 0.70) {
+        type = 'double_flame';
+      }
+
+      let extraDelay = 0;
+      if (type === 'flame') {
+        const size = 75 + Math.random() * 33;
+        obstacles.push({
+          type: 'flame',
+          x: spawnX,
+          y: GROUND_Y,
+          size: size,
+          phase: Math.random() * Math.PI * 2,
+          passed: false,
+          hit: false
+        });
+      } else {
+        const size = 75 + Math.random() * 20;
+        const gap = 72;
+        obstacles.push({
+          type: 'double_flame',
+          x: spawnX,
+          y: GROUND_Y,
+          size: size,
+          gap: gap,
+          phase: Math.random() * Math.PI * 2,
+          passed: false,
+          hit: false
+        });
+        extraDelay = 0.25;
+      }
+
+      const baseInterval = Math.max(0.85, (1050 / gameSpeed) + Math.random() * 0.85);
+      spawnTimer = baseInterval + extraDelay;
+    }
+
+    function spawnGem() {
+      const spawnX = CANVAS_W + 90;
+      // 避免與剛生成的鑰匙重疊
+      if (keyItem && Math.abs(keyItem.x - spawnX) < 150) {
+        gemSpawnTimer = 0.9;
+        return;
+      }
+
+      const isHigh = Math.random() < 0.5;
+      const baseY = isHigh
+        ? GROUND_Y - (410 + Math.random() * 80)  // 高空二段跳高度
+        : GROUND_Y - (260 + Math.random() * 70); // 中空一段跳高度
+
+      gems.push({
+        x: spawnX,
+        y: baseY,
+        baseY: baseY,
+        radius: 30,
+        phase: Math.random() * Math.PI * 2,
+        colorIdx: Math.floor(Math.random() * 3)
+      });
+
+      gemSpawnTimer = 4.2 + Math.random() * 1.2;
+    }
+
+    // =========================================
+    // 碰撞與兩條命距離追逐邏輯
+    // =========================================
+    function handlePlayerHit(obs) {
+      if (player.invincibleTimer > 0 || gameState !== 'playing') return;
+      obs.hit = true;
+
+      if (monster.dangerLevel === 0) {
+        // 第一條命失誤：怪物追近身後，給短暫無敵與微降速
+        monster.dangerLevel = 1;
+        monster.targetX = MONSTER_DANGER_X;
+        monster.safePasses = 0;
+        player.invincibleTimer = 1.6;
+        gameSpeed = Math.max(BASE_SPEED, gameSpeed - 100);
+
+        addShake(0.25, 10);
+        spawnParticles(player.x, player.y - 60, '#ff6d00', 16, [120, 320], [5, 11]);
+        spawnFloatingText(player.x, player.y - 175, '🔥 燙到了！快跑！', '#ff8a65');
+        playSfx('hurt');
+      } else {
+        // 怪物已經貼近時再撞到火焰 -> 撲抓結束
+        monster.dangerLevel = 2;
+        monster.targetX = MONSTER_CAUGHT_X;
+        gameState = 'caught_anim';
+
+        addShake(0.32, 14);
+        spawnParticles(player.x, player.y - 60, '#ff1744', 22, [150, 400], [6, 13]);
+        playSfx('lose');
+
+        if (endTimeoutId) clearTimeout(endTimeoutId);
+        endTimeoutId = setTimeout(() => endGame(false, 'caught'), 600);
+      }
     }
 
     // =========================================
     // 遊戲主迴圈
     // =========================================
     function gameLoop(currentTime) {
-      if (!isPlaying) return;
-      
-      // 限制最大 dt 避免切換分頁回來產生大跳躍
-      const dt = Math.min((currentTime - lastTime) / 1000, 0.05); 
+      if (gameState === 'exiting' || gameState === 'result') return;
+
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
       lastTime = currentTime;
 
       update(dt);
-      draw();
-
-      animationFrameId = requestAnimationFrame(gameLoop);
+      if (gameState !== 'exiting' && gameState !== 'result') {
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
     }
 
     function update(dt) {
-      // 1. 更新速度與距離
+      gameTime += dt;
+
+      if (shakeTimer > 0) {
+        shakeTimer = Math.max(0, shakeTimer - dt);
+      }
+      if (monster.hitFlashTimer > 0) {
+        monster.hitFlashTimer = Math.max(0, monster.hitFlashTimer - dt);
+      }
+      monster.recoilOffset += (0 - monster.recoilOffset) * Math.min(1, dt * 8);
+
+      // 被抓到演出期間：讓怪物迅速撲向玩家並更新特效
+      if (gameState === 'caught_anim') {
+        monster.walkTimer += dt * 10;
+        monster.x += (monster.targetX - monster.x) * Math.min(1, dt * 12);
+        updateEffects(dt);
+        return;
+      }
+
+      // 過關演出期間：分「打敗怪物停止」與「終點坍塌逃脫」兩種演出
+      if (gameState === 'victory_anim') {
+        victoryTimer += dt;
+
+        if (victoryReason === 'defeat') {
+          // 情境 A：怪物被擊敗倒地變成 bad17-3，人偶與怪物都停下來
+          monster.x += (monster.targetX - monster.x) * Math.min(1, dt * 8);
+
+          if (player.isJumping) {
+            player.vy += GRAVITY * dt;
+            player.y += player.vy * dt;
+            if (player.isFlipping) {
+              player.flipAngle += dt * Math.PI * 4.5;
+              if (player.flipAngle >= Math.PI * 2) {
+                player.flipAngle = 0;
+                player.isFlipping = false;
+              }
+            }
+            if (player.y >= GROUND_Y) {
+              player.y = GROUND_Y;
+              player.isJumping = false;
+              player.vy = 0;
+              player.flipAngle = 0;
+              player.isFlipping = false;
+              player.stopped = true;
+              spawnParticles(player.x, GROUND_Y - 5, 'rgba(220,210,200,0.75)', 5, [40, 120], [4, 8]);
+            }
+          } else {
+            player.stopped = true;
+          }
+
+          updateEffects(dt);
+          return;
+        }
+
+        // 情境 B：跑到終點逃脫，背景煞車、落石坍塌、怪物變 bad17-3、人偶跑出螢幕外
+        gameSpeed = Math.max(0, gameSpeed - 1100 * dt);
+        if (gameSpeed > 0) {
+          bgOffsetX -= gameSpeed * dt * 0.45;
+          if (bgOffsetX <= -CANVAS_W) bgOffsetX += CANVAS_W;
+          floorOffsetX -= gameSpeed * dt;
+          if (floorOffsetX <= -CANVAS_W) floorOffsetX += CANVAS_W;
+        }
+
+        if (!monster.isKnockedOut) {
+          monster.walkTimer += dt * 4;
+          monster.x += (monster.targetX - monster.x) * Math.min(1, dt * 7);
+          if (victoryTimer >= 0.42) {
+            monster.isKnockedOut = true;
+            updateHUD();
+            spawnParticles(monster.x, monster.y - 100, '#ff8a65', 22, [130, 360], [6, 13]);
+            spawnParticles(monster.x, monster.y - 120, '#ffd54f', 12, [90, 260], [5, 10]);
+          }
+        }
+
+        if (player.isJumping) {
+          player.vy += GRAVITY * 1.4 * dt;
+          player.y += player.vy * dt;
+          if (player.y >= GROUND_Y) {
+            player.y = GROUND_Y;
+            player.isJumping = false;
+            player.vy = 0;
+            player.flipAngle = 0;
+            player.isFlipping = false;
+          }
+        }
+        if (victoryTimer >= 0.15) {
+          player.x += 620 * dt;
+          player.walkTimer += dt * 3.2;
+          if (!player.isJumping && player.x < CANVAS_W + 40 && Math.random() < 0.35) {
+            spawnParticles(player.x - 20, GROUND_Y - 5, 'rgba(220,210,200,0.65)', 1, [30, 90], [4, 7]);
+          }
+        } else {
+          player.walkTimer += dt * 2.2;
+        }
+
+        // 坍塌落石物理
+        for (let r of collapseRocks) {
+          if (r.landed) continue;
+          r.vy += 2400 * dt;
+          r.x += r.vx * dt;
+          r.y += r.vy * dt;
+          r.rot += r.vRot * dt;
+          if (r.y >= r.landY) {
+            if (r.bounceCount === 0) {
+              r.y = r.landY;
+              r.vy = -(120 + Math.random() * 140);
+              r.vx *= 0.5;
+              r.bounceCount = 1;
+              spawnParticles(r.x, r.landY, 'rgba(200, 195, 210, 0.8)', 6, [70, 200], [5, 11]);
+            } else {
+              r.y = r.landY;
+              r.vy = 0;
+              r.vx = 0;
+              r.vRot = 0;
+              r.landed = true;
+            }
+          }
+        }
+
+        if (victoryTimer >= 0.6 && !victoryConfettiSpawned) {
+          victoryConfettiSpawned = true;
+          spawnConfetti();
+          spawnFloatingText(CANVAS_W / 2, 420, '🎉 逃脫成功！', '#69f0ae');
+          playSfx('win');
+        }
+
+        updateEffects(dt);
+        return;
+      }
+
+      if (gameState !== 'playing') return;
+
+      if (player.invincibleTimer > 0) {
+        player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
+      }
+
+      // 1. 更新速度與內部距離 (畫面不顯示距離)
       gameSpeed = Math.min(MAX_SPEED, gameSpeed + SPEED_INC * dt);
-      distance += (gameSpeed * dt) / 50; // 每 50px 算 1m
-      
-      // 每 50m 獎勵一星
-      let expectedCoins = Math.floor(distance / 50);
-      if (expectedCoins > coins) {
-        coins = expectedCoins;
-      }
-      updateHUD();
+      distance += (gameSpeed * dt) / 50;
 
-      // 2. 更新背景滾動
-      bgOffsetX -= gameSpeed * dt * 0.5; // 背景視差 (比前景慢)
-      if (bgOffsetX <= -CANVAS_W) {
-        bgOffsetX += CANVAS_W;
+      if (distance >= FINISH_DISTANCE) {
+        triggerVictory('escape');
+        return;
       }
 
-      // 3. 角色物理 (重力與跳躍)
+      // 2. 更新背景與地板雙層視差滾動
+      bgOffsetX -= gameSpeed * dt * 0.45;
+      if (bgOffsetX <= -CANVAS_W) bgOffsetX += CANVAS_W;
+
+      floorOffsetX -= gameSpeed * dt;
+      if (floorOffsetX <= -CANVAS_W) floorOffsetX += CANVAS_W;
+
+      // 3. 角色物理 (重力、二段跳與前滾翻)
       if (player.isJumping) {
         player.vy += GRAVITY * dt;
         player.y += player.vy * dt;
-        
+
+        if (player.y < PLAYER_SIZE + 40) {
+          player.y = PLAYER_SIZE + 40;
+          if (player.vy < 0) player.vy = 0;
+        }
+
+        if (player.isFlipping) {
+          player.flipAngle += dt * Math.PI * 4.5;
+          if (player.flipAngle >= Math.PI * 2) {
+            player.flipAngle = 0;
+            player.isFlipping = false;
+          }
+        }
+
         if (player.y >= GROUND_Y) {
           player.y = GROUND_Y;
           player.isJumping = false;
           player.vy = 0;
+          player.jumpCount = 0;
+          player.flipAngle = 0;
+          player.isFlipping = false;
+          spawnParticles(player.x, GROUND_Y - 5, 'rgba(220,210,200,0.75)', 5, [40, 120], [4, 8]);
         }
       } else {
-        player.walkTimer += dt * (gameSpeed / 300); // 隨車速加快擺動腳步
-      }
-      monster.walkTimer += dt * (gameSpeed / 300);
-
-      // 4. 障礙物生成與移動
-      spawnTimer -= dt;
-      if (spawnTimer <= 0) {
-        // 隨機生成障礙物
-        obstacles.push({
-          x: CANVAS_W + 50,
-          y: GROUND_Y,
-          size: 80 + Math.random() * 40, // 大小隨機 80~120
-          passed: false
-        });
-        // 根據目前速度動態調整生成間隔 (速度越快，間隔越短，但不小於 0.8秒)
-        spawnTimer = Math.max(0.8, (1200 / gameSpeed) + Math.random() * 1.5);
+        player.walkTimer += dt * (gameSpeed / 300);
       }
 
-      // 5. 更新障礙物並進行碰撞偵測
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        let obs = obstacles[i];
-        obs.x -= gameSpeed * dt;
+      // 4. 怪物平滑移動與跑步節奏
+      monster.walkTimer += dt * (gameSpeed / 280);
+      monster.x += (monster.targetX - monster.x) * Math.min(1, dt * 6);
 
-        // 碰撞偵測 (圓形判定法)
-        let dx = PLAYER_X - obs.x;
-        let dy = (player.y - PLAYER_SIZE*0.3) - (obs.y - obs.size*0.4); 
-        let dist = Math.hypot(dx, dy);
-        
-        // 如果距離小於兩者半徑相加，即為碰到
-        if (dist < HITBOX_RADIUS + (obs.size * 0.4)) {
-          endGame();
-          return;
+      // 5. 火焰與寶石與鑰匙生成
+      if (distance < FINISH_DISTANCE - 18) {
+        spawnTimer -= dt;
+        if (spawnTimer <= 0) {
+          spawnObstacle();
         }
 
-        // 移除超出畫面的障礙物
-        if (obs.x < -200) {
+        gemSpawnTimer -= dt;
+        if (gemSpawnTimer <= 0) {
+          spawnGem();
+        }
+      }
+
+      if (!hasKeySticker() && !keyPickedThisRun && !keySpawnedThisRun && !keyItem &&
+          distance >= keySpawnDistance && distance < FINISH_DISTANCE - 24) {
+        keySpawnedThisRun = true;
+        let spawnX = CANVAS_W + 100;
+        for (let g of gems) {
+          if (Math.abs(g.x - spawnX) < 120) {
+            spawnX += 140;
+          }
+        }
+        keyItem = {
+          x: spawnX,
+          baseY: GROUND_Y - 310,
+          y: GROUND_Y - 310,
+          radius: 42,
+          phase: 0
+        };
+      }
+
+      // 玩家碰撞中心點
+      const pCenterX = player.x;
+      const pCenterY = player.y - PLAYER_SIZE * 0.45;
+
+      // 6. 更新火焰障礙物並偵測碰撞
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.x -= gameSpeed * dt;
+
+        if (!obs.hit) {
+          if (obs.type === 'flame') {
+            const dist = Math.hypot(pCenterX - obs.x, pCenterY - (obs.y - obs.size * 0.38));
+            if (dist < HITBOX_RADIUS + obs.size * 0.32) {
+              handlePlayerHit(obs);
+              if (gameState !== 'playing') return;
+            }
+          } else if (obs.type === 'double_flame') {
+            const leftX = obs.x - obs.gap / 2;
+            const rightX = obs.x + obs.gap / 2;
+            const d1 = Math.hypot(pCenterX - leftX, pCenterY - (obs.y - obs.size * 0.38));
+            const d2 = Math.hypot(pCenterX - rightX, pCenterY - (obs.y - obs.size * 0.92 * 0.38));
+            if (d1 < HITBOX_RADIUS + obs.size * 0.30 || d2 < HITBOX_RADIUS + obs.size * 0.28) {
+              handlePlayerHit(obs);
+              if (gameState !== 'playing') return;
+            }
+          }
+        }
+
+        // 安全閃過火焰 -> 逐步甩開怪物
+        if (!obs.passed && obs.x < player.x - 90) {
+          obs.passed = true;
+          if (!obs.hit && monster.dangerLevel === 1) {
+            monster.safePasses++;
+            if (monster.safePasses >= SAFE_PASSES_TO_RECOVER) {
+              monster.dangerLevel = 0;
+              monster.targetX = MONSTER_SAFE_X;
+              monster.safePasses = 0;
+              spawnFloatingText(player.x, player.y - 175, '💨 甩開怪物了！', '#69f0ae');
+            }
+          }
+        }
+
+        if (obs.x < -220) {
           obstacles.splice(i, 1);
         }
       }
+
+      // 7. 更新天空寶石並發射魔法攻擊
+      const gemPalette = ['#00e5ff', '#e040fb', '#69f0ae'];
+      for (let i = gems.length - 1; i >= 0; i--) {
+        const g = gems[i];
+        g.x -= gameSpeed * dt;
+        g.phase += dt * 5;
+        g.y = g.baseY + Math.sin(g.phase) * 9;
+
+        const dist = Math.hypot(pCenterX - g.x, pCenterY - g.y);
+        if (dist < HITBOX_RADIUS + g.radius + 22) {
+          const color = gemPalette[g.colorIdx % gemPalette.length];
+          spawnParticles(g.x, g.y, color, 14, [100, 280], [4, 9]);
+          spawnFloatingText(g.x, g.y - 25, '✨ 魔法攻擊！', color);
+          playSfx('gem');
+
+          const targetX = Math.max(35, monster.x + monster.recoilOffset + 25);
+          const targetY = monster.y - PLAYER_SIZE * 1.8 * 0.55;
+          magicBolts.push({
+            x: g.x,
+            y: g.y,
+            startX: g.x,
+            startY: g.y,
+            ctrlX: (g.x + targetX) * 0.5,
+            ctrlY: Math.min(g.y, targetY) - 180,
+            t: 0,
+            duration: 0.28,
+            color: color,
+            trail: []
+          });
+
+          gems.splice(i, 1);
+          continue;
+        }
+
+        if (g.x < -100) {
+          gems.splice(i, 1);
+        }
+      }
+
+      // 8. 更新神秘鑰匙 2
+      if (keyItem) {
+        keyItem.x -= gameSpeed * dt;
+        keyItem.phase += dt * 4.5;
+        keyItem.y = keyItem.baseY + Math.sin(keyItem.phase) * 10;
+
+        const dist = Math.hypot(pCenterX - keyItem.x, pCenterY - keyItem.y);
+        if (dist < HITBOX_RADIUS + keyItem.radius + 24) {
+          const kx = keyItem.x;
+          const ky = keyItem.y;
+          keyItem = null;
+          keyPickedThisRun = true;
+
+          // 獲得後立刻寫入貼紙存檔，之後不再出現
+          if (localStorage.getItem('sticker_skey2') !== 'true') {
+            localStorage.setItem('sticker_skey2', 'new');
+          }
+
+          spawnParticles(kx, ky, '#ffd54f', 22, [120, 340], [5, 11]);
+          spawnFloatingText(kx, ky - 35, '🔑 獲得神秘鑰匙！', '#ffeb3b');
+          playSfx('key');
+          updateHUD();
+        } else if (keyItem.x < -120) {
+          keyItem = null;
+        }
+      }
+
+      // 9. 更新魔法攻擊彈與特效
+      updateBolts(dt);
+      updateEffects(dt);
+    }
+
+    function updateBolts(dt) {
+      const mSize = PLAYER_SIZE * 1.8;
+      for (let i = magicBolts.length - 1; i >= 0; i--) {
+        const b = magicBolts[i];
+        b.t = Math.min(1, b.t + dt / b.duration);
+
+        const tx = Math.max(35, monster.x + monster.recoilOffset + 25);
+        const ty = monster.y - mSize * 0.55;
+        const u = 1 - b.t;
+        b.x = u * u * b.startX + 2 * u * b.t * b.ctrlX + b.t * b.t * tx;
+        b.y = u * u * b.startY + 2 * u * b.t * b.ctrlY + b.t * b.t * ty;
+
+        b.trail.push({ x: b.x, y: b.y });
+        if (b.trail.length > 9) b.trail.shift();
+
+        if (b.t >= 1) {
+          magicBolts.splice(i, 1);
+
+          if (gameState === 'playing' && !monster.isKnockedOut) {
+            monster.hits = Math.min(MONSTER_MAX_HITS, monster.hits + 1);
+            monster.hitFlashTimer = 0.35;
+            monster.recoilOffset = -45;
+
+            addShake(0.18, 8);
+            spawnParticles(tx, ty, '#e040fb', 18, [120, 320], [5, 11]);
+            spawnParticles(tx, ty, '#ffd54f', 10, [90, 260], [4, 9]);
+            spawnFloatingText(Math.max(110, tx + 30), ty - 90, '💥 命中！', '#ffd54f');
+            playSfx('magic_hit');
+            updateHUD();
+
+            if (monster.hits >= MONSTER_MAX_HITS) {
+              triggerVictory('defeat');
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    function updateEffects(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 600 * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 95 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+      }
+
+      for (let i = confetti.length - 1; i >= 0; i--) {
+        const c = confetti[i];
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.vy += 650 * dt;
+        c.rot += c.vRot * dt;
+        c.life -= dt;
+        if (c.life <= 0) confetti.splice(i, 1);
+      }
     }
 
     // =========================================
-    // 繪圖處理
+    // 繪圖輔助函式
     // =========================================
-    function drawInitial() {
-      // 初始畫面只畫一次背景與角色站立
-      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
-        ctx.drawImage(assets.bg, 0, 0, CANVAS_W, CANVAS_H);
-      } else {
-        ctx.fillStyle = '#2b2433';
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      }
-      if (assets.p1.complete && assets.p1.naturalWidth > 0) {
-        ctx.drawImage(assets.p1, PLAYER_X - PLAYER_SIZE/2, GROUND_Y - PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+    function drawRoundedRectPath(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.lineTo(x + w - rr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+      ctx.lineTo(x + w, y + h - rr);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+      ctx.lineTo(x + rr, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+      ctx.lineTo(x, y + rr);
+      ctx.quadraticCurveTo(x, y, x + rr, y);
+      ctx.closePath();
+    }
+
+    function drawCollapseRocks(layerName) {
+      for (let r of collapseRocks) {
+        if (r.layer !== layerName) continue;
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        ctx.rotate(r.rot);
+
+        ctx.fillStyle = r.color;
+        ctx.strokeStyle = '#17131e';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        for (let i = 0; i < r.points.length; i++) {
+          const pt = r.points[i];
+          if (i === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 上方亮面切線增加石塊立體感
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.beginPath();
+        ctx.moveTo(r.points[0].x * 0.7, r.points[0].y * 0.7);
+        ctx.lineTo(r.points[1].x * 0.75, r.points[1].y * 0.75);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
       }
     }
 
-    function draw() {
-      // 1. 畫背景 (兩張拼接達成無限滾動)
-      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
-        ctx.drawImage(assets.bg, bgOffsetX, 0, CANVAS_W, CANVAS_H);
-        ctx.drawImage(assets.bg, bgOffsetX + CANVAS_W, 0, CANVAS_W, CANVAS_H);
+    function drawFlame(x, y, size, phase) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const flicker1 = Math.sin(gameTime * 14 + phase);
+      const flicker2 = Math.cos(gameTime * 19 + phase * 1.3);
+      const sway = flicker1 * size * 0.09;
+      const hScale = 1 + flicker2 * 0.08;
+      const h = size * 1.15 * hScale;
+      const w = size * 0.56;
+
+      // 地面焦黑底影與暖光暈
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, w * 0.95, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const glow = ctx.createRadialGradient(0, -h * 0.35, 6, 0, -h * 0.35, size * 0.95);
+      glow.addColorStop(0, 'rgba(255, 120, 0, 0.42)');
+      glow.addColorStop(1, 'rgba(255, 80, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.35, size * 0.95, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 外層紅橘火焰 (帶深色卡通外框)
+      const outerGrad = ctx.createLinearGradient(0, 0, 0, -h);
+      outerGrad.addColorStop(0, '#ff3d00');
+      outerGrad.addColorStop(0.65, '#ff6d00');
+      outerGrad.addColorStop(1, '#ffab00');
+      ctx.fillStyle = outerGrad;
+      ctx.strokeStyle = '#3a0900';
+      ctx.lineWidth = 3.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 2);
+      ctx.bezierCurveTo(-w * 1.05, 2, -w * 1.1, -h * 0.48, -w * 0.42, -h * 0.72);
+      ctx.quadraticCurveTo(-w * 0.58, -h * 0.42, -w * 0.25, -h * 0.54);
+      ctx.quadraticCurveTo(-w * 0.12 + sway * 0.4, -h * 0.85, sway, -h);
+      ctx.quadraticCurveTo(w * 0.2 + sway * 0.4, -h * 0.8, w * 0.28, -h * 0.52);
+      ctx.quadraticCurveTo(w * 0.56, -h * 0.44, w * 0.46, -h * 0.70);
+      ctx.bezierCurveTo(w * 1.08, -h * 0.46, w * 1.05, 2, 0, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 中層金黃火舌
+      const midGrad = ctx.createLinearGradient(0, -4, 0, -h * 0.75);
+      midGrad.addColorStop(0, '#ff9100');
+      midGrad.addColorStop(1, '#ffea00');
+      ctx.fillStyle = midGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(-w * 0.62, 0, -w * 0.62, -h * 0.38, sway * 0.6, -h * 0.72);
+      ctx.bezierCurveTo(w * 0.62, -h * 0.38, w * 0.62, 0, 0, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // 內層亮黃火芯
+      ctx.fillStyle = '#fff9c4';
+      ctx.beginPath();
+      ctx.moveTo(0, -2);
+      ctx.bezierCurveTo(-w * 0.30, -2, -w * 0.28, -h * 0.24, sway * 0.3, -h * 0.44);
+      ctx.bezierCurveTo(w * 0.28, -h * 0.24, w * 0.30, -2, 0, -2);
+      ctx.closePath();
+      ctx.fill();
+
+      // 上升火星
+      for (let j = 0; j < 2; j++) {
+        const sparkT = ((gameTime * 1.4 + phase + j * 0.5) % 1);
+        const sx = Math.sin(sparkT * 6 + j * 2) * w * 0.5;
+        const sy = -h * (0.65 + sparkT * 0.65);
+        ctx.fillStyle = `rgba(255, 224, 130, ${1 - sparkT})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 3.5 * (1 - sparkT * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawGem(g) {
+      const palettes = [
+        { light: '#80f8ff', mid: '#00e5ff', dark: '#006064', glow: '#00e5ff' },
+        { light: '#f8bbd0', mid: '#e040fb', dark: '#6a1b9a', glow: '#ea80fc' },
+        { light: '#b9f6ca', mid: '#00e676', dark: '#1b5e20', glow: '#69f0ae' }
+      ];
+      const pal = palettes[g.colorIdx % palettes.length];
+      const r = g.radius;
+
+      ctx.save();
+      ctx.translate(g.x, g.y);
+
+      // 外圈光暈
+      const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, r * 1.9);
+      halo.addColorStop(0, pal.glow);
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.45 + Math.sin(gameTime * 6 + g.phase) * 0.15;
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // 多面鑽石/寶石主體
+      ctx.strokeStyle = '#120824';
+      ctx.lineWidth = 3.5;
+
+      // 左上與右上切面
+      ctx.fillStyle = pal.light;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.15);
+      ctx.lineTo(-r * 0.9, -r * 0.15);
+      ctx.lineTo(0, -r * 0.25);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = pal.mid;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.15);
+      ctx.lineTo(r * 0.9, -r * 0.15);
+      ctx.lineTo(0, -r * 0.25);
+      ctx.closePath();
+      ctx.fill();
+
+      // 下半切面
+      ctx.fillStyle = pal.mid;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.9, -r * 0.15);
+      ctx.lineTo(0, -r * 0.25);
+      ctx.lineTo(0, r * 1.15);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = pal.dark;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.9, -r * 0.15);
+      ctx.lineTo(0, -r * 0.25);
+      ctx.lineTo(0, r * 1.15);
+      ctx.closePath();
+      ctx.fill();
+
+      // 外框輪廓
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 1.15);
+      ctx.lineTo(r * 0.9, -r * 0.15);
+      ctx.lineTo(0, r * 1.15);
+      ctx.lineTo(-r * 0.9, -r * 0.15);
+      ctx.closePath();
+      ctx.stroke();
+
+      // 閃爍星芒
+      const sparkleScale = 0.7 + Math.sin(gameTime * 8 + g.phase) * 0.3;
+      ctx.fillStyle = '#ffffff';
+      ctx.translate(r * 0.45, -r * 0.65);
+      ctx.scale(sparkleScale, sparkleScale);
+      ctx.beginPath();
+      ctx.moveTo(0, -9); ctx.lineTo(2.5, -2.5); ctx.lineTo(9, 0);
+      ctx.lineTo(2.5, 2.5); ctx.lineTo(0, 9); ctx.lineTo(-2.5, 2.5);
+      ctx.lineTo(-9, 0); ctx.lineTo(-2.5, -2.5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawKeyItem(k) {
+      ctx.save();
+      ctx.translate(k.x, k.y);
+
+      // 金色神祕光暈
+      const pulse = 1 + Math.sin(gameTime * 6) * 0.12;
+      const halo = ctx.createRadialGradient(0, 0, 8, 0, 0, k.radius * 2.1 * pulse);
+      halo.addColorStop(0, 'rgba(255, 235, 59, 0.75)');
+      halo.addColorStop(0.55, 'rgba(255, 193, 7, 0.25)');
+      halo.addColorStop(1, 'rgba(255, 193, 7, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, k.radius * 2.1 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 旋轉虛線光環
+      ctx.save();
+      ctx.rotate(gameTime * 1.6);
+      ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 10]);
+      ctx.beginPath();
+      ctx.arc(0, 0, k.radius * 1.28, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      if (assets.key.complete && assets.key.naturalWidth > 0) {
+        const size = k.radius * 2.2;
+        ctx.rotate(Math.sin(gameTime * 3) * 0.12);
+        ctx.drawImage(assets.key, -size / 2, -size / 2, size, size);
       } else {
-        // 如果沒有背景圖，畫一個漸層代替
-        let grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        ctx.font = '64px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔑', 0, 0);
+      }
+
+      ctx.restore();
+    }
+
+    function drawProgressBar() {
+      const barW = 420;
+      const barH = 18;
+      const barX = (CANVAS_W - barW) / 2;
+      const barY = 86;
+      const ratio = Math.min(1, Math.max(0, distance / FINISH_DISTANCE));
+
+      ctx.save();
+
+      // 半透明底板
+      ctx.fillStyle = 'rgba(10, 12, 22, 0.72)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 3;
+      drawRoundedRectPath(barX - 24, barY - 14, barW + 48, barH + 28, 22);
+      ctx.fill();
+      ctx.stroke();
+
+      // 進度槽
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      drawRoundedRectPath(barX, barY, barW, barH, 9);
+      ctx.fill();
+
+      // 填充條
+      if (ratio > 0) {
+        const fillGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        fillGrad.addColorStop(0, '#4cd137');
+        fillGrad.addColorStop(1, '#ffeb3b');
+        ctx.fillStyle = fillGrad;
+        drawRoundedRectPath(barX, barY, Math.max(18, barW * ratio), barH, 9);
+        ctx.fill();
+      }
+
+      // 終點旗幟圖示與玩家進度小圓點 (不顯示距離數字)
+      const markerX = barX + barW * ratio;
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏁', barX + barW + 10, barY + barH / 2);
+
+      ctx.fillStyle = '#ffeb3b';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(markerX, barY + barH / 2, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // =========================================
+    // 繪圖主程序
+    // =========================================
+    function drawBackground() {
+      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
+        const iw = assets.bg.naturalWidth;
+        const ih = assets.bg.naturalHeight;
+        const srcSplitY = Math.round(ih * (FLOOR_SPLIT_Y / CANVAS_H));
+
+        // 上半部牆壁 (0.45x 視差)
+        ctx.drawImage(assets.bg, 0, 0, iw, srcSplitY, bgOffsetX, 0, CANVAS_W, FLOOR_SPLIT_Y);
+        ctx.drawImage(assets.bg, 0, 0, iw, srcSplitY, bgOffsetX + CANVAS_W, 0, CANVAS_W, FLOOR_SPLIT_Y);
+
+        // 下半部石板地板 (1.0x 速度與火焰同步)
+        ctx.drawImage(assets.bg, 0, srcSplitY, iw, ih - srcSplitY, floorOffsetX, FLOOR_SPLIT_Y, CANVAS_W, CANVAS_H - FLOOR_SPLIT_Y);
+        ctx.drawImage(assets.bg, 0, srcSplitY, iw, ih - srcSplitY, floorOffsetX + CANVAS_W, FLOOR_SPLIT_Y, CANVAS_W, CANVAS_H - FLOOR_SPLIT_Y);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
         grad.addColorStop(0, '#2b2433');
         grad.addColorStop(1, '#120e18');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-        // 畫地板線
         ctx.fillStyle = '#111';
-        ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+        ctx.fillRect(0, FLOOR_SPLIT_Y, CANVAS_W, CANVAS_H - FLOOR_SPLIT_Y);
+      }
+    }
+
+    function drawMonster(mSize) {
+      const drawX = monster.x + monster.recoilOffset;
+
+      if (monster.isKnockedOut) {
+        // 倒地陰影
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(drawX, monster.y + 4, mSize * 0.48, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (assets.m3 && assets.m3.complete && assets.m3.naturalWidth > 0) {
+          // bad17-3.webp 有效底部在 y=274/400 (0.685)，對齊地板不浮空
+          ctx.translate(drawX, monster.y);
+          ctx.drawImage(assets.m3, -mSize / 2, -mSize * 0.685, mSize, mSize);
+        } else if (assets.m1 && assets.m1.complete && assets.m1.naturalWidth > 0) {
+          ctx.translate(drawX, monster.y - mSize * 0.28);
+          ctx.rotate(-Math.PI / 2);
+          ctx.drawImage(assets.m1, -mSize / 2, -mSize / 2, mSize, mSize);
+        }
+        ctx.restore();
+        return;
       }
 
-      // 2. 畫障礙物 (如果在素材準備好前，預設先用 Canvas 畫出幾何圖形代替)
-      for (let obs of obstacles) {
+      const mImg = (Math.floor(monster.walkTimer * 4) % 2 === 0) ? assets.m1 : assets.m2;
+      if (mImg && mImg.complete && mImg.naturalWidth > 0) {
         ctx.save();
-        ctx.translate(obs.x, obs.y);
-        // 畫一個簡單的尖刺或木箱
-        ctx.fillStyle = '#ff5252';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-obs.size/2, 0);
-        ctx.lineTo(0, -obs.size);
-        ctx.lineTo(obs.size/2, 0);
-        ctx.closePath();
+        const mOffsetY = Math.sin(monster.walkTimer * 8) * 6;
+
+        // 受擊閃光發亮光暈
+        if (monster.hitFlashTimer > 0) {
+          const hitGlow = ctx.createRadialGradient(drawX + 20, monster.y - mSize * 0.5, 10, drawX + 20, monster.y - mSize * 0.5, mSize * 0.7);
+          hitGlow.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+          hitGlow.addColorStop(0.45, 'rgba(224, 64, 251, 0.55)');
+          hitGlow.addColorStop(1, 'rgba(224, 64, 251, 0)');
+          ctx.fillStyle = hitGlow;
+          ctx.beginPath();
+          ctx.arc(drawX + 20, monster.y - mSize * 0.5, mSize * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.translate(drawX, monster.y + mOffsetY);
+        ctx.drawImage(mImg, -mSize / 2, -mSize, mSize, mSize);
+        ctx.restore();
+      }
+
+      // 怪物頭上同步遞減血條
+      const hpRatio = Math.max(0, (MONSTER_MAX_HITS - monster.hits) / MONSTER_MAX_HITS);
+      const barW = 120;
+      const barH = 14;
+      const barX = Math.max(24, drawX - barW / 2 + 25);
+      const barY = monster.y - mSize + 6;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 12, 24, 0.85)';
+      drawRoundedRectPath(barX, barY, barW, barH, 7);
+      ctx.fill();
+
+      if (hpRatio > 0) {
+        const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        hpGrad.addColorStop(0, '#ff1744');
+        hpGrad.addColorStop(1, '#ff9100');
+        ctx.fillStyle = hpGrad;
+        drawRoundedRectPath(barX + 1.5, barY + 1.5, Math.max(6, (barW - 3) * hpRatio), barH - 3, 5.5);
         ctx.fill();
-        ctx.strokeStyle = '#2b0000';
+      }
+
+      // 5 格刻度線
+      ctx.fillStyle = 'rgba(15, 10, 20, 0.65)';
+      for (let i = 1; i < MONSTER_MAX_HITS; i++) {
+        const tickX = barX + (barW * i) / MONSTER_MAX_HITS;
+        ctx.fillRect(tickX - 1, barY + 2, 2, barH - 4);
+      }
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = 2;
+      drawRoundedRectPath(barX, barY, barW, barH, 7);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawInitial() {
+      drawBackground();
+      drawMonster(PLAYER_SIZE * 1.8);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(player.x, GROUND_Y + 4, 55, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (assets.p1.complete && assets.p1.naturalWidth > 0) {
+        ctx.drawImage(assets.p1, player.x - PLAYER_SIZE / 2, GROUND_Y - PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+      }
+    }
+
+    function draw() {
+      ctx.save();
+      if (shakeTimer > 0) {
+        const sx = (Math.random() - 0.5) * 2 * shakeIntensity;
+        const sy = (Math.random() - 0.5) * 2 * shakeIntensity;
+        ctx.translate(sx, sy);
+      }
+
+      // 1. 背景與雙層視差地板
+      drawBackground();
+
+      // 怪物貼身時的左側紅色警訊微光
+      if (monster.dangerLevel === 1 && gameState === 'playing') {
+        const pulse = 0.22 + Math.sin(gameTime * 10) * 0.12;
+        const warnGrad = ctx.createLinearGradient(0, 0, 260, 0);
+        warnGrad.addColorStop(0, `rgba(255, 23, 68, ${pulse})`);
+        warnGrad.addColorStop(1, 'rgba(255, 23, 68, 0)');
+        ctx.fillStyle = warnGrad;
+        ctx.fillRect(0, 0, 260, CANVAS_H);
+      }
+
+      // 終點距離進度條 (不顯示距離數字)
+      drawProgressBar();
+
+      // 2. 怪物後方碎石層
+      drawCollapseRocks('back');
+
+      // 3. 火焰障礙物
+      for (let obs of obstacles) {
+        if (obs.type === 'flame') {
+          drawFlame(obs.x, obs.y, obs.size, obs.phase);
+        } else if (obs.type === 'double_flame') {
+          drawFlame(obs.x - obs.gap / 2, obs.y, obs.size, obs.phase);
+          drawFlame(obs.x + obs.gap / 2, obs.y, obs.size * 0.92, obs.phase + 1.5);
+        }
+      }
+
+      // 4. 天空寶石與神秘鑰匙 2
+      for (let g of gems) {
+        drawGem(g);
+      }
+      if (keyItem) {
+        drawKeyItem(keyItem);
+      }
+
+      // 5. 怪物 (石巨人)
+      drawMonster(PLAYER_SIZE * 1.8);
+
+      // 6. 通道坍塌碎石層
+      drawCollapseRocks('front');
+
+      // 7. 魔法攻擊光彈與拖尾
+      for (let b of magicBolts) {
+        ctx.save();
+        for (let j = 0; j < b.trail.length; j++) {
+          const pt = b.trail[j];
+          const ratio = (j + 1) / b.trail.length;
+          ctx.globalAlpha = ratio * 0.65;
+          ctx.fillStyle = b.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 16 * ratio, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 22;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = b.color;
         ctx.lineWidth = 4;
         ctx.stroke();
         ctx.restore();
       }
 
-      // 3. 畫怪物 (追趕者)
-      let mImg = (Math.floor(monster.walkTimer * 4) % 2 === 0) ? assets.m1 : assets.m2;
-      let mSize = PLAYER_SIZE * 1.8; // 怪物稍微大一點比較有壓迫感
-      if (mImg && mImg.complete && mImg.naturalWidth > 0) {
+      // 8 & 9. 玩家落地陰影與人偶 (跑出螢幕外後不再繪製)
+      if (player.x < CANVAS_W + PLAYER_SIZE) {
+        const heightRatio = Math.max(0.25, 1 - (GROUND_Y - player.y) / 550);
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.42 * heightRatio})`;
+        ctx.beginPath();
+        ctx.ellipse(player.x, GROUND_Y + 4, 55 * heightRatio, 12 * heightRatio, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        let pImg;
+        if (player.isJumping) {
+          pImg = assets.p3;
+        } else if (player.stopped) {
+          pImg = assets.p1;
+        } else {
+          pImg = (Math.floor(player.walkTimer * 8) % 2 === 0) ? assets.p1 : assets.p2;
+        }
+
+        const blinkHide = player.invincibleTimer > 0 && (Math.floor(player.invincibleTimer * 16) % 2 === 0);
+        if (!blinkHide && pImg && pImg.complete && pImg.naturalWidth > 0) {
+          ctx.save();
+          const pOffsetY = (player.isJumping || player.stopped) ? 0 : Math.sin(player.walkTimer * 16) * 4;
+          ctx.translate(player.x, player.y - PLAYER_SIZE / 2 + pOffsetY);
+          if (player.isFlipping) {
+            ctx.rotate(player.flipAngle);
+          }
+          ctx.drawImage(pImg, -PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
+          ctx.restore();
+        }
+      }
+
+      // 10. 粒子特效
+      for (let p of particles) {
         ctx.save();
-        let mOffsetY = Math.sin(monster.walkTimer * 8) * 5;
-        ctx.translate(monster.x, monster.y + mOffsetY);
-        ctx.drawImage(mImg, -mSize/2, -mSize, mSize, mSize);
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
 
-      // 4. 畫玩家 (粢涵)
-      let pImg;
-      if (player.isJumping) {
-        pImg = assets.p3; // 跳躍圖 han7-3
-      } else {
-        // 跑步交替圖 han7-1, han7-2
-        pImg = (Math.floor(player.walkTimer * 8) % 2 === 0) ? assets.p1 : assets.p2;
-      }
-      
-      if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+      // 11. 慶祝彩帶
+      for (let c of confetti) {
         ctx.save();
-        let pOffsetY = player.isJumping ? 0 : Math.sin(player.walkTimer * 16) * 4;
-        ctx.translate(PLAYER_X, player.y + pOffsetY);
-        // 如果圖檔本來是朝右則不需翻轉；如果是朝左，可以使用 ctx.scale(-1, 1) 來翻轉
-        // ctx.scale(-1, 1); 
-        ctx.drawImage(pImg, -PLAYER_SIZE/2, -PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+        ctx.globalAlpha = Math.min(1, c.life * 1.4);
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rot);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
         ctx.restore();
       }
+
+      // 12. 飄字回饋
+      for (let ft of floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+
+      ctx.restore();
     }
 
     // =========================================
-    // 點擊觸發跳躍
+    // 操作事件 (觸控點擊 + 鍵盤空白鍵/上鍵)
     // =========================================
-    canvas.addEventListener('pointerdown', (e) => {
-      if (!isPlaying) return;
-      if (e.cancelable) e.preventDefault();
-      
-      // 只有在地面上才可以起跳 (避免無限二段跳)
-      if (!player.isJumping) {
+    function triggerJump() {
+      if (gameState !== 'playing') return;
+      if (player.jumpCount < MAX_JUMPS) {
         player.isJumping = true;
-        player.vy = JUMP_FORCE;
+        player.jumpCount++;
+        if (player.jumpCount === 1) {
+          player.vy = JUMP_FORCE;
+          spawnParticles(player.x, GROUND_Y - 5, 'rgba(255,255,255,0.7)', 6, [50, 140], [4, 8]);
+          playSfx('jump');
+        } else {
+          player.vy = DOUBLE_JUMP_FORCE;
+          player.isFlipping = true;
+          player.flipAngle = 0;
+          spawnParticles(player.x, player.y - 30, '#80d8ff', 10, [80, 200], [4, 9]);
+          playSfx('double_jump');
+        }
       }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gameState !== 'playing') return;
+      if (e.cancelable) e.preventDefault();
+      triggerJump();
     });
 
+    window.addEventListener('keydown', (e) => {
+      if (gameState !== 'playing') return;
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        triggerJump();
+      }
+    });
   </script>
 </body>
 </html>
