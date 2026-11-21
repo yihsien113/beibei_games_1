@@ -352,7 +352,11 @@
     const BOARD_Y = 330;
 
     const TOTAL_WAVES = 6;        // 總共幾波 (第 N 波有 N 顆炸彈)
-    const WARNING_TIME = 2.0;     // 炸彈閃爍幾秒後爆炸
+    function getWarningTime(waveNumber) {
+      if (waveNumber <= 3) return 1.0;
+      if (waveNumber === 4) return 1.3;
+      return 1.8;
+    }
     const EXPLODE_TIME = 0.6;     // 爆炸火焰動畫長度 (只是動畫，不會判定傷害)
     const GAP_TIME = 0.6;         // 爆炸結束後到下一波的間隔
     const READY_TIME = 1.2;       // 按下開始後的準備時間
@@ -640,19 +644,23 @@
       
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
       
-      // 不管輸贏，只要玩了就解鎖關卡和給貼紙
-      localStorage.setItem('map16_cleared', 'true');
-      if (localStorage.getItem('sticker_smap16') !== 'true') {
-          localStorage.setItem('sticker_smap16', 'new');
-      }
-
-      // 這一局有撿到鑰匙，進結算畫面才正式給予貼紙
       let gotNewKeySticker = false;
-      if (keyPickedThisRun) {
-          if (localStorage.getItem('sticker_skey1') !== 'true') {
-              localStorage.setItem('sticker_skey1', 'new');
+
+      // 通關後才解鎖傳送門並獲得貼紙
+      if (isWin) {
+          localStorage.setItem('map16_cleared', 'true');
+
+          if (localStorage.getItem('sticker_smap16') !== 'true') {
+              localStorage.setItem('sticker_smap16', 'new');
           }
-          gotNewKeySticker = true;
+
+          // 通關且本局撿到鑰匙才獲得鑰匙貼紙
+          if (keyPickedThisRun) {
+              if (localStorage.getItem('sticker_skey1') !== 'true') {
+                  localStorage.setItem('sticker_skey1', 'new');
+              }
+              gotNewKeySticker = true;
+          }
       }
 
       // 輸贏只用來改變結算畫面的標題
@@ -662,18 +670,19 @@
           document.getElementById('result-title').innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
       }
 
-      let newTotalCoins = currentCoins + stars;
+      const earnedStars = isWin ? stars : 0;
+      let newTotalCoins = currentCoins + earnedStars;
       localStorage.setItem('playerCoins', newTotalCoins); 
       
-      document.getElementById('newCoins').innerText = "+" + stars;
+      document.getElementById('newCoins').innerText = "+" + earnedStars;
       document.getElementById('totalCoins').innerText = newTotalCoins;
       
       let starsHtml = '';
-      for (let i = 1; i <= stars; i++) {
+      for (let i = 1; i <= earnedStars; i++) {
         starsHtml += '⭐';
         if (i % 5 === 0) starsHtml += '<br>'; 
       }
-      if (stars === 0 && !gotNewKeySticker) starsHtml = '💨 再加油喔！';
+      if (earnedStars === 0 && !gotNewKeySticker) starsHtml = '💨 再加油喔！';
       if (gotNewKeySticker) {
         starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
       }
@@ -752,7 +761,7 @@
       }
 
       waveState = 'warning';
-      waveTimer = WARNING_TIME;
+      waveTimer = getWarningTime(n);
       updateHUD();
     }
 
@@ -771,6 +780,8 @@
       const isHit = blast.rows.has(foot.row) || blast.cols.has(foot.col);
 
       if (isHit) {
+        stars = 0;
+        updateHUD();
         gamePhase = 'dead';
         player.isMoving = false;
         addPopup('💫', player.x, player.y - player.size, '#ffffff', 70, false);
@@ -1087,8 +1098,9 @@
       }
 
       // 炸彈閃爍節奏：越接近爆炸閃越快
-      const elapsed = WARNING_TIME - waveTimer;
-      const interval = 0.35 - 0.25 * Math.min(1, Math.max(0, elapsed / WARNING_TIME));
+      const warningTime = getWarningTime(wave);
+      const elapsed = warningTime - waveTimer;
+      const interval = 0.35 - 0.25 * Math.min(1, Math.max(0, elapsed / warningTime));
       const blinkOn = Math.floor(elapsed / interval) % 2 === 0;
 
       // 2. 危險範圍提示
