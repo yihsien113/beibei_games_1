@@ -22,6 +22,8 @@
   <script src="bopomofo.js"></script>
   <!-- 帳號密碼模組 -->
   <script src="password.js"></script>
+  <!-- 人物設定模組 (提供大禮包人物三連圖前綴) -->
+  <script src="player.js"></script>
 
   <style>
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -883,6 +885,7 @@
 
     let lobbyAnimId = null;
     let isExitingLobby = false;
+    let skipSavePosOnExit = false;
 
     // 世界座標沿用第一大廳尺寸 (3000x4000)；lobby1.webp 為 1200x1600，等比放大 2.5 倍
     const MAP_WIDTH = 3000;
@@ -1074,7 +1077,7 @@
 
     const playerImg = new Image();
     playerImg.src = equippedCharKey === 'bad19'
-      ? 'assets/bad/bad19-2.webp'
+      ? 'assets/bad/bad19-1.webp'
       : `assets/player/${equippedCharKey}-1.webp`;
 
     // ---------- 玩家位置 (與第一大廳分開儲存) ----------
@@ -1090,6 +1093,7 @@
     };
 
     function savePlayerPosition() {
+      if (skipSavePosOnExit) return;
       localStorage.setItem('lobby1PlayerX', Math.round(player.x));
       localStorage.setItem('lobby1PlayerY', Math.round(player.y));
     }
@@ -1178,6 +1182,7 @@
     const zones = [
       { id: 'map16', type: '關卡', x: 796, y: 2633, w: 225, h: 300, starX: 864, starY: 2720, targetUrl: 'map16.html', clearKey: 'map16_cleared', color: '#2196f3', imgSrc: 'assets/map/map16.webp' },
       { id: 'map17', type: '關卡', x: 570, y: 3040, w: 260, h: 260, starX: 696, starY: 3240, targetUrl: 'map17.html', clearKey: 'map17_cleared', color: '#2196f3', imgSrc: 'assets/bad/bad17-1.webp' },
+      { id: 'map18', type: '關卡', x: 2169, y: 3400, w: 260, h: 260, starX: 2336, starY: 3453, targetUrl: 'map18.html', clearKey: 'map18_cleared', color: '#2196f3', imgSrc: 'assets/bad/bad18-6.webp' },
       { id: 'map19', type: '關卡', x: 1376, y: 2618, w: 225, h: 300, starX: 1501, starY: 2885, targetUrl: 'map19.html', clearKey: 'map19_cleared', gateKey: 'map19_gate_cleared', color: '#7c4dff', imgSrc: 'assets/map/map19-2.webp' },
       { id: 'star13', type: '金幣', x: 0, y: 0, w: 225, h: 300, starX: 721, starY: 2080, rewardAmount: 5 },
     ];
@@ -1261,6 +1266,118 @@
       }
     }
 
+    // ---------- 神秘大門破關大禮包 (模子設定，方便日後擴充修改) ----------
+    const MAP19_GIFT_CLAIM_KEY = 'blindbox_map19_gift';
+    const MAP19_GIFT_PACK = {
+      title: '<ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>藏<rt>ㄗㄤˋ</rt></ruby><ruby>箱<rt>ㄒㄧㄤ</rt></ruby>',
+      subtitle: '<ruby>恭<rt>ㄍㄨㄥ</rt></ruby><ruby>喜<rt>ㄒㄧˇ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+      summaryTitle: '<span>🎉 </span><ruby>領<rt>ㄌㄧㄥˇ</rt></ruby><ruby>取<rt>ㄑㄩˇ</rt></ruby><ruby>完<rt>ㄨㄢˊ</rt></ruby><ruby>畢<rt>ㄅㄧˋ</rt></ruby><span>！</span>',
+      summarySubtitle: '',
+      items: [
+        {
+          type: 'coin',
+          amount: 20,
+          badge: '<ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>',
+          icon: '⭐',
+          title: '<span>⭐ + 20</span>',
+          desc: ''
+        },
+        {
+          type: 'player',
+          playerId: 'bad19',
+          badge: '<ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>角<rt>ㄐㄧㄠˇ</rt></ruby><ruby>色<rt>ㄙㄜˋ</rt></ruby>',
+          img: 'assets/bad/bad19-1.webp',
+          title: '<ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby>',
+          desc: ''
+        },
+        {
+          type: 'sticker',
+          stickerId: 'smap19',
+          badge: '<ruby>新<rt>ㄒㄧㄣ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>',
+          img: 'assets/sticker/map19.webp',
+          title: '<ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>',
+          desc: ''
+        }
+      ]
+    };
+
+    function applyGiftPackRewards(claimKey, items) {
+      if (localStorage.getItem(claimKey) === 'claimed') return;
+
+      let coinGain = 0;
+      for (const item of (items || [])) {
+        if (item.type === 'coin') {
+          coinGain += parseInt(item.amount || 0, 10);
+        } else if ((item.type === 'player' || item.type === 'character') && (item.playerId || item.charId)) {
+          localStorage.setItem('owns_' + (item.playerId || item.charId), 'true');
+        } else if (item.type === 'sticker' && item.stickerId) {
+          if (localStorage.getItem('sticker_' + item.stickerId) !== 'true') {
+            localStorage.setItem('sticker_' + item.stickerId, 'new');
+          }
+        }
+      }
+
+      if (coinGain > 0) {
+        playerCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10) + coinGain;
+        localStorage.setItem('playerCoins', playerCoins);
+        const coinEl = document.getElementById('coinDisplay');
+        if (coinEl) coinEl.innerText = playerCoins;
+      }
+
+      localStorage.setItem(claimKey, 'claimed');
+
+      if (window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
+      }
+    }
+
+    function shouldShowMap19GiftPack() {
+      return localStorage.getItem('map19_cleared') === 'true'
+        && localStorage.getItem(MAP19_GIFT_CLAIM_KEY) !== 'claimed';
+    }
+
+    let hasCheckedInitialLobby = false;
+    let pendingMap19GiftCheck = false;
+
+    function checkMap19GiftPack() {
+      if (isExitingLobby || isModalOpen) return;
+      if (!shouldShowMap19GiftPack()) return;
+
+      const accModalEl = document.getElementById('account-modal');
+      const rewardModalEl = document.getElementById('reward-modal');
+      if ((accModalEl && accModalEl.classList.contains('active')) ||
+          (rewardModalEl && rewardModalEl.classList.contains('active'))) {
+        return;
+      }
+
+      const updateModalEl = document.getElementById('update-modal');
+      if (updateModalEl && updateModalEl.classList.contains('active')) {
+        pendingMap19GiftCheck = true;
+        return;
+      }
+
+      if (!window.GiftPackModal || window.GiftPackModal.isOpen()) return;
+
+      window.GiftPackModal.show({
+        title: MAP19_GIFT_PACK.title,
+        subtitle: MAP19_GIFT_PACK.subtitle,
+        summaryTitle: MAP19_GIFT_PACK.summaryTitle,
+        summarySubtitle: MAP19_GIFT_PACK.summarySubtitle,
+        items: MAP19_GIFT_PACK.items,
+        onOpen: () => {
+          isModalOpen = true;
+          player.isMoving = false;
+        },
+        onClaim: (items) => {
+          applyGiftPackRewards(MAP19_GIFT_CLAIM_KEY, items);
+        },
+        onClose: () => {
+          isModalOpen = false;
+          refreshFromStorage();
+        }
+      });
+    }
+
     // ==========================================
     // 🌟 遊戲版本與更新公告設定 🌟
     // ==========================================
@@ -1291,8 +1408,8 @@
 <ruby>"<rt></rt></ruby>
 <ruby>開<rt>ㄎㄞ</rt></ruby>
 <ruby>放<rt>ㄈㄤˋ</rt></ruby>
-<ruby>囉<rt>ㄌㄨㄛˊ</rt></ruby>
-<span>!</span>
+<ruby>囉<rt>ㄌㄨㄛ</rt></ruby>
+<span>!</span></b></p>
         `;
     try {
       const savedAutoShow = localStorage.getItem('shared_auto_show_notice');
@@ -1421,12 +1538,17 @@
 
     function closeUpdateNotice() {
       document.getElementById('update-modal').classList.remove('active');
+      if (pendingMap19GiftCheck) {
+        pendingMap19GiftCheck = false;
+        checkMap19GiftPack();
+      }
     }
 
     function checkUpdateAndTutorial() {
       refreshGameVersion();
       // 同步後若未解鎖魔法森林，或帳號雲端紀錄上次在第一大廳，導回 index.html
       if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
+        skipSavePosOnExit = true;
         sessionStorage.setItem('current_lobby', 'index');
         sessionStorage.setItem('returning_from_subpage', '1');
         window.location.replace('index.html');
@@ -1435,14 +1557,22 @@
       if (localStorage.getItem('last_lobby') !== 'lobby1') {
         localStorage.setItem('last_lobby', 'lobby1');
       }
+      hasCheckedInitialLobby = true;
 
+      let showingUpdateModal = false;
       const savedVersion = localStorage.getItem('game_version');
       const isTutorialDone = localStorage.getItem('lobby_tutorial_done') === 'true';
       if (isTutorialDone && savedVersion !== GAME_VERSION) {
         if (AUTO_SHOW_NOTICE) {
+          showingUpdateModal = true;
+          pendingMap19GiftCheck = true;
           showUpdateNotice();
         }
         localStorage.setItem('game_version', GAME_VERSION);
+      }
+
+      if (!showingUpdateModal) {
+        checkMap19GiftPack();
       }
     }
 
@@ -1461,9 +1591,11 @@
       if (player.isMoving) return;
       const sx = parseFloat(localStorage.getItem('lobby1PlayerX'));
       const sy = parseFloat(localStorage.getItem('lobby1PlayerY'));
-      if (!isNaN(sx) && !isNaN(sy) && (Math.abs(sx - player.x) > 1 || Math.abs(sy - player.y) > 1)) {
-        player.x = player.targetX = sx;
-        player.y = player.targetY = sy;
+      const targetX = !isNaN(sx) ? sx : SPAWN_X;
+      const targetY = !isNaN(sy) ? sy : SPAWN_Y;
+      if (Math.abs(targetX - player.x) > 1 || Math.abs(targetY - player.y) > 1) {
+        player.x = player.targetX = targetX;
+        player.y = player.targetY = targetY;
         cameraX = player.x - (canvas.width / scale) / 2;
         cameraY = player.y - (canvas.height / scale) / 2;
         clampCamera();
@@ -1478,11 +1610,14 @@
       if (newCharKey !== equippedCharKey) {
         equippedCharKey = newCharKey;
         playerImg.src = equippedCharKey === 'bad19'
-          ? 'assets/bad/bad19-2.webp'
+          ? 'assets/bad/bad19-1.webp'
           : `assets/player/${equippedCharKey}-1.webp`;
       }
       applySavedPosition();
       loadClearedImages();
+      if (hasCheckedInitialLobby && !isModalOpen && !pendingMap19GiftCheck) {
+        checkMap19GiftPack();
+      }
     }
     window.addEventListener('cloudsync:updated', refreshFromStorage);
     document.addEventListener('visibilitychange', () => {
@@ -1607,6 +1742,7 @@
         await ensureNoticeSynced();
         checkUpdateAndTutorial();
       } else if (!isForestUnlocked() || localStorage.getItem('last_lobby') === 'index') {
+        skipSavePosOnExit = true;
         sessionStorage.setItem('current_lobby', 'index');
         sessionStorage.setItem('returning_from_subpage', '1');
         cleanupLobbyAndGo('index.html');
@@ -2097,5 +2233,6 @@
   </script>
 
   <script src="rpg-dialog-ui.js"></script>
+  <script src="gift-pack-ui.js"></script>
 </body>
 </html>

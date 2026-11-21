@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>冒險小遊戲 - 地下城逃脫</title>
 
-  <!-- 引入外部注音模組與帳號密碼模組 (不需要 player.js) -->
+  <!-- 引入外部注音模組、帳號密碼模組與角色模組 -->
   <script src="bopomofo.js"></script>
   <script src="password.js"></script>
+  <script src="player.js"></script>
 
   <style>
     * {
@@ -227,28 +228,27 @@
 
       <div class="intro-copy">
         <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          
+          <ruby>逃<rt>ㄊㄠˊ</rt></ruby>
+          <ruby>脫<rt>ㄊㄨㄛ</rt></ruby>
           <ruby>地<rt>ㄉㄧˋ</rt></ruby>
           <ruby>下<rt>ㄒㄧㄚˋ</rt></ruby>
           <ruby>城<rt>ㄔㄥˊ</rt></ruby>
-          <ruby>逃<rt>ㄊㄠˊ</rt></ruby>
-          <ruby>脫<rt>ㄊㄨㄛ</rt></ruby>
         </h1>
         <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
           <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby>
-<ruby>擊<rt>ㄐㄧˊ</rt></ruby>
-<ruby>螢<rt>ㄧㄥˊ</rt></ruby>
-<ruby>幕<rt>ㄇㄨˋ</rt></ruby>
-<ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
-<ruby>躍<rt>ㄩㄝˋ</rt></ruby>
-<br>
-<ruby>還<rt>ㄏㄞˊ</rt></ruby>
-<ruby>可<rt>ㄎㄜˇ</rt></ruby>
-<ruby>以<rt>ㄧˇ</rt></ruby>
-<ruby>二<rt>ㄦˋ</rt></ruby>
-<ruby>段<rt>ㄉㄨㄢˋ</rt></ruby>
-<ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
-
-
+          <ruby>擊<rt>ㄐㄧˊ</rt></ruby>
+          <ruby>螢<rt>ㄧㄥˊ</rt></ruby>
+          <ruby>幕<rt>ㄇㄨˋ</rt></ruby>
+          <ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
+          <ruby>躍<rt>ㄩㄝˋ</rt></ruby>
+          <br>
+          <ruby>還<rt>ㄏㄞˊ</rt></ruby>
+          <ruby>可<rt>ㄎㄜˇ</rt></ruby>
+          <ruby>以<rt>ㄧˇ</rt></ruby>
+          <ruby>二<rt>ㄦˋ</rt></ruby>
+          <ruby>段<rt>ㄉㄨㄢˋ</rt></ruby>
+          <ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby>
         </p>
       </div>
 
@@ -308,6 +308,16 @@
 
   <script>
     // =========================================
+    // 角色讀取設定 (依衣櫃裝備的角色決定外觀、大小與攻擊特效)
+    // =========================================
+    const equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    const charConfig = (typeof PLAYER_CHARACTERS !== 'undefined' && PLAYER_CHARACTERS[equippedCharKey])
+      ? PLAYER_CHARACTERS[equippedCharKey]
+      : ((typeof PLAYER_CHARACTERS !== 'undefined' && PLAYER_CHARACTERS['han1'])
+        ? PLAYER_CHARACTERS['han1']
+        : { name: '揮劍女孩', prefix: 'han1', size: 165 });
+
+    // =========================================
     // 參數設定區 (可微調物理與難度)
     // =========================================
     const CANVAS_W = 900;
@@ -315,13 +325,39 @@
     const GROUND_Y = 965;              // 石板走道上緣位置 (腳底位置)
     const FLOOR_SPLIT_Y = 946;         // 雙層視差切割線 (牆壁慢、地板快)
 
+    // 單張搖晃跑步參數
+    const WOBBLE_SPEED = 25;
+    const WOBBLE_ANGLE = 0.15;
+    const WOBBLE_BOUNCE_Y = 3;
+    const WOBBLE_PIVOT = 'center';     // 'center' 或 'bottom'
+    const SCALE_WOBBLE_WITH_SPEED = false;
+
+    // 寶石落地反擊動畫參數 (比照 map1 三連圖：-1 起手 -> -2 蓄力+觸發特效 -> -3 完整出招 -> -1 收招)
+    const ATTACK_TURN_DUR = 0.10;      // 第 1 張 (-1)：落地停止並轉身面向怪物
+    const ATTACK_FRAME2_DUR = 0.12;    // 第 2 張 (-2)：蓄力起手並同步啟動角色攻擊特效
+    const ATTACK_STRIKE_DUR = 0.58;    // 攻擊特效完整播放總時間 (前段顯示 -2，後段切到 -3 直到特效結束)
+    const ATTACK_RECOVER_DUR = 0.12;   // 第 1 張 (-1)：收招並轉回繼續跑
+    const CHAR_ATTACK_HIT_POINT = {
+      han1: 0.25,
+      chih1: 0.25,
+      han2: 0.25,
+      bad19: 0.30,
+      han7: 0.40,
+      han3: 0.65,
+      han4: 0.65,
+      han5: 0.78,
+      han6: 0.78,
+      chih2: 0.78
+    };
+
     // 角色物理參數 (二段跳)
     const GRAVITY = 4200;              // 重力
     const JUMP_FORCE = -1700;          // 第一段跳躍力道
     const DOUBLE_JUMP_FORCE = -1520;   // 第二段跳躍力道
     const MAX_JUMPS = 2;               // 最大跳躍次數 (二段跳)
     const PLAYER_X = 280;              // 角色起始 X 座標
-    const PLAYER_SIZE = 160;           // 角色繪製大小
+    const PLAYER_SIZE = charConfig.size || 165; // 依角色設定大小繪製 (預設 165)
+    const MONSTER_SIZE = 288;          // 固定怪物繪製大小 (原 160 * 1.8)
     const HITBOX_RADIUS = 42;          // 玩家碰撞判定半徑
 
     // 怪物距離代表兩條命 (不顯示愛心)
@@ -346,7 +382,7 @@
     const INTRO_MONSTER_SPEED = 380;
 
     // 通關與獎勵設定
-    const MONSTER_MAX_HITS = 5;        // 寶石魔法命中 5 次打敗怪物
+    const MONSTER_MAX_HITS = 5;        // 寶石攻擊命中 5 次打敗怪物
     const FINISH_DISTANCE = 390;       // 跑到內部目標距離即觸發坍塌逃脫
     const WIN_REWARD_COINS = 10;       // 只有成功通關才給 10 顆星
 
@@ -358,7 +394,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // 遊戲狀態: 'ready' | 'intro_anim' | 'playing' | 'victory_anim' | 'caught_anim' | 'result' | 'exiting'
+    // 遊戲狀態: 'ready' | 'intro_anim' | 'playing' | 'attack_anim' | 'victory_anim' | 'caught_anim' | 'result' | 'exiting'
     let gameState = 'ready';
     let lastTime = 0;
     let animationFrameId = null;
@@ -388,6 +424,20 @@
     let shakeTimer = 0;
     let shakeIntensity = 0;
 
+    // 寶石落地轉身攻擊演出狀態
+    let pendingGemAttacks = 0;
+    let pendingGemColor = '#00e5ff';
+    let attackState = {
+      phase: 'idle',    // 'idle' | 'turn' | 'strike' | 'recover'
+      timer: 0,
+      progress: 0,
+      hitApplied: false,
+      startX: 0,
+      startY: 0,
+      targetX: 0,
+      targetY: 0
+    };
+
     // 通關演出狀態
     let victoryReason = '';
     let victoryTimer = 0;
@@ -403,12 +453,14 @@
       vy: 0,
       isJumping: false,
       jumpCount: 0,
-      walkTimer: 0,
+      walkCycle: 0,
       invincibleTimer: 0,
       flipAngle: 0,
       isFlipping: false,
       facingLeft: false,
-      stopped: false
+      stopped: false,
+      isAttacking: false,
+      attackFrame: 0
     };
 
     // 怪物狀態
@@ -429,7 +481,6 @@
     // 場上物件與特效
     let obstacles = [];
     let gems = [];
-    let magicBolts = [];
     let particles = [];
     let floatingTexts = [];
     let confetti = [];
@@ -437,10 +488,16 @@
     let gemSpawnTimer = 0;
 
     // 神秘鑰匙 2 (skey2)
+    const KEY_MAX_SPAWNS_PER_RUN = 3;
     let keyItem = null;
     let keySpawnDistance = 0;
-    let keySpawnedThisRun = false;
+    let keySpawnCount = 0;
     let keyPickedThisRun = false;
+
+    function advancePlayerWalk(dt, speedRef) {
+      const mult = SCALE_WOBBLE_WITH_SPEED ? (speedRef / BASE_SPEED) : 1;
+      player.walkCycle += WOBBLE_SPEED * mult * dt;
+    }
 
     // =========================================
     // 輕量 Web Audio 合成音效 (無需外部音檔)
@@ -490,6 +547,8 @@
       } else if (type === 'gem') {
         playTone(660, 880, 0.09, 'sine', 0.14, 0);
         playTone(880, 1180, 0.12, 'sine', 0.14, 0.06);
+      } else if (type === 'attack') {
+        playTone(360, 740, 0.13, 'triangle', 0.15);
       } else if (type === 'magic_hit') {
         playTone(180, 75, 0.18, 'triangle', 0.22, 0);
         playTone(520, 780, 0.16, 'sine', 0.15, 0.02);
@@ -643,13 +702,13 @@
     }
 
     // =========================================
-    // 資源載入
+    // 資源載入 (動態載入已選角色的 -1 跑步圖、-2 攻擊蓄力圖、-3 攻擊出招/跳躍圖)
     // =========================================
     const assets = {
       bg: new Image(),
-      p1: new Image(),  // han7-1.webp
-      p2: new Image(),  // han7-2.webp
-      p3: new Image(),  // han7-3.webp
+      p1: new Image(),  // {prefix}-1.webp (待機、左右搖晃跑步、攻擊起手與收招)
+      p2: new Image(),  // {prefix}-2.webp (攻擊蓄力姿勢)
+      p3: new Image(),  // {prefix}-3.webp (攻擊出招與跳躍姿勢)
       m1: new Image(),  // bad17-1.webp
       m2: new Image(),  // bad17-2.webp
       m3: new Image(),  // bad17-3.webp
@@ -657,7 +716,7 @@
     };
 
     let loadedCount = 0;
-    const totalAssets = 8;
+    const totalAssets = Object.keys(assets).length;
 
     function checkLoad() {
       loadedCount++;
@@ -674,9 +733,9 @@
     }
 
     assets.bg.src = 'assets/map/map17.webp';
-    assets.p1.src = 'assets/player/han7-1.webp';
-    assets.p2.src = 'assets/player/han7-2.webp';
-    assets.p3.src = 'assets/player/han7-3.webp';
+    assets.p1.src = `assets/player/${charConfig.prefix}-1.webp`;
+    assets.p2.src = `assets/player/${charConfig.prefix}-2.webp`;
+    assets.p3.src = `assets/player/${charConfig.prefix}-3.webp`;
     assets.m1.src = 'assets/bad/bad17-1.webp';
     assets.m2.src = 'assets/bad/bad17-2.webp';
     assets.m3.src = 'assets/bad/bad17-3.webp';
@@ -811,9 +870,121 @@
     }
 
     // =========================================
+    // 寶石落地轉身攻擊流程 (三連圖 + 角色攻擊特效)
+    // =========================================
+    function startGemAttack() {
+      if ((gameState !== 'playing' && gameState !== 'attack_anim') || monster.isKnockedOut) return;
+      if (pendingGemAttacks <= 0) return;
+
+      pendingGemAttacks--;
+      gameState = 'attack_anim';
+
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.isJumping = false;
+      player.jumpCount = 0;
+      player.flipAngle = 0;
+      player.isFlipping = false;
+      player.stopped = true;
+      player.facingLeft = true;
+      player.isAttacking = true;
+      player.attackFrame = 0; // 第 1 張 (-1.webp)：轉身起手
+
+      monster.stopped = true;
+
+      attackState.phase = 'turn';
+      attackState.timer = 0;
+      attackState.progress = 0;
+      attackState.hitApplied = false;
+      attackState.startX = player.x - PLAYER_SIZE * 0.22;
+      attackState.startY = player.y - PLAYER_SIZE * 0.52;
+      attackState.targetX = Math.max(85, monster.x + 10);
+      attackState.targetY = monster.y - MONSTER_SIZE * 0.50;
+
+      updateHUD();
+    }
+
+    function updateAttackAnim(dt) {
+      attackState.timer += dt;
+
+      if (attackState.phase === 'turn') {
+        player.attackFrame = 0; // 第 1 張 (-1.webp)
+        if (attackState.timer >= ATTACK_TURN_DUR) {
+          attackState.phase = 'strike';
+          attackState.timer = 0;
+          attackState.progress = 0;
+          attackState.hitApplied = false;
+          attackState.startX = player.x - PLAYER_SIZE * 0.22;
+          attackState.startY = player.y - PLAYER_SIZE * 0.52;
+          attackState.targetX = Math.max(85, monster.x + 10);
+          attackState.targetY = monster.y - MONSTER_SIZE * 0.50;
+          player.isAttacking = true;
+          player.attackFrame = 1; // 切到第 2 張 (-2.webp) 並同步觸發角色攻擊特效
+          playSfx('attack');
+        }
+      } else if (attackState.phase === 'strike') {
+        attackState.progress = Math.min(1, attackState.timer / ATTACK_STRIKE_DUR);
+
+        // 前段顯示第 2 張 (-2.webp) 蓄力，後段切換至第 3 張 (-3.webp) 完整出招
+        player.attackFrame = (attackState.timer < ATTACK_FRAME2_DUR) ? 1 : 2;
+
+        const hitPoint = CHAR_ATTACK_HIT_POINT[equippedCharKey] ?? 0.5;
+        if (!attackState.hitApplied && attackState.progress >= hitPoint) {
+          attackState.hitApplied = true;
+          if (!monster.isKnockedOut) {
+            monster.hits = Math.min(MONSTER_MAX_HITS, monster.hits + 1);
+            monster.hitFlashTimer = 0.35;
+            monster.recoilOffset = -45;
+
+            addShake(0.18, 8);
+            spawnParticles(attackState.targetX, attackState.targetY, '#e040fb', 18, [120, 320], [5, 11]);
+            spawnParticles(attackState.targetX, attackState.targetY, '#ffd54f', 10, [90, 260], [4, 9]);
+            spawnFloatingText(Math.max(115, attackState.targetX + 20), attackState.targetY - 95, '💥 命中！', '#ffd54f');
+            playSfx('magic_hit');
+            updateHUD();
+          }
+        }
+
+        if (attackState.progress >= 1) {
+          player.attackFrame = 0; // 特效播完，切回第 1 張 (-1.webp) 收招
+          attackState.phase = 'recover';
+          attackState.timer = 0;
+        }
+      } else if (attackState.phase === 'recover') {
+        player.attackFrame = 0;
+        if (monster.hits >= MONSTER_MAX_HITS) {
+          if (attackState.timer >= 0.08) {
+            pendingGemAttacks = 0;
+            attackState.phase = 'idle';
+            player.isAttacking = false;
+            triggerVictory('defeat');
+            return;
+          }
+        } else if (attackState.timer >= ATTACK_RECOVER_DUR) {
+          if (pendingGemAttacks > 0) {
+            startGemAttack();
+            return;
+          }
+          attackState.phase = 'idle';
+          attackState.timer = 0;
+          attackState.progress = 0;
+          player.facingLeft = false;
+          player.stopped = false;
+          player.isAttacking = false;
+          player.attackFrame = 0;
+          monster.stopped = false;
+          gameState = 'playing';
+          updateHUD();
+        }
+      }
+
+      updateEffects(dt);
+    }
+
+    // =========================================
     // 遊戲流程控制
     // =========================================
-    function exitToLobby() {
+    function cleanupMemory() {
       gameState = 'exiting';
       stopIntroAudio();
       if (animationFrameId) {
@@ -824,11 +995,36 @@
         clearTimeout(endTimeoutId);
         endTimeoutId = null;
       }
+      obstacles.length = 0;
+      gems.length = 0;
+      particles.length = 0;
+      floatingTexts.length = 0;
+      confetti.length = 0;
+      collapseRocks.length = 0;
+      keyItem = null;
+
+      for (let k in assets) {
+        if (assets[k]) {
+          assets[k].onload = null;
+          assets[k].onerror = null;
+          assets[k].src = '';
+        }
+      }
+
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      cleanupMemory();
       sessionStorage.setItem('returning_from_subpage', '1');
       window.location.replace('lobby1.html');
     }
 
-    window.addEventListener('pagehide', stopIntroAudio);
+    window.addEventListener('pagehide', cleanupMemory);
 
     function startGame(playIntro = true) {
       if (endTimeoutId) {
@@ -850,6 +1046,13 @@
       shakeTimer = 0;
       shakeIntensity = 0;
 
+      pendingGemAttacks = 0;
+      pendingGemColor = '#00e5ff';
+      attackState.phase = 'idle';
+      attackState.timer = 0;
+      attackState.progress = 0;
+      attackState.hitApplied = false;
+
       victoryReason = '';
       victoryTimer = 0;
       victoryConfettiSpawned = false;
@@ -859,7 +1062,6 @@
 
       obstacles = [];
       gems = [];
-      magicBolts = [];
       particles = [];
       floatingTexts = [];
       confetti = [];
@@ -868,18 +1070,20 @@
 
       keyItem = null;
       keyPickedThisRun = false;
-      keySpawnedThisRun = false;
-      keySpawnDistance = hasKeySticker() ? 0 : (90 + Math.random() * 90);
+      keySpawnCount = 0;
+      keySpawnDistance = hasKeySticker() ? 0 : (75 + Math.random() * 55);
 
       player.y = GROUND_Y;
       player.vy = 0;
       player.isJumping = false;
       player.jumpCount = 0;
-      player.walkTimer = 0;
+      player.walkCycle = 0;
       player.invincibleTimer = 0;
       player.flipAngle = 0;
       player.isFlipping = false;
       player.facingLeft = false;
+      player.isAttacking = false;
+      player.attackFrame = 0;
 
       monster.y = GROUND_Y;
       monster.walkTimer = 0;
@@ -939,12 +1143,18 @@
     }
 
     function triggerVictory(reason) {
-      if (gameState !== 'playing') return;
+      if (gameState !== 'playing' && gameState !== 'attack_anim') return;
       gameState = 'victory_anim';
       victoryReason = reason;
       victoryTimer = 0;
       victoryConfettiSpawned = false;
+      pendingGemAttacks = 0;
+      attackState.phase = 'idle';
       player.invincibleTimer = 0;
+      player.facingLeft = false;
+      player.isAttacking = false;
+      player.attackFrame = 0;
+      monster.stopped = false;
 
       // 場上殘留火焰與寶石散成小粒子後清空
       for (let obs of obstacles) {
@@ -962,7 +1172,6 @@
       }
       obstacles = [];
       gems = [];
-      magicBolts = [];
       keyItem = null;
 
       if (reason === 'defeat') {
@@ -998,12 +1207,24 @@
       }
     }
 
+    function isForestStarRewardUnlocked() {
+      return localStorage.getItem('map19_cleared') === 'true'
+        && localStorage.getItem('blindbox_map19_gift') === 'claimed';
+    }
+
     function endGame(isWin, reason) {
       if (gameState === 'exiting' || gameState === 'result') return;
       gameState = 'result';
       endTimeoutId = null;
 
-      const earnedCoins = isWin ? WIN_REWARD_COINS : 0;
+      const starsUnlocked = isForestStarRewardUnlocked();
+      const earnedCoins = (isWin && starsUnlocked) ? WIN_REWARD_COINS : 0;
+      const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      const newTotalCoins = currentCoins + earnedCoins;
+      if (earnedCoins > 0) {
+        localStorage.setItem('playerCoins', newTotalCoins);
+      }
+
       if (isWin) {
         localStorage.setItem('map17_cleared', 'true');
 
@@ -1033,10 +1254,6 @@
         titleEl.innerHTML = '<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>抓<rt>ㄓㄨㄚ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>';
       }
 
-      const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
-      const newTotalCoins = currentCoins + earnedCoins;
-      localStorage.setItem('playerCoins', newTotalCoins);
-
       document.getElementById('newCoins').innerText = '+' + earnedCoins;
       document.getElementById('totalCoins').innerText = newTotalCoins;
 
@@ -1046,10 +1263,14 @@
         if (i % 5 === 0 && i < earnedCoins) starsHtml += '<br>';
       }
       if (earnedCoins === 0) {
-        starsHtml = '<span style="color:#777;">再接再厲！</span>';
+        if (isWin && !starsUnlocked) {
+          starsHtml = `<div class="zh-text" style="color: #b2fef7;">🔒 <ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>門<rt>ㄇㄣˊ</rt></ruby><ruby>後<rt>ㄏㄡˋ</rt></ruby><ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby><span>！</span></div>`;
+        } else {
+          starsHtml = '<span style="color:#777;">再接再厲！</span>';
+        }
       }
       if (isWin && keyPickedThisRun) {
-        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
+        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
       }
       document.getElementById('star-container').innerHTML = starsHtml;
 
@@ -1062,7 +1283,7 @@
 
     function updateHUD() {
       const hudEl = document.getElementById('hud');
-      hudEl.style.display = (keyPickedThisRun && gameState === 'playing') ? 'block' : 'none';
+      hudEl.style.display = (keyPickedThisRun && (gameState === 'playing' || gameState === 'attack_anim')) ? 'block' : 'none';
     }
 
     // =========================================
@@ -1254,6 +1475,7 @@
         // 怪物已經貼近時再撞到火焰 -> 撲抓結束
         monster.dangerLevel = 2;
         monster.targetX = MONSTER_CAUGHT_X;
+        pendingGemAttacks = 0;
         gameState = 'caught_anim';
 
         addShake(0.32, 14);
@@ -1308,11 +1530,11 @@
           player.x = INTRO_PLAYER_START_X;
           player.facingLeft = false;
           player.stopped = false;
-          player.walkTimer = 0;
+          player.walkCycle = 0;
         }
       } else if (intro.phase === 'player_enter') {
         player.x += INTRO_PLAYER_SPEED * dt;
-        player.walkTimer += dt * (INTRO_PLAYER_SPEED / 300);
+        advancePlayerWalk(dt, INTRO_PLAYER_SPEED);
 
         if (player.x > INTRO_CAM_X_CENTER - 20 && Math.random() < 0.28) {
           spawnParticles(player.x - 18, GROUND_Y - 5, 'rgba(220,210,200,0.65)', 1, [25, 75], [3, 6]);
@@ -1382,7 +1604,7 @@
           intro.timer = 0;
           player.facingLeft = false;
           player.stopped = false;
-          player.walkTimer = 0;
+          player.walkCycle = 0;
           monster.stopped = false;
           monster.walkTimer = 0;
         }
@@ -1404,7 +1626,7 @@
         floorOffsetX -= curSpeed * dt;
         if (floorOffsetX <= -CANVAS_W) floorOffsetX += CANVAS_W;
 
-        player.walkTimer += dt * (BASE_SPEED / 300);
+        advancePlayerWalk(dt, BASE_SPEED);
         monster.walkTimer += dt * (BASE_SPEED / 280);
 
         if (p >= 1) {
@@ -1445,6 +1667,12 @@
       // 開場動畫演出期間
       if (gameState === 'intro_anim') {
         updateIntro(dt);
+        return;
+      }
+
+      // 吃到寶石後落地停跑、轉身攻擊怪物演出期間
+      if (gameState === 'attack_anim') {
+        updateAttackAnim(dt);
         return;
       }
 
@@ -1490,7 +1718,7 @@
               spawnParticles(player.x, GROUND_Y - 5, 'rgba(220,210,200,0.75)', 5, [40, 120], [4, 8]);
             }
           } else {
-            player.walkTimer += dt * (defeatRunSpeed / 240);
+            advancePlayerWalk(dt, defeatRunSpeed);
             if (player.x < CANVAS_W + 40 && Math.random() < 0.35) {
               spawnParticles(player.x - 20, GROUND_Y - 5, 'rgba(220,210,200,0.65)', 1, [30, 90], [4, 7]);
             }
@@ -1540,12 +1768,12 @@
         }
         if (victoryTimer >= 0.15) {
           player.x += 620 * dt;
-          player.walkTimer += dt * 3.2;
+          advancePlayerWalk(dt, 620);
           if (!player.isJumping && player.x < CANVAS_W + 40 && Math.random() < 0.35) {
             spawnParticles(player.x - 20, GROUND_Y - 5, 'rgba(220,210,200,0.65)', 1, [30, 90], [4, 7]);
           }
         } else {
-          player.walkTimer += dt * 2.2;
+          advancePlayerWalk(dt, BASE_SPEED);
         }
 
         // 坍塌落石物理
@@ -1605,7 +1833,7 @@
       floorOffsetX -= gameSpeed * dt;
       if (floorOffsetX <= -CANVAS_W) floorOffsetX += CANVAS_W;
 
-      // 3. 角色物理 (重力、二段跳與前滾翻)
+      // 3. 角色物理 (重力、二段跳與前滾翻；若持有寶石，落地後立即停止轉身攻擊)
       if (player.isJumping) {
         player.vy += GRAVITY * dt;
         player.y += player.vy * dt;
@@ -1631,9 +1859,14 @@
           player.flipAngle = 0;
           player.isFlipping = false;
           spawnParticles(player.x, GROUND_Y - 5, 'rgba(220,210,200,0.75)', 5, [40, 120], [4, 8]);
+
+          if (pendingGemAttacks > 0) {
+            startGemAttack();
+            return;
+          }
         }
       } else {
-        player.walkTimer += dt * (gameSpeed / 300);
+        advancePlayerWalk(dt, gameSpeed);
       }
 
       // 4. 怪物平滑移動與跑步節奏
@@ -1653,9 +1886,9 @@
         }
       }
 
-      if (!hasKeySticker() && !keyPickedThisRun && !keySpawnedThisRun && !keyItem &&
+      if (!hasKeySticker() && !keyPickedThisRun && keySpawnCount < KEY_MAX_SPAWNS_PER_RUN && !keyItem &&
           distance >= keySpawnDistance && distance < FINISH_DISTANCE - 24) {
-        keySpawnedThisRun = true;
+        keySpawnCount++;
         let spawnX = CANVAS_W + 100;
         for (let g of gems) {
           if (Math.abs(g.x - spawnX) < 120) {
@@ -1750,7 +1983,7 @@
         }
       }
 
-      // 7. 更新天空寶石並發射魔法攻擊
+      // 7. 更新天空寶石：吃到後預約攻擊，落地後停止轉身施放角色專屬攻擊特效
       const gemPalette = ['#00e5ff', '#e040fb', '#69f0ae'];
       for (let i = gems.length - 1; i >= 0; i--) {
         const g = gems[i];
@@ -1762,25 +1995,17 @@
         if (dist < HITBOX_RADIUS + g.radius + 22) {
           const color = gemPalette[g.colorIdx % gemPalette.length];
           spawnParticles(g.x, g.y, color, 14, [100, 280], [4, 9]);
-          spawnFloatingText(g.x, g.y - 25, '✨ 魔法攻擊！', color);
+          spawnFloatingText(g.x, g.y - 25, '✨ 準備反擊！', color);
           playSfx('gem');
 
-          const targetX = Math.max(35, monster.x + monster.recoilOffset + 25);
-          const targetY = monster.y - PLAYER_SIZE * 1.8 * 0.55;
-          magicBolts.push({
-            x: g.x,
-            y: g.y,
-            startX: g.x,
-            startY: g.y,
-            ctrlX: (g.x + targetX) * 0.5,
-            ctrlY: Math.min(g.y, targetY) - 180,
-            t: 0,
-            duration: 0.28,
-            color: color,
-            trail: []
-          });
-
+          pendingGemAttacks++;
+          pendingGemColor = color;
           gems.splice(i, 1);
+
+          if (!player.isJumping) {
+            startGemAttack();
+            return;
+          }
           continue;
         }
 
@@ -1808,51 +2033,14 @@
           updateHUD();
         } else if (keyItem.x < -120) {
           keyItem = null;
-        }
-      }
-
-      // 9. 更新魔法攻擊彈與特效
-      updateBolts(dt);
-      updateEffects(dt);
-    }
-
-    function updateBolts(dt) {
-      const mSize = PLAYER_SIZE * 1.8;
-      for (let i = magicBolts.length - 1; i >= 0; i--) {
-        const b = magicBolts[i];
-        b.t = Math.min(1, b.t + dt / b.duration);
-
-        const tx = Math.max(35, monster.x + monster.recoilOffset + 25);
-        const ty = monster.y - mSize * 0.55;
-        const u = 1 - b.t;
-        b.x = u * u * b.startX + 2 * u * b.t * b.ctrlX + b.t * b.t * tx;
-        b.y = u * u * b.startY + 2 * u * b.t * b.ctrlY + b.t * b.t * ty;
-
-        b.trail.push({ x: b.x, y: b.y });
-        if (b.trail.length > 9) b.trail.shift();
-
-        if (b.t >= 1) {
-          magicBolts.splice(i, 1);
-
-          if (gameState === 'playing' && !monster.isKnockedOut) {
-            monster.hits = Math.min(MONSTER_MAX_HITS, monster.hits + 1);
-            monster.hitFlashTimer = 0.35;
-            monster.recoilOffset = -45;
-
-            addShake(0.18, 8);
-            spawnParticles(tx, ty, '#e040fb', 18, [120, 320], [5, 11]);
-            spawnParticles(tx, ty, '#ffd54f', 10, [90, 260], [4, 9]);
-            spawnFloatingText(Math.max(110, tx + 30), ty - 90, '💥 命中！', '#ffd54f');
-            playSfx('magic_hit');
-            updateHUD();
-
-            if (monster.hits >= MONSTER_MAX_HITS) {
-              triggerVictory('defeat');
-              return;
-            }
+          if (!keyPickedThisRun && keySpawnCount < KEY_MAX_SPAWNS_PER_RUN) {
+            keySpawnDistance = distance + 55 + Math.random() * 35;
           }
         }
       }
+
+      // 9. 更新粒子與特效
+      updateEffects(dt);
     }
 
     function updateEffects(dt) {
@@ -2312,6 +2500,32 @@
       ctx.restore();
     }
 
+    function drawAttackEffect() {
+      if (gameState !== 'attack_anim' || attackState.phase !== 'strike') return;
+      const p = Math.max(0, Math.min(1, attackState.progress));
+
+      ctx.save();
+      if (typeof charConfig.drawEffect === 'function') {
+        charConfig.drawEffect(
+          ctx,
+          p,
+          attackState.startX,
+          attackState.startY,
+          attackState.targetX,
+          attackState.targetY
+        );
+      } else {
+        ctx.strokeStyle = `rgba(135, 206, 235, ${1 - p})`;
+        ctx.shadowColor = '#00bfff';
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 12 * (1 - p);
+        ctx.beginPath();
+        ctx.arc(attackState.targetX, attackState.targetY, 30 + p * 40, Math.PI / 2, Math.PI * 1.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // =========================================
     // 繪圖主程序
     // =========================================
@@ -2503,21 +2717,104 @@
       ctx.restore();
     }
 
-    function drawInitial() {
-      drawBackground();
-      drawMonster(PLAYER_SIZE * 1.8);
+    function drawPlayerSprite() {
+      // 第 2 張 (-2) 微微蓄力後仰，第 3 張 (-3) 向前出招突刺
+      let attackLungeX = 0;
+      if (gameState === 'attack_anim' && attackState.phase === 'strike') {
+        if (player.attackFrame === 1) {
+          const p2 = Math.min(1, attackState.timer / ATTACK_FRAME2_DUR);
+          attackLungeX = Math.sin(p2 * Math.PI) * 8;
+        } else if (player.attackFrame === 2) {
+          const p3 = Math.min(1, (attackState.timer - ATTACK_FRAME2_DUR) / Math.max(0.01, ATTACK_STRIKE_DUR - ATTACK_FRAME2_DUR));
+          attackLungeX = -Math.sin(p3 * Math.PI) * 16;
+        }
+      }
+      const drawX = player.x + attackLungeX;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      const heightRatio = Math.max(0.25, 1 - (GROUND_Y - player.y) / 550);
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.42 * heightRatio})`;
       ctx.beginPath();
-      ctx.ellipse(player.x, GROUND_Y + 4, 55, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(drawX, GROUND_Y + 4, (PLAYER_SIZE * 0.34) * heightRatio, 12 * heightRatio, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      if (assets.p1.complete && assets.p1.naturalWidth > 0) {
-        ctx.drawImage(assets.p1, player.x - PLAYER_SIZE / 2, GROUND_Y - PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+      // 空中吃到寶石、等待落地反擊時的蓄力光暈
+      if (pendingGemAttacks > 0 && gameState === 'playing') {
+        ctx.save();
+        const auraR = PLAYER_SIZE * (0.58 + Math.sin(gameTime * 16) * 0.06);
+        const aura = ctx.createRadialGradient(drawX, player.y - PLAYER_SIZE * 0.5, 10, drawX, player.y - PLAYER_SIZE * 0.5, auraR);
+        aura.addColorStop(0, pendingGemColor);
+        aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.globalAlpha = 0.48;
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(drawX, player.y - PLAYER_SIZE * 0.5, auraR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
+
+      // 攻擊時依序播放三連圖 (-1 -> -2 -> -3 -> -1)；跳躍用 -3；跑步與待機用 -1
+      const p2Ready = assets.p2 && assets.p2.complete && assets.p2.naturalWidth > 0;
+      const p3Ready = assets.p3 && assets.p3.complete && assets.p3.naturalWidth > 0;
+      let pImg = assets.p1;
+      if (gameState === 'attack_anim') {
+        if (player.attackFrame === 1 && p2Ready) {
+          pImg = assets.p2;
+        } else if (player.attackFrame === 2 && p3Ready) {
+          pImg = assets.p3;
+        } else {
+          pImg = assets.p1;
+        }
+      } else if (player.isJumping && p3Ready) {
+        pImg = assets.p3;
+      }
+
+      const blinkHide = player.invincibleTimer > 0 && gameState === 'playing' && (Math.floor(player.invincibleTimer * 16) % 2 === 0);
+      if (blinkHide || !pImg || !pImg.complete || pImg.naturalWidth === 0) return;
+
+      const isRunning = !player.isJumping && !player.stopped;
+      const wobbleY = isRunning ? Math.sin(player.walkCycle * 2) * WOBBLE_BOUNCE_Y : 0;
+      const wobbleRot = isRunning ? Math.sin(player.walkCycle) * WOBBLE_ANGLE : 0;
+
+      ctx.save();
+      if (isRunning && WOBBLE_PIVOT === 'bottom') {
+        ctx.translate(drawX, player.y + wobbleY);
+        ctx.rotate(wobbleRot);
+        if (player.facingLeft) {
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(pImg, -PLAYER_SIZE / 2, -PLAYER_SIZE, PLAYER_SIZE, PLAYER_SIZE);
+      } else {
+        ctx.translate(drawX, player.y - PLAYER_SIZE / 2 + wobbleY);
+        if (isRunning) {
+          ctx.rotate(wobbleRot);
+        }
+        if (player.facingLeft) {
+          ctx.scale(-1, 1);
+        }
+        if (player.isFlipping) {
+          ctx.rotate(player.flipAngle);
+        }
+        ctx.drawImage(pImg, -PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
+      }
+      ctx.restore();
+    }
+
+    function drawInitial() {
+      drawBackground();
+      drawMonster(MONSTER_SIZE);
+
+      player.x = PLAYER_X;
+      player.y = GROUND_Y;
+      player.stopped = true;
+      player.isJumping = false;
+      player.facingLeft = false;
+      player.isAttacking = false;
+      player.attackFrame = 0;
+      drawPlayerSprite();
     }
 
     function draw() {
+      if (gameState === 'exiting') return;
       ctx.save();
       if (shakeTimer > 0) {
         const sx = (Math.random() - 0.5) * 2 * shakeIntensity;
@@ -2563,77 +2860,27 @@
 
       // 5. 怪物 (石巨人)
       if (gameState !== 'intro_anim' || intro.monsterVisible) {
-        drawMonster(PLAYER_SIZE * 1.8);
+        drawMonster(MONSTER_SIZE);
       }
 
       // 6. 通道坍塌碎石層
       drawCollapseRocks('front');
 
-      // 7. 魔法攻擊光彈與拖尾
-      for (let b of magicBolts) {
-        ctx.save();
-        for (let j = 0; j < b.trail.length; j++) {
-          const pt = b.trail[j];
-          const ratio = (j + 1) / b.trail.length;
-          ctx.globalAlpha = ratio * 0.65;
-          ctx.fillStyle = b.color;
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 16 * ratio, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1;
-        ctx.shadowColor = b.color;
-        ctx.shadowBlur = 22;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = b.color;
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      // 8 & 9. 玩家落地陰影與人偶 (跑出螢幕外後不再繪製)
+      // 7. 玩家落地陰影與人偶 (跑出螢幕外後不再繪製)
       if ((gameState !== 'intro_anim' || intro.playerVisible) &&
           player.x > -PLAYER_SIZE && player.x < CANVAS_W + PLAYER_SIZE) {
-        const heightRatio = Math.max(0.25, 1 - (GROUND_Y - player.y) / 550);
-        ctx.fillStyle = `rgba(0, 0, 0, ${0.42 * heightRatio})`;
-        ctx.beginPath();
-        ctx.ellipse(player.x, GROUND_Y + 4, 55 * heightRatio, 12 * heightRatio, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        let pImg;
-        if (player.isJumping) {
-          pImg = assets.p3;
-        } else if (player.stopped) {
-          pImg = assets.p1;
-        } else {
-          pImg = (Math.floor(player.walkTimer * 8) % 2 === 0) ? assets.p1 : assets.p2;
-        }
-
-        const blinkHide = player.invincibleTimer > 0 && (Math.floor(player.invincibleTimer * 16) % 2 === 0);
-        if (!blinkHide && pImg && pImg.complete && pImg.naturalWidth > 0) {
-          ctx.save();
-          const pOffsetY = (player.isJumping || player.stopped) ? 0 : Math.sin(player.walkTimer * 16) * 4;
-          ctx.translate(player.x, player.y - PLAYER_SIZE / 2 + pOffsetY);
-          if (player.facingLeft) {
-            ctx.scale(-1, 1);
-          }
-          if (player.isFlipping) {
-            ctx.rotate(player.flipAngle);
-          }
-          ctx.drawImage(pImg, -PLAYER_SIZE / 2, -PLAYER_SIZE / 2, PLAYER_SIZE, PLAYER_SIZE);
-          ctx.restore();
-        }
+        drawPlayerSprite();
       }
+
+      // 8. 角色專屬攻擊特效 (由 player.js 繪製)
+      drawAttackEffect();
 
       // 驚嘆號特效 (位於玩家頭頂)
       if (gameState === 'intro_anim' && intro.alertAlpha > 0) {
         drawExclamationMark();
       }
 
-      // 10. 粒子特效
+      // 9. 粒子特效
       for (let p of particles) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -2644,7 +2891,7 @@
         ctx.restore();
       }
 
-      // 11. 慶祝彩帶
+      // 10. 慶祝彩帶
       for (let c of confetti) {
         ctx.save();
         ctx.globalAlpha = Math.min(1, c.life * 1.4);
@@ -2655,7 +2902,7 @@
         ctx.restore();
       }
 
-      // 12. 飄字回饋
+      // 11. 飄字回饋
       for (let ft of floatingTexts) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
@@ -2672,7 +2919,7 @@
       ctx.restore();
 
       // 螢幕空間 UI 與警訊微光 (不受攝影機縮放影響)
-      if (monster.dangerLevel === 1 && gameState === 'playing') {
+      if (monster.dangerLevel === 1 && (gameState === 'playing' || gameState === 'attack_anim')) {
         const pulse = 0.22 + Math.sin(gameTime * 10) * 0.12;
         const warnGrad = ctx.createLinearGradient(0, 0, 260, 0);
         warnGrad.addColorStop(0, `rgba(255, 23, 68, ${pulse})`);

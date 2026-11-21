@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>冒險小遊戲 - 關卡18 (山洞骷髏狗)</title>
+
+  <!-- 引入外部注音模組、帳號密碼模組與角色模組 -->
+  <script src="bopomofo.js"></script>
+  <script src="password.js"></script>
+  <script src="player.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      outline: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      height: 100dvh;
+      width: 100%;
+      position: fixed;
+      overscroll-behavior: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #loading-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 999;
+    }
+
+    .spinner {
+      margin-bottom: 20px;
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #ff7043;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    #game-container {
+      position: relative;
+      width: 95vw;
+      max-width: 900px;
+      aspect-ratio: 3 / 4;
+      max-height: 85vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: none;
+      background-color: #1a1621;
+      margin: 0 auto;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .intro-copy {
+      width: 100%;
+      max-width: 720px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #4cd137;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(76, 209, 55, 0.4);
+      transition: transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    #back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 18px;
+      background-color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 101;
+      display: none;
+    }
+
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.65);
+      padding: 8px 14px;
+      border-radius: 15px;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+    }
+
+    .math-box {
+      background: rgba(43, 39, 39, 0.88);
+      padding: 15px 25px;
+      border-radius: 14px;
+      margin: 15px 0;
+      font-size: 28px;
+      text-align: center;
+      line-height: 1.8;
+      border: 2px solid rgba(255,255,255,0.18);
+    }
+
+    #star-container {
+      font-size: 26px;
+      margin-top: 10px;
+      width: 100%;
+      text-align: center;
+      line-height: 1.5;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+
+    /* ========================================= */
+    /* 手機螢幕響應式設定 (與 map16/map17 一致) */
+    /* ========================================= */
+    @media (max-width: 600px) {
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left) !important;
+        min-height: 100dvh !important;
+        height: 100dvh !important;
+      }
+      #game-container {
+        width: 100vw !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+      }
+      #back-btn {
+        top: 10px !important;
+        left: 10px !important;
+        padding: 6px 12px !important;
+        font-size: 14px !important;
+      }
+      #hud {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 16px !important;
+        padding: 6px 10px !important;
+      }
+      #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
+      #start-screen .intro-copy p { font-size: 24px !important; }
+      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+
+      #result-screen h1 { font-size: 32px !important; margin-bottom: 6px !important; }
+      .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
+      #totalCoins { font-size: 26px !important; }
+      #star-container { font-size: 19px !important; margin-top: 6px !important; }
+
+      #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
+      #result-screen div[style*="flex-direction: column"] .btn { font-size: 24px !important; padding: 10px 0 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">山洞關卡載入中...</div>
+  </div>
+
+  <div id="game-container">
+    <button id="back-btn" class="btn" onclick="exitToLobby()">🔙 EXIT</button>
+    <div id="hud">❤️❤️❤️</div>
+
+    <!-- 開始畫面 -->
+    <div id="start-screen" class="overlay" style="display: none;">
+      <button class="btn" style="position: absolute; top: 15px; left: 15px; margin: 0; padding: 8px 16px; font-size: 18px; background-color: #333;" onclick="exitToLobby()">🔙 EXIT</button>
+
+      <div class="intro-copy">
+        <h1 class="zh-text" style="display: block; font-size: 60px; margin: 0 0 28px; text-shadow: 0 4px 10px rgba(0,0,0,0.8); color: #fff;">
+          <ruby>山<rt>ㄕㄢ</rt></ruby>
+          <ruby>洞<rt>ㄉㄨㄥˋ</rt></ruby>
+          <ruby>骷<rt>ㄎㄨ</rt></ruby>
+          <ruby>髏<rt>ㄌㄡˊ</rt></ruby>
+          <ruby>狗<rt>ㄍㄡˇ</rt></ruby>
+        </h1>
+        <p class="zh-text" style="display: block; font-size: 36px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.55;">
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>板<rt>ㄅㄢˇ</rt></ruby><ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>開<rt>ㄎㄞ</rt></ruby><ruby>噴<rt>ㄆㄣ</rt></ruby><ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><br>
+          <ruby>點<rt>ㄉㄧㄢˇ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>發<rt>ㄈㄚ</rt></ruby><ruby>動<rt>ㄉㄨㄥˋ</rt></ruby><ruby>攻<rt>ㄍㄨㄥ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby>
+        </p>
+      </div>
+
+      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+        <ruby>開<rt>ㄎㄞ</rt></ruby>
+        <ruby>始<rt>ㄕˇ</rt></ruby>
+      </button>
+    </div>
+
+    <!-- 結算畫面 -->
+    <div id="result-screen" class="overlay" style="display: none;">
+      <h1 id="result-title" class="zh-text" style="font-size: 42px; color: #ffeb3b; margin: 0 0 10px 0;">
+        <ruby>過<rt>ㄍㄨㄛˋ</rt></ruby>
+        <ruby>關<rt>ㄍㄨㄢ</rt></ruby>
+        <ruby>了<rt>˙ㄌㄜ</rt></ruby>
+        <span>！</span>
+      </h1>
+
+      <div class="math-box">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby>
+          <ruby>得<rt>ㄉㄜˊ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="newCoins" style="color:#60ff40; font-weight:bold;">+0</span> ⭐ <br>
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 0;">
+        <span class="zh-text" style="vertical-align: middle;">
+          <ruby>總<rt>ㄗㄨㄥˇ</rt></ruby>
+          <ruby>共<rt>ㄍㄨㄥˋ</rt></ruby>
+          <ruby>存<rt>ㄘㄨㄣˊ</rt></ruby>
+          <ruby>款<rt>ㄎㄨㄢˇ</rt></ruby>
+          <span>:</span>
+        </span>
+        <span id="totalCoins" style="color:#ffeb3b; font-weight:bold; font-size: 34px; margin-left: 8px;">0</span> ⭐
+      </div>
+
+      <div id="star-container"></div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 15px; width: 100%; max-width: 340px;">
+        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0;" onclick="startGame(false)">
+          <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+          <ruby>玩<rt>ㄨㄢˊ</rt></ruby>
+          <ruby>一<rt>ㄧ</rt></ruby>
+          <ruby>次<rt>ㄘˋ</rt></ruby>
+        </button>
+        <button class="btn" style="width: 100%; font-size: 32px; padding: 14px 10px; margin: 0; background-color: #2196F3;" onclick="exitToLobby()">
+          <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby>
+          <ruby>大<rt>ㄉㄚˋ</rt></ruby>
+          <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
+        </button>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+  </div>
+
+  <script>
+    // =========================================
+    // 角色模組讀取設定
+    // =========================================
+    const equippedCharKey = localStorage.getItem('equippedCharacter') || 'han1';
+    const charConfig = (typeof PLAYER_CHARACTERS !== 'undefined' && PLAYER_CHARACTERS[equippedCharKey])
+      ? PLAYER_CHARACTERS[equippedCharKey]
+      : ((typeof PLAYER_CHARACTERS !== 'undefined' && PLAYER_CHARACTERS['han1'])
+        ? PLAYER_CHARACTERS['han1']
+        : { name: '揮劍女孩', prefix: 'han1', size: 165, hitboxOffsetX: 90, hitboxOffsetY: -20, hitboxRadius: 65 });
+
+    // =========================================
+    // 🎮 關卡參數設定區 (難度與數值可在此調整)
+    // =========================================
+    const CANVAS_W = 900;
+    const CANVAS_H = 1200;
+
+    // 山洞可移動地板範圍 (避開頂部魔王血條與周圍岩壁)
+    const ARENA = {
+      minX: 85,
+      maxX: 815,
+      minY: 270,
+      maxY: 1125
+    };
+
+    const BOSS_MAX_HP = 20;            // 魔王血量 (打 20 下擊敗)
+    const KEY_TRIGGER_HP = 7;         // 魔王剩 7 格血時出現鑰匙
+    const PLAYER_MAX_HP = 3;          // 人偶 3 次被攻擊機會
+    const WIN_REWARD_COINS = 10;      // 通關獎勵 10 顆星
+    const KEY_STICKER_ID = 'sticker_skey3'; // 本關鑰匙貼紙 ID (如貼紙簿用別的編號可改此處)
+
+    const PLAYER_SPEED = 500;         // 人偶移動速度 (px/s)
+    const PLAYER_SIZE = charConfig.size || 165;
+    const PLAYER_INVINCIBLE_TIME = 1.5; // 受傷後無敵時間 (秒)
+    const PLAYER_HITBOX_R = 38;       // 人偶受擊半徑 (稍微寬鬆，好閃躲)
+
+    const BOSS_SIZE = 280;            // 骷髏狗顯示尺寸
+    const BOSS_WALK_SPEED = 250;      // 骷髏狗平時移動速度
+    const BOSS_RAGE_SPEED = 275;      // 骷髏狗剩 7 格血以下移動速度
+    const BOSS_HIT_COOLDOWN = 0.5;   // 魔王受擊保護間隔，避免同一刀重覆扣血
+
+    // 動作時間節奏 (走 -> 定住 bad18-3 -> 蓄力 bad18-4 -> 噴火 bad18-5 -> 喘氣 bad18-3 -> 走)
+    const BOSS_PAUSE_TIME = 0.37;
+    const BOSS_CHARGE_TIME = 0.70;
+    const BOSS_FIRE_TIME = 0.67;
+    const BOSS_RECOVER_TIME = 0.56;
+
+    // 開場過場動畫參數 (從門走進洞穴 -> 特寫怪物 -> 展示完整噴火攻擊+語音 -> 恢復正常視角開始遊戲)
+    const INTRO_PLAYER_START_X = 455;     // 對齊 map18.webp 下方木門開口中央
+    const INTRO_PLAYER_START_Y = 1290;    // 從門外步入，頭頂自門框內現身
+    const INTRO_PLAYER_STOP_Y = 960;      // 走進洞穴內就位位置
+    const INTRO_PLAYER_WALK_SPEED = 310;  // 走進洞穴速度 (px/s)
+    const INTRO_PLAYER_PAUSE_DUR = 0.22;  // 進場就位後短暫停頓再推近鏡頭
+    const INTRO_ZOOM_IN_DUR = 0.55;       // 鏡頭推近特寫時間 (秒)
+    const INTRO_ZOOM_OUT_DUR = 0.65;      // 鏡頭恢復正常視角時間 (秒)
+    const INTRO_CLOSEUP_ZOOM = 1.65;      // 怪物特寫放大倍率
+    const INTRO_CLOSEUP_CAM_X = 235;      // 特寫世界座標 X (視口 [235, 780.5]，右側留出噴火展示空間)
+    const INTRO_CLOSEUP_CAM_Y = 0;        // 特寫世界座標 Y (視口 [0, 727.3]，不超出底圖邊界)
+    const INTRO_DEMO_AIM_ANGLE = 0.45;    // 特寫展示噴火方向 (往右下方約 26 度，與張口姿勢自然契合且遠離玩家)
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const hudEl = document.getElementById('hud');
+
+    // =========================================
+    // 狀態變數
+    // =========================================
+    // gamePhase: 'start' | 'intro' | 'playing' | 'winning' | 'losing' | 'result' | 'exiting'
+    let gamePhase = 'start';
+    let gameTime = 0;
+    let lastTime = 0;
+    let animationFrameId = null;
+    let endTimeoutId = null;
+    let phaseTimer = 0;
+    let shakeTime = 0;
+    let shakeIntensity = 0;
+
+    // 攝影機與開場演出狀態
+    let camera = { zoom: 1, x: 0, y: 0 };
+    let intro = {
+      phase: 'idle',        // 'idle' | 'player_enter' | 'player_pause' | 'zoom_in' | 'boss_showcase' | 'zoom_out' | 'done'
+      timer: 0,
+      audioDone: false,
+      attackDone: false,
+      postAudioTimer: 0,
+      runId: 0
+    };
+
+    // 玩家狀態
+    const player = {
+      x: CANVAS_W / 2,
+      y: 980,
+      targetX: CANVAS_W / 2,
+      targetY: 980,
+      hp: PLAYER_MAX_HP,
+      size: PLAYER_SIZE,
+      isMoving: false,
+      isFacingLeft: false,
+      walkCycle: 0,
+      frame: 0, // 0: -1.webp, 1: -2.webp, 2: -3.webp
+      isAttacking: false,
+      attackTimer: 0,
+      attackDuration: 0.34,
+      attackHitApplied: false,
+      attackQueued: false,
+      invincibleTimer: 0,
+      hurtFlash: 0,
+      deadSpin: 0,
+      deadTime: 0
+    };
+
+    // 骷髏狗魔王狀態
+    const boss = {
+      x: CANVAS_W / 2,
+      y: 450,
+      targetX: CANVAS_W / 2,
+      targetY: 450,
+      size: BOSS_SIZE,
+      hp: BOSS_MAX_HP,
+      facingLeft: false,
+      // state: 'idle' | 'walk' | 'pause' | 'charge' | 'fire' | 'recover' | 'defeated'
+      state: 'idle',
+      stateTimer: 0,
+      walkAnimTime: 0,
+      aimAngle: Math.PI / 2,
+      fireShotIndex: 0,
+      hitCooldown: 0,
+      hitFlash: 0,
+      recoilX: 0,
+      recoilY: 0,
+      defeatFlipProgress: 0,
+      defeatBounce: 0
+    };
+
+    // 場上物件與特效
+    let fireballs = [];
+    let activeEffects = [];
+    let particles = [];
+    let popups = [];
+    let confetti = [];
+    let tapMarker = null;
+
+    // 鑰匙狀態
+    let keyItem = null;           // { x, y, radius }
+    let keySpawnedThisRun = false;
+    let keyPickedThisRun = false;
+
+    // 離屏快取 (山洞背景、鑰匙備用圖示)
+    let bgCacheCanvas = null;
+    let keyEmojiCache = null;
+
+    // =========================================
+    // 輕量 Web Audio 音效合成
+    // =========================================
+    let audioCtx = null;
+    function getAudioCtx() {
+      try {
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) audioCtx = new AC();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      } catch (e) {}
+      return audioCtx;
+    }
+
+    function playTone(freqStart, freqEnd, duration, type = 'sine', volume = 0.14, delay = 0) {
+      try {
+        const ac = getAudioCtx();
+        if (!ac) return;
+        const now = ac.currentTime + delay;
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freqStart, now);
+        if (freqEnd !== freqStart) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(25, freqEnd), now + duration);
+        }
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      } catch (e) {}
+    }
+
+    function playSfx(type) {
+      if (type === 'attack') {
+        playTone(360, 760, 0.12, 'triangle', 0.15);
+      } else if (type === 'boss_hit') {
+        playTone(220, 90, 0.16, 'triangle', 0.20, 0);
+        playTone(540, 820, 0.13, 'sine', 0.14, 0.02);
+      } else if (type === 'charge') {
+        playTone(160, 340, 0.25, 'sawtooth', 0.09);
+      } else if (type === 'fire') {
+        playTone(260, 110, 0.18, 'sawtooth', 0.11);
+      } else if (type === 'hurt') {
+        playTone(220, 85, 0.26, 'sawtooth', 0.16);
+      } else if (type === 'key_spawn') {
+        playTone(660, 880, 0.12, 'sine', 0.14, 0);
+        playTone(880, 1320, 0.20, 'triangle', 0.15, 0.10);
+      } else if (type === 'key_pick') {
+        playTone(523, 523, 0.10, 'triangle', 0.16, 0);
+        playTone(659, 659, 0.10, 'triangle', 0.16, 0.08);
+        playTone(784, 784, 0.10, 'triangle', 0.16, 0.16);
+        playTone(1046, 1046, 0.22, 'triangle', 0.18, 0.24);
+      } else if (type === 'win') {
+        playTone(523, 523, 0.11, 'sine', 0.16, 0);
+        playTone(659, 659, 0.11, 'sine', 0.16, 0.09);
+        playTone(784, 784, 0.11, 'sine', 0.16, 0.18);
+        playTone(1046, 1046, 0.30, 'sine', 0.20, 0.27);
+      } else if (type === 'lose') {
+        playTone(320, 210, 0.16, 'sawtooth', 0.13, 0);
+        playTone(210, 120, 0.28, 'sawtooth', 0.13, 0.14);
+      }
+    }
+
+    // =========================================
+    // 開場動畫語音與緩動輔助函式
+    // =========================================
+    const introAudio = new Audio('assets/mp3/map18-1.mp3');
+    introAudio.preload = 'auto';
+    let introAudioTimerId = null;
+    let introFallbackTimerId = null;
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function easeInOutCubic(t) {
+      const c = Math.max(0, Math.min(1, t));
+      return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+    }
+
+    function primeIntroAudio(audio) {
+      if (!audio) return;
+      try {
+        audio._priming = true;
+        audio.muted = true;
+        const p = audio.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            if (!audio._priming) return;
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+            audio._priming = false;
+          }).catch(() => {
+            if (!audio._priming) return;
+            audio.muted = false;
+            audio._priming = false;
+          });
+        } else {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+          audio._priming = false;
+        }
+      } catch (e) {
+        audio.muted = false;
+        audio._priming = false;
+      }
+    }
+
+    function stopIntroAudio() {
+      intro.runId++;
+      if (introAudioTimerId) {
+        clearTimeout(introAudioTimerId);
+        introAudioTimerId = null;
+      }
+      if (introFallbackTimerId) {
+        clearTimeout(introFallbackTimerId);
+        introFallbackTimerId = null;
+      }
+      if (introAudio) {
+        introAudio._priming = false;
+        introAudio.onended = null;
+        introAudio.onerror = null;
+        try {
+          introAudio.pause();
+          introAudio.currentTime = 0;
+          introAudio.muted = false;
+        } catch (e) {}
+      }
+    }
+
+    function playIntroAudio(audio, fallbackMs, maxMs, onDone) {
+      const runId = intro.runId;
+      let done = false;
+
+      if (introAudioTimerId) {
+        clearTimeout(introAudioTimerId);
+        introAudioTimerId = null;
+      }
+      if (introFallbackTimerId) {
+        clearTimeout(introFallbackTimerId);
+        introFallbackTimerId = null;
+      }
+
+      function finish() {
+        if (done) return;
+        done = true;
+        if (introFallbackTimerId) {
+          clearTimeout(introFallbackTimerId);
+          introFallbackTimerId = null;
+        }
+        if (introAudioTimerId) {
+          clearTimeout(introAudioTimerId);
+          introAudioTimerId = null;
+        }
+        if (audio) {
+          audio.onended = null;
+          audio.onerror = null;
+        }
+        if (runId !== intro.runId || gamePhase !== 'intro') return;
+        if (typeof onDone === 'function') onDone();
+      }
+
+      function scheduleFallback() {
+        if (!done && !introFallbackTimerId && runId === intro.runId) {
+          introFallbackTimerId = setTimeout(finish, fallbackMs);
+        }
+      }
+
+      if (!audio) {
+        scheduleFallback();
+        return;
+      }
+
+      introAudioTimerId = setTimeout(finish, maxMs);
+
+      try {
+        audio._priming = false;
+        audio.muted = false;
+        audio.currentTime = 0;
+        audio.onended = finish;
+        audio.onerror = scheduleFallback;
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(scheduleFallback);
+        }
+      } catch (e) {
+        scheduleFallback();
+      }
+    }
+
+    // =========================================
+    // 資源載入
+    // =========================================
+    const assets = {
+      bg: new Image(),
+      p1: new Image(),
+      p2: new Image(),
+      p3: new Image(),
+      b1: new Image(),
+      b2: new Image(),
+      b3: new Image(),
+      b4: new Image(),
+      b5: new Image(),
+      key: new Image()
+    };
+
+    const totalAssets = Object.keys(assets).length;
+    let loadedAssets = 0;
+
+    function checkLoadProgress() {
+      loadedAssets++;
+      document.getElementById('loading-text').innerText = `山洞關卡載入中 (${loadedAssets}/${totalAssets})...`;
+      if (loadedAssets >= totalAssets) {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('start-screen').style.display = 'flex';
+
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+
+        initRenderCaches();
+        resetPositionsForPreview();
+        draw();
+
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // 📌 底圖預留位置：之後可放置山洞圖片到 assets/map/map18.webp (無圖時自動繪製山洞背景)
+    assets.bg.src = 'assets/map/map18.webp';
+    assets.p1.src = `assets/player/${charConfig.prefix}-1.webp`;
+    assets.p2.src = `assets/player/${charConfig.prefix}-2.webp`;
+    assets.p3.src = `assets/player/${charConfig.prefix}-3.webp`;
+    assets.b1.src = 'assets/bad/bad18-1.webp';
+    assets.b2.src = 'assets/bad/bad18-2.webp';
+    assets.b3.src = 'assets/bad/bad18-3.webp';
+    assets.b4.src = 'assets/bad/bad18-4.webp';
+    assets.b5.src = 'assets/bad/bad18-5.webp';
+    // 📌 鑰匙圖片預留位置：assets/sticker/key3.webp (無圖時自動改用 🔑)
+    assets.key.src = 'assets/sticker/key3.webp';
+
+    for (let k in assets) {
+      assets[k].onload = checkLoadProgress;
+      assets[k].onerror = checkLoadProgress;
+    }
+
+    // =========================================
+    // 預渲染山洞底圖快取
+    // =========================================
+    function makeEmojiCache(emoji, fontSize, canvasSize) {
+      const c = document.createElement('canvas');
+      c.width = canvasSize;
+      c.height = canvasSize;
+      const cCtx = c.getContext('2d');
+      cCtx.font = `${fontSize}px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
+      cCtx.textAlign = 'center';
+      cCtx.textBaseline = 'middle';
+      cCtx.fillStyle = '#000000';
+      cCtx.shadowColor = 'transparent';
+      cCtx.shadowBlur = 0;
+      cCtx.fillText(emoji, canvasSize / 2, canvasSize / 2);
+      return c;
+    }
+
+    function initRenderCaches() {
+      keyEmojiCache = makeEmojiCache('🔑', 70, 110);
+
+      bgCacheCanvas = document.createElement('canvas');
+      bgCacheCanvas.width = CANVAS_W;
+      bgCacheCanvas.height = CANVAS_H;
+      const bCtx = bgCacheCanvas.getContext('2d');
+
+      if (assets.bg.complete && assets.bg.naturalWidth > 0) {
+        bCtx.drawImage(assets.bg, 0, 0, CANVAS_W, CANVAS_H);
+        return;
+      }
+
+      // 尚未放入 map18.webp 時的預設山洞場景
+      const wallGrad = bCtx.createLinearGradient(0, 0, 0, CANVAS_H);
+      wallGrad.addColorStop(0, '#181322');
+      wallGrad.addColorStop(0.22, '#2a2238');
+      wallGrad.addColorStop(1, '#1d1726');
+      bCtx.fillStyle = wallGrad;
+      bCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // 山洞地面石盤區
+      const floorGrad = bCtx.createRadialGradient(CANVAS_W / 2, 680, 60, CANVAS_W / 2, 680, 560);
+      floorGrad.addColorStop(0, '#4a3d57');
+      floorGrad.addColorStop(0.65, '#342a40');
+      floorGrad.addColorStop(1, '#201929');
+      bCtx.fillStyle = floorGrad;
+      bCtx.beginPath();
+      bCtx.ellipse(CANVAS_W / 2, 700, 420, 470, 0, 0, Math.PI * 2);
+      bCtx.fill();
+
+      // 地面石頭紋理
+      bCtx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      const stones = [
+        [220, 420, 70, 34], [650, 390, 82, 38], [310, 610, 90, 42],
+        [580, 660, 75, 36], [240, 860, 86, 40], [640, 910, 92, 42],
+        [450, 760, 105, 45], [460, 1020, 88, 36], [440, 480, 78, 34]
+      ];
+      for (let s of stones) {
+        bCtx.beginPath();
+        bCtx.ellipse(s[0], s[1], s[2], s[3], 0.1, 0, Math.PI * 2);
+        bCtx.fill();
+      }
+
+      // 地面邊界岩塊環繞
+      bCtx.fillStyle = '#15101d';
+      // 上方洞穴拱壁與鐘乳石
+      bCtx.beginPath();
+      bCtx.moveTo(0, 0);
+      bCtx.lineTo(CANVAS_W, 0);
+      bCtx.lineTo(CANVAS_W, 255);
+      bCtx.quadraticCurveTo(730, 175, 450, 170);
+      bCtx.quadraticCurveTo(170, 175, 0, 255);
+      bCtx.closePath();
+      bCtx.fill();
+
+      // 鐘乳石剪影
+      const stalactites = [
+        [95, 195, 42, 65], [210, 178, 32, 48], [340, 168, 28, 42],
+        [560, 168, 30, 45], [690, 178, 36, 52], [805, 195, 44, 68]
+      ];
+      bCtx.fillStyle = '#1d1629';
+      for (let st of stalactites) {
+        bCtx.beginPath();
+        bCtx.moveTo(st[0] - st[2] / 2, st[1]);
+        bCtx.lineTo(st[0] + st[2] / 2, st[1]);
+        bCtx.lineTo(st[0], st[1] + st[3]);
+        bCtx.closePath();
+        bCtx.fill();
+      }
+
+      // 兩側洞壁岩石陰影
+      bCtx.fillStyle = 'rgba(12, 9, 18, 0.85)';
+      bCtx.beginPath();
+      bCtx.moveTo(0, 200);
+      bCtx.lineTo(52, 340);
+      bCtx.lineTo(36, 580);
+      bCtx.lineTo(55, 860);
+      bCtx.lineTo(30, CANVAS_H);
+      bCtx.lineTo(0, CANVAS_H);
+      bCtx.closePath();
+      bCtx.fill();
+
+      bCtx.beginPath();
+      bCtx.moveTo(CANVAS_W, 200);
+      bCtx.lineTo(CANVAS_W - 52, 340);
+      bCtx.lineTo(CANVAS_W - 36, 580);
+      bCtx.lineTo(CANVAS_W - 55, 860);
+      bCtx.lineTo(CANVAS_W - 30, CANVAS_H);
+      bCtx.lineTo(CANVAS_W, CANVAS_H);
+      bCtx.closePath();
+      bCtx.fill();
+
+      // 底部山洞入口微光
+      const exitLight = bCtx.createRadialGradient(CANVAS_W / 2, CANVAS_H + 30, 20, CANVAS_W / 2, CANVAS_H + 20, 290);
+      exitLight.addColorStop(0, 'rgba(130, 165, 220, 0.28)');
+      exitLight.addColorStop(1, 'rgba(130, 165, 220, 0)');
+      bCtx.fillStyle = exitLight;
+      bCtx.fillRect(0, CANVAS_H - 280, CANVAS_W, 280);
+
+      // 左右火把微光裝飾
+      const torches = [[92, 340], [808, 340], [85, 840], [815, 840]];
+      for (let t of torches) {
+        const tg = bCtx.createRadialGradient(t[0], t[1], 6, t[0], t[1], 115);
+        tg.addColorStop(0, 'rgba(255, 145, 40, 0.35)');
+        tg.addColorStop(1, 'rgba(255, 110, 0, 0)');
+        bCtx.fillStyle = tg;
+        bCtx.beginPath();
+        bCtx.arc(t[0], t[1], 115, 0, Math.PI * 2);
+        bCtx.fill();
+      }
+    }
+
+    // =========================================
+    // 記憶體釋放與返回大廳 (中途退出不給獎勵)
+    // =========================================
+    function cleanupMemory() {
+      gamePhase = 'exiting';
+      stopIntroAudio();
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      fireballs.length = 0;
+      activeEffects.length = 0;
+      particles.length = 0;
+      popups.length = 0;
+      confetti.length = 0;
+
+      for (let k in assets) {
+        if (assets[k]) {
+          assets[k].onload = null;
+          assets[k].onerror = null;
+          assets[k].src = '';
+        }
+      }
+      [bgCacheCanvas, keyEmojiCache].forEach(c => {
+        if (c) { c.width = 1; c.height = 1; }
+      });
+      bgCacheCanvas = null;
+      keyEmojiCache = null;
+
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 1;
+        canvas.height = 1;
+      }
+    }
+
+    function exitToLobby() {
+      cleanupMemory();
+      sessionStorage.setItem('returning_from_subpage', '1');
+      window.location.replace('lobby1.html');
+    }
+
+    window.addEventListener('pagehide', cleanupMemory);
+
+    // =========================================
+    // 鑰匙檢查與生成邏輯
+    // =========================================
+    function hasKeySticker() {
+      const val = localStorage.getItem(KEY_STICKER_ID);
+      return val === 'true' || val === 'new';
+    }
+
+    // 魔王剩 7 格血時生成鑰匙：隨機位置、不會消失直到遊戲結束
+    function trySpawnKey() {
+      if (hasKeySticker() || keySpawnedThisRun || keyPickedThisRun || keyItem) return;
+      keySpawnedThisRun = true;
+
+      let bestX = CANVAS_W / 2;
+      let bestY = 720;
+      let bestScore = -1;
+
+      // 隨機挑選幾個候選點，優先選離玩家與魔王都不要太近的位置
+      for (let i = 0; i < 18; i++) {
+        const rx = ARENA.minX + 65 + Math.random() * (ARENA.maxX - ARENA.minX - 130);
+        const ry = ARENA.minY + 95 + Math.random() * (ARENA.maxY - ARENA.minY - 190);
+        const dPlayer = Math.hypot(rx - player.x, ry - player.y);
+        const dBoss = Math.hypot(rx - boss.x, ry - boss.y);
+        const minD = Math.min(dPlayer, dBoss);
+        if (minD > bestScore) {
+          bestScore = minD;
+          bestX = rx;
+          bestY = ry;
+        }
+      }
+
+      keyItem = { x: bestX, y: bestY, radius: 42 };
+      spawnParticles(bestX, bestY, '#ffeb3b', 22, [80, 260], [5, 11]);
+      addPopup('🔑 鑰匙出現了！', bestX, bestY - 55, '#ffeb3b', 34);
+      playSfx('key_spawn');
+    }
+
+    // =========================================
+    // 遊戲開始與重設
+    // =========================================
+    function resetPositionsForPreview() {
+      camera.zoom = 1;
+      camera.x = 0;
+      camera.y = 0;
+
+      player.x = CANVAS_W / 2;
+      player.y = 950;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      player.isMoving = false;
+      player.isAttacking = false;
+      player.frame = 0;
+
+      boss.x = CANVAS_W / 2;
+      boss.y = 460;
+      boss.hp = BOSS_MAX_HP;
+      boss.state = 'idle';
+      boss.facingLeft = false;
+    }
+
+    function startGame(playIntro = true) {
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+      stopIntroAudio();
+      getAudioCtx();
+
+      camera.zoom = 1;
+      camera.x = 0;
+      camera.y = 0;
+      lastTime = performance.now();
+
+      fireballs = [];
+      activeEffects = [];
+      particles = [];
+      popups = [];
+      confetti = [];
+      tapMarker = null;
+      shakeTime = 0;
+      shakeIntensity = 0;
+      phaseTimer = 0;
+
+      keyItem = null;
+      keySpawnedThisRun = false;
+      keyPickedThisRun = false;
+
+      player.hp = PLAYER_MAX_HP;
+      player.walkCycle = 0;
+      player.frame = 0;
+      player.isAttacking = false;
+      player.attackTimer = 0;
+      player.attackHitApplied = false;
+      player.attackQueued = false;
+      player.invincibleTimer = 0;
+      player.hurtFlash = 0;
+      player.deadSpin = 0;
+      player.deadTime = 0;
+
+      boss.x = CANVAS_W / 2;
+      boss.y = 440;
+      boss.targetX = boss.x;
+      boss.targetY = boss.y;
+      boss.hp = BOSS_MAX_HP;
+      boss.facingLeft = false;
+      boss.state = 'idle';
+      boss.stateTimer = 0;
+      boss.walkAnimTime = 0;
+      boss.fireShotIndex = 0;
+      boss.hitCooldown = 0;
+      boss.hitFlash = 0;
+      boss.recoilX = 0;
+      boss.recoilY = 0;
+      boss.defeatFlipProgress = 0;
+      boss.defeatBounce = 0;
+
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('back-btn').style.display = 'block';
+
+      if (playIntro) {
+        primeIntroAudio(introAudio);
+
+        // 人偶從下方山洞木門走進洞穴
+        player.x = INTRO_PLAYER_START_X;
+        player.y = INTRO_PLAYER_START_Y;
+        player.targetX = CANVAS_W / 2;
+        player.targetY = INTRO_PLAYER_STOP_Y;
+        player.isMoving = true;
+        player.isFacingLeft = false;
+
+        boss.aimAngle = INTRO_DEMO_AIM_ANGLE;
+
+        hudEl.style.display = 'none';
+        updateHUD();
+
+        intro.phase = 'player_enter';
+        intro.timer = 0;
+        intro.audioDone = false;
+        intro.attackDone = false;
+        intro.postAudioTimer = 0;
+        gamePhase = 'intro';
+      } else {
+        player.x = CANVAS_W / 2;
+        player.y = INTRO_PLAYER_STOP_Y;
+        player.targetX = player.x;
+        player.targetY = player.y;
+        player.isMoving = false;
+        player.isFacingLeft = false;
+
+        boss.aimAngle = Math.PI / 2;
+
+        hudEl.style.display = 'block';
+        updateHUD();
+
+        intro.phase = 'done';
+        gamePhase = 'playing';
+        pickNextBossWaypoint();
+      }
+    }
+
+    function updateHUD() {
+      let hearts = '';
+      for (let i = 0; i < PLAYER_MAX_HP; i++) {
+        hearts += (i < player.hp) ? '❤️' : '🖤';
+      }
+      if (keyPickedThisRun) {
+        hearts += ' 🔑';
+      }
+      hudEl.textContent = hearts;
+    }
+
+    // =========================================
+    // 結算畫面 (破關才給星星、貼紙、鑰匙)
+    // =========================================
+    function isForestStarRewardUnlocked() {
+      return localStorage.getItem('map19_cleared') === 'true'
+        && localStorage.getItem('blindbox_map19_gift') === 'claimed';
+    }
+
+    function endGame(isWin) {
+      if (gamePhase === 'exiting' || gamePhase === 'result') return;
+      gamePhase = 'result';
+      endTimeoutId = null;
+
+      document.getElementById('back-btn').style.display = 'none';
+      hudEl.style.display = 'none';
+
+      const starsUnlocked = isForestStarRewardUnlocked();
+      const earnedCoins = (isWin && starsUnlocked) ? WIN_REWARD_COINS : 0;
+      let gotKeyReward = false;
+
+      const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      const newTotalCoins = currentCoins + earnedCoins;
+      if (earnedCoins > 0) {
+        localStorage.setItem('playerCoins', newTotalCoins);
+      }
+
+      if (isWin) {
+        localStorage.setItem('map18_cleared', 'true');
+
+        if (localStorage.getItem('sticker_smap18') !== 'true') {
+          localStorage.setItem('sticker_smap18', 'new');
+        }
+        if (keyPickedThisRun) {
+          if (localStorage.getItem(KEY_STICKER_ID) !== 'true') {
+            localStorage.setItem(KEY_STICKER_ID, 'new');
+          }
+          gotKeyReward = true;
+        }
+        if (window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+          window.CloudSync.syncNow(false);
+        }
+      }
+
+      const titleEl = document.getElementById('result-title');
+      if (isWin) {
+        titleEl.style.color = '#ffeb3b';
+        titleEl.innerHTML = `<ruby>打<rt>ㄉㄚˇ</rt></ruby><ruby>敗<rt>ㄅㄞˋ</rt></ruby><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>！</span>`;
+      } else {
+        titleEl.style.color = '#ff5252';
+        titleEl.innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>燒<rt>ㄕㄠ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
+      }
+
+      document.getElementById('newCoins').innerText = '+' + earnedCoins;
+      document.getElementById('totalCoins').innerText = newTotalCoins;
+
+      let starsHtml = '';
+      for (let i = 1; i <= earnedCoins; i++) {
+        starsHtml += '⭐';
+        if (i % 5 === 0 && i < earnedCoins) starsHtml += '<br>';
+      }
+      if (earnedCoins === 0) {
+        if (isWin && !starsUnlocked) {
+          starsHtml = `<div class="zh-text" style="color: #b2fef7;">🔒 <ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>門<rt>ㄇㄣˊ</rt></ruby><ruby>後<rt>ㄏㄡˋ</rt></ruby><ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby><span>！</span></div>`;
+        } else {
+          starsHtml = '<span style="color:#aaa;">💨 再加油喔！</span>';
+        }
+      }
+      if (gotKeyReward) {
+        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
+      }
+      document.getElementById('star-container').innerHTML = starsHtml;
+
+      if (window.Bopomofo && typeof window.Bopomofo.render === 'function') {
+        window.Bopomofo.render();
+      }
+
+      document.getElementById('result-screen').style.display = 'flex';
+    }
+
+    // =========================================
+    // 特效輔助函式
+    // =========================================
+    function addShake(dur, intensity) {
+      shakeTime = Math.max(shakeTime, dur);
+      shakeIntensity = Math.max(shakeIntensity, intensity);
+    }
+
+    function addPopup(text, x, y, color = '#fff', size = 34) {
+      popups.push({ text, x, y, color, size, t: 0, duration: 0.95 });
+    }
+
+    function spawnParticles(x, y, color, count, speedRange, sizeRange) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const spd = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);
+        const life = 0.28 + Math.random() * 0.28;
+        particles.push({
+          x, y,
+          vx: Math.cos(a) * spd,
+          vy: Math.sin(a) * spd - 40,
+          size: sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]),
+          color,
+          life,
+          maxLife: life
+        });
+      }
+    }
+
+    function spawnConfetti() {
+      const colors = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#ff6b81', '#ffeb3b'];
+      for (let i = 0; i < 65; i++) {
+        confetti.push({
+          x: CANVAS_W / 2 + (Math.random() - 0.5) * 520,
+          y: 260 + Math.random() * 260,
+          vx: (Math.random() - 0.5) * 420,
+          vy: -180 - Math.random() * 340,
+          size: 12 + Math.random() * 12,
+          color: colors[i % colors.length],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 11
+        });
+      }
+    }
+
+    // =========================================
+    // 骷髏狗 AI 與噴火攻擊模式
+    // =========================================
+    function pickNextBossWaypoint() {
+      const minX = ARENA.minX + 95;
+      const maxX = ARENA.maxX - 95;
+      const minY = ARENA.minY + 115;
+      const maxY = ARENA.maxY - 170;
+
+      let chosenX = CANVAS_W / 2;
+      let chosenY = 520;
+      for (let i = 0; i < 12; i++) {
+        const rx = minX + Math.random() * (maxX - minX);
+        const ry = minY + Math.random() * (maxY - minY);
+        const dSelf = Math.hypot(rx - boss.x, ry - boss.y);
+        const dPlayer = Math.hypot(rx - player.x, ry - player.y);
+        if (dSelf > 180 && dPlayer > 170) {
+          chosenX = rx;
+          chosenY = ry;
+          break;
+        }
+      }
+      boss.targetX = chosenX;
+      boss.targetY = chosenY;
+      boss.state = 'walk';
+      boss.stateTimer = 0;
+    }
+
+    // 取得骷髏狗嘴巴座標 (對應 bad18-5.webp 張口位置)
+    function getBossMouthPos() {
+      const dir = boss.facingLeft ? -1 : 1;
+      return {
+        x: boss.x + dir * boss.size * 0.28,
+        y: boss.y - boss.size * 0.55
+      };
+    }
+
+    function shootBossFire(angleOffset = 0, speed = 510) {
+      const mouth = getBossMouthPos();
+      const angle = boss.aimAngle + angleOffset;
+      fireballs.push({
+        x: mouth.x,
+        y: mouth.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 30,
+        age: 0,
+        phase: Math.random() * Math.PI * 2
+      });
+      spawnParticles(mouth.x, mouth.y, '#ffab00', 7, [90, 220], [5, 10]);
+      playSfx('fire');
+    }
+
+    function updateBoss(dt) {
+      if (boss.hitCooldown > 0) boss.hitCooldown = Math.max(0, boss.hitCooldown - dt);
+      if (boss.hitFlash > 0) boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+      boss.recoilX += (0 - boss.recoilX) * Math.min(1, dt * 10);
+      boss.recoilY += (0 - boss.recoilY) * Math.min(1, dt * 10);
+
+      if (boss.state === 'defeated') {
+        boss.defeatFlipProgress = Math.min(1, boss.defeatFlipProgress + dt * 3.0);
+        return;
+      }
+
+      boss.stateTimer += dt;
+      const isLowHp = boss.hp <= KEY_TRIGGER_HP;
+
+      if (boss.state === 'walk') {
+        // 走路交錯使用 bad18-1 與 bad18-2
+        boss.walkAnimTime += dt;
+        const dx = boss.targetX - boss.x;
+        const dy = boss.targetY - boss.y;
+        const dist = Math.hypot(dx, dy);
+        const speed = isLowHp ? BOSS_RAGE_SPEED : BOSS_WALK_SPEED;
+
+        if (Math.abs(dx) > 4) boss.facingLeft = dx < 0;
+
+        if (dist <= speed * dt + 6 || boss.stateTimer > 2.6) {
+          boss.x = boss.targetX;
+          boss.y = boss.targetY;
+          boss.state = 'pause';
+          boss.stateTimer = 0;
+          boss.facingLeft = player.x < boss.x;
+        } else {
+          boss.x += (dx / dist) * speed * dt;
+          boss.y += (dy / dist) * speed * dt;
+        }
+      }
+      else if (boss.state === 'pause') {
+        // 定住 (bad18-3)，鎖定面向人偶，準備進入蓄力
+        boss.facingLeft = player.x < boss.x;
+        if (boss.stateTimer >= BOSS_PAUSE_TIME) {
+          boss.state = 'charge';
+          boss.stateTimer = 0;
+          const mouth = getBossMouthPos();
+          boss.aimAngle = Math.atan2((player.y - player.size * 0.42) - mouth.y, player.x - mouth.x);
+          playSfx('charge');
+        }
+      }
+      else if (boss.state === 'charge') {
+        // 蓄力預告 (bad18-4)：前 0.25 秒微調方向，之後鎖定角度讓玩家有空間閃躲
+        if (boss.stateTimer < 0.18) {
+          boss.facingLeft = player.x < boss.x;
+          const mouth = getBossMouthPos();
+          boss.aimAngle = Math.atan2((player.y - player.size * 0.42) - mouth.y, player.x - mouth.x);
+        }
+        if (Math.random() < 0.45) {
+          const mouth = getBossMouthPos();
+          spawnParticles(mouth.x + (Math.random() - 0.5) * 40, mouth.y - 25 + (Math.random() - 0.5) * 30, '#ff9100', 1, [30, 90], [4, 8]);
+        }
+        if (boss.stateTimer >= BOSS_CHARGE_TIME) {
+          boss.state = 'fire';
+          boss.stateTimer = 0;
+          boss.fireShotIndex = 0;
+        }
+      }
+      else if (boss.state === 'fire') {
+        // 噴火狀態 (bad18-5)：依序噴出火球流
+        const totalShots = isLowHp ? 5 : 4;
+        const shotInterval = 0.125;
+        const expectedShot = Math.floor(boss.stateTimer / shotInterval) + 1;
+
+        while (boss.fireShotIndex < totalShots && boss.fireShotIndex < expectedShot) {
+          boss.fireShotIndex++;
+          if (isLowHp && boss.fireShotIndex === 3) {
+            // 剩 7 格血以下時，第 3 發附帶微幅左右擴散，增加緊張感但仍好閃躲
+            shootBossFire(0, 540);
+            shootBossFire(-0.26, 480);
+            shootBossFire(0.26, 480);
+          } else {
+            const spread = (Math.random() - 0.5) * 0.10;
+            shootBossFire(spread, isLowHp ? 530 : 490);
+          }
+        }
+
+        if (boss.stateTimer >= BOSS_FIRE_TIME) {
+          boss.state = 'recover';
+          boss.stateTimer = 0;
+        }
+      }
+      else if (boss.state === 'recover') {
+        // 噴完火喘氣 (bad18-3)：人偶趁機進攻的好時機
+        if (Math.random() < 0.18) {
+          const mouth = getBossMouthPos();
+          spawnParticles(mouth.x, mouth.y, 'rgba(220, 220, 230, 0.55)', 1, [20, 60], [5, 9]);
+        }
+        if (boss.stateTimer >= BOSS_RECOVER_TIME) {
+          pickNextBossWaypoint();
+        }
+      }
+    }
+
+    // =========================================
+    // 玩家移動、攻擊與受傷判定
+    // =========================================
+    function getStrikePosForBoss() {
+      const side = (player.x < boss.x) ? -1 : 1;
+      const offsetDist = Math.max(105, (charConfig.hitboxOffsetX || 90) + 25);
+      return {
+        x: Math.max(ARENA.minX, Math.min(ARENA.maxX, boss.x + side * offsetDist)),
+        y: Math.max(ARENA.minY, Math.min(ARENA.maxY, boss.y + 12))
+      };
+    }
+
+    function startPlayerAttack() {
+      if (player.isAttacking || gamePhase !== 'playing') return;
+      player.isAttacking = true;
+      player.isMoving = false;
+      player.attackQueued = false;
+      player.attackTimer = 0;
+      player.attackHitApplied = false;
+      player.frame = 0;
+      player.isFacingLeft = boss.x < player.x;
+    }
+
+    function damageBoss() {
+      if (boss.hp <= 0 || boss.hitCooldown > 0) return;
+
+      boss.hp = Math.max(0, boss.hp - 1);
+      boss.hitCooldown = BOSS_HIT_COOLDOWN;
+      boss.hitFlash = 0.28;
+
+      const knockDir = boss.x >= player.x ? 1 : -1;
+      boss.recoilX = knockDir * 24;
+      boss.recoilY = -10;
+
+      addShake(0.16, 7);
+      spawnParticles(boss.x, boss.y - boss.size * 0.45, '#ffeb3b', 16, [110, 310], [5, 11]);
+      spawnParticles(boss.x, boss.y - boss.size * 0.45, '#ff6d00', 10, [80, 240], [4, 9]);
+      addPopup('💥 -1', boss.x, boss.y - boss.size * 0.9, '#ffeb3b', 42);
+      playSfx('boss_hit');
+
+      // 剩 7 格血時出現鑰匙 (若尚未取得過)
+      if (boss.hp <= KEY_TRIGGER_HP && boss.hp > 0) {
+        trySpawnKey();
+      }
+
+      // 血量歸零：打敗骷髏狗！
+      if (boss.hp <= 0) {
+        triggerWin();
+      }
+    }
+
+    function damagePlayer() {
+      if (player.invincibleTimer > 0 || gamePhase !== 'playing') return;
+
+      player.hp = Math.max(0, player.hp - 1);
+      player.invincibleTimer = PLAYER_INVINCIBLE_TIME;
+      player.hurtFlash = 0.3;
+      player.attackQueued = false;
+      updateHUD();
+
+      addShake(0.28, 12);
+      spawnParticles(player.x, player.y - player.size * 0.45, '#ff3d00', 20, [120, 340], [5, 11]);
+      addPopup('🔥 燙到了！', player.x, player.y - player.size - 10, '#ff8a65', 36);
+
+      if (player.hp <= 0) {
+        triggerLose();
+      } else {
+        playSfx('hurt');
+      }
+    }
+
+    function triggerWin() {
+      gamePhase = 'winning';
+      phaseTimer = 0;
+      player.isMoving = false;
+      player.attackQueued = false;
+
+      // 清除場上火焰變為無害火星
+      for (let f of fireballs) {
+        spawnParticles(f.x, f.y, '#ffab00', 6, [60, 180], [4, 8]);
+      }
+      fireballs = [];
+
+      // 骷髏狗四腳朝天倒下 (bad18-3 上下顛倒)
+      boss.state = 'defeated';
+      boss.defeatFlipProgress = 0;
+      addShake(0.32, 11);
+      spawnParticles(boss.x, boss.y - boss.size * 0.4, '#ffeb3b', 28, [140, 380], [6, 13]);
+      addPopup('🎉 打敗魔王了！', CANVAS_W / 2, 340, '#ffeb3b', 48);
+      spawnConfetti();
+      playSfx('win');
+
+      if (endTimeoutId) clearTimeout(endTimeoutId);
+      endTimeoutId = setTimeout(() => endGame(true), 1950);
+    }
+
+    function triggerLose() {
+      gamePhase = 'losing';
+      phaseTimer = 0;
+      player.isMoving = false;
+      player.isAttacking = false;
+      player.attackQueued = false;
+      player.deadSpin = 0;
+      player.deadTime = 0;
+      playSfx('lose');
+
+      if (endTimeoutId) clearTimeout(endTimeoutId);
+      endTimeoutId = setTimeout(() => endGame(false), 1350);
+    }
+
+    function updatePlayer(dt) {
+      if (player.invincibleTimer > 0) player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
+      if (player.hurtFlash > 0) player.hurtFlash = Math.max(0, player.hurtFlash - dt);
+
+      // 攻擊三連圖 (-1 -> -2 + 特效 -> -3 -> -1)
+      if (player.isAttacking) {
+        player.attackTimer += dt;
+        const t = player.attackTimer;
+        if (t < 0.08) {
+          player.frame = 0;
+        } else if (t < 0.18) {
+          player.frame = 1;
+          if (!player.attackHitApplied) {
+            player.attackHitApplied = true;
+            playSfx('attack');
+
+            const startX = player.x;
+            const startY = player.y - player.size * 0.45;
+            const targetX = boss.x;
+            const targetY = boss.y - boss.size * 0.45;
+
+            activeEffects.push({
+              startTime: performance.now(),
+              duration: 280,
+              startX, startY, targetX, targetY
+            });
+
+            // 檢查攻擊距離是否命中魔王
+            const distToBoss = Math.hypot(player.x - boss.x, (player.y - player.size * 0.4) - (boss.y - boss.size * 0.4));
+            const attackReach = (charConfig.hitboxOffsetX || 90) + (charConfig.hitboxRadius || 65) + boss.size * 0.42;
+            if (distToBoss <= attackReach) {
+              damageBoss();
+            }
+          }
+        } else if (t < 0.28) {
+          player.frame = 2;
+        } else if (t < player.attackDuration) {
+          player.frame = 0;
+        } else {
+          player.frame = 0;
+          player.isAttacking = false;
+        }
+        return;
+      }
+
+      // 若已鎖定攻擊骷髏狗，動態追蹤到最佳揮擊位置
+      if (player.attackQueued && boss.hp > 0) {
+        const strike = getStrikePosForBoss();
+        player.targetX = strike.x;
+        player.targetY = strike.y;
+        const distToBoss = Math.hypot(player.x - boss.x, player.y - boss.y);
+        const quickReach = (charConfig.hitboxOffsetX || 90) + boss.size * 0.34;
+        if (distToBoss <= quickReach) {
+          startPlayerAttack();
+          return;
+        }
+        player.isMoving = true;
+      }
+
+      if (player.isMoving) {
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.hypot(dx, dy);
+        const step = PLAYER_SPEED * dt;
+
+        if (Math.abs(dx) > 3) player.isFacingLeft = dx < 0;
+
+        if (dist > step) {
+          player.x += (dx / dist) * step;
+          player.y += (dy / dist) * step;
+          player.walkCycle += 24 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          if (player.attackQueued && boss.hp > 0) {
+            startPlayerAttack();
+          }
+        }
+      }
+    }
+
+    function updateFireballs(dt) {
+      const pCenterX = player.x;
+      const pCenterY = player.y - player.size * 0.42;
+
+      for (let i = fireballs.length - 1; i >= 0; i--) {
+        const f = fireballs[i];
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        f.age += dt;
+
+        if (Math.random() < 0.4) {
+          spawnParticles(f.x, f.y, '#ff9100', 1, [20, 70], [4, 8]);
+        }
+
+        if (gamePhase === 'playing') {
+          const dist = Math.hypot(pCenterX - f.x, pCenterY - f.y);
+          if (dist < PLAYER_HITBOX_R + f.radius * 0.72) {
+            fireballs.splice(i, 1);
+            damagePlayer();
+            continue;
+          }
+        }
+
+        if (f.x < -80 || f.x > CANVAS_W + 80 || f.y < 140 || f.y > CANVAS_H + 80 || f.age > 3.5) {
+          fireballs.splice(i, 1);
+        }
+      }
+    }
+
+    function checkKeyPickup() {
+      if (!keyItem || gamePhase !== 'playing') return;
+      const dist = Math.hypot(player.x - keyItem.x, (player.y - player.size * 0.35) - keyItem.y);
+      if (dist < 62 + keyItem.radius) {
+        const kx = keyItem.x;
+        const ky = keyItem.y;
+        keyItem = null;
+        keyPickedThisRun = true;
+        spawnParticles(kx, ky, '#ffeb3b', 24, [100, 320], [5, 11]);
+        addPopup('🔑 拿到鑰匙了！', kx, ky - 45, '#ffeb3b', 36);
+        playSfx('key_pick');
+        updateHUD();
+      }
+    }
+
+    function updateEffects(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 420 * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].t += dt;
+        if (popups[i].t >= popups[i].duration) popups.splice(i, 1);
+      }
+      for (let c of confetti) {
+        c.vy += 520 * dt;
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.rot += c.vRot * dt;
+      }
+      if (tapMarker) {
+        tapMarker.t += dt;
+        if (tapMarker.t >= 0.35) tapMarker = null;
+      }
+    }
+
+    // =========================================
+    // 主迴圈
+    // =========================================
+    function gameLoop(currentTime) {
+      if (gamePhase === 'exiting') return;
+      const dt = Math.min((currentTime - lastTime) / 1000, 0.08);
+      lastTime = currentTime;
+
+      if (gamePhase !== 'start' && gamePhase !== 'result') {
+        update(dt);
+        draw();
+      }
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updateIntro(dt) {
+      intro.timer += dt;
+
+      if (intro.phase === 'player_enter') {
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.hypot(dx, dy);
+        const step = INTRO_PLAYER_WALK_SPEED * dt;
+
+        if (dist > step) {
+          player.x += (dx / dist) * step;
+          player.y += (dy / dist) * step;
+          player.walkCycle += 22 * dt;
+          if (player.y < 1185 && Math.random() < 0.25) {
+            spawnParticles(player.x, player.y - 4, 'rgba(210, 200, 190, 0.55)', 1, [20, 65], [3, 6]);
+          }
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          intro.phase = 'player_pause';
+          intro.timer = 0;
+        }
+      } else if (intro.phase === 'player_pause') {
+        if (intro.timer >= INTRO_PLAYER_PAUSE_DUR) {
+          intro.phase = 'zoom_in';
+          intro.timer = 0;
+        }
+      } else if (intro.phase === 'zoom_in') {
+        const p = Math.min(1, intro.timer / INTRO_ZOOM_IN_DUR);
+        const e = easeInOutCubic(p);
+        camera.zoom = lerp(1, INTRO_CLOSEUP_ZOOM, e);
+        camera.x = lerp(0, INTRO_CLOSEUP_CAM_X, e);
+        camera.y = lerp(0, INTRO_CLOSEUP_CAM_Y, e);
+
+        if (p >= 1) {
+          camera.zoom = INTRO_CLOSEUP_ZOOM;
+          camera.x = INTRO_CLOSEUP_CAM_X;
+          camera.y = INTRO_CLOSEUP_CAM_Y;
+          intro.phase = 'boss_showcase';
+          intro.timer = 0;
+          intro.audioDone = false;
+          intro.attackDone = false;
+          intro.postAudioTimer = 0;
+
+          boss.facingLeft = false;
+          boss.aimAngle = INTRO_DEMO_AIM_ANGLE;
+          boss.state = 'pause';
+          boss.stateTimer = 0;
+          boss.fireShotIndex = 0;
+
+          playIntroAudio(introAudio, 2800, 5500, () => {
+            intro.audioDone = true;
+          });
+        }
+      } else if (intro.phase === 'boss_showcase') {
+        if (!intro.attackDone) {
+          boss.stateTimer += dt;
+          boss.facingLeft = false;
+          boss.aimAngle = INTRO_DEMO_AIM_ANGLE;
+
+          if (boss.state === 'pause') {
+            if (boss.stateTimer >= BOSS_PAUSE_TIME) {
+              boss.state = 'charge';
+              boss.stateTimer = 0;
+              boss.aimAngle = INTRO_DEMO_AIM_ANGLE;
+              playSfx('charge');
+            }
+          } else if (boss.state === 'charge') {
+            if (Math.random() < 0.45) {
+              const mouth = getBossMouthPos();
+              spawnParticles(mouth.x + (Math.random() - 0.5) * 40, mouth.y - 25 + (Math.random() - 0.5) * 30, '#ff9100', 1, [30, 90], [4, 8]);
+            }
+            if (boss.stateTimer >= BOSS_CHARGE_TIME) {
+              boss.state = 'fire';
+              boss.stateTimer = 0;
+              boss.fireShotIndex = 0;
+              addShake(0.22, 6);
+            }
+          } else if (boss.state === 'fire') {
+            const totalShots = 4;
+            const shotInterval = 0.125;
+            const expectedShot = Math.floor(boss.stateTimer / shotInterval) + 1;
+
+            while (boss.fireShotIndex < totalShots && boss.fireShotIndex < expectedShot) {
+              boss.fireShotIndex++;
+              const spread = (Math.random() - 0.5) * 0.10;
+              shootBossFire(spread, 490);
+            }
+
+            if (boss.stateTimer >= BOSS_FIRE_TIME) {
+              boss.state = 'recover';
+              boss.stateTimer = 0;
+            }
+          } else if (boss.state === 'recover') {
+            if (Math.random() < 0.18) {
+              const mouth = getBossMouthPos();
+              spawnParticles(mouth.x, mouth.y, 'rgba(220, 220, 230, 0.55)', 1, [20, 60], [5, 9]);
+            }
+            if (boss.stateTimer >= BOSS_RECOVER_TIME) {
+              boss.state = 'idle';
+              boss.stateTimer = 0;
+              intro.attackDone = true;
+            }
+          }
+        }
+
+        if (intro.attackDone && intro.audioDone) {
+          intro.postAudioTimer += dt;
+          if (intro.postAudioTimer >= 0.18) {
+            intro.phase = 'zoom_out';
+            intro.timer = 0;
+          }
+        }
+      } else if (intro.phase === 'zoom_out') {
+        const p = Math.min(1, intro.timer / INTRO_ZOOM_OUT_DUR);
+        const e = easeInOutCubic(p);
+        camera.zoom = lerp(INTRO_CLOSEUP_ZOOM, 1, e);
+        camera.x = lerp(INTRO_CLOSEUP_CAM_X, 0, e);
+        camera.y = lerp(INTRO_CLOSEUP_CAM_Y, 0, e);
+
+        if (p >= 1) {
+          camera.zoom = 1;
+          camera.x = 0;
+          camera.y = 0;
+          fireballs = [];
+          hudEl.style.display = 'block';
+          updateHUD();
+          intro.phase = 'done';
+          gamePhase = 'playing';
+          pickNextBossWaypoint();
+          return;
+        }
+      }
+
+      updateFireballs(dt);
+      updateEffects(dt);
+    }
+
+    function update(dt) {
+      gameTime += dt;
+      if (shakeTime > 0) shakeTime = Math.max(0, shakeTime - dt);
+
+      if (gamePhase === 'intro') {
+        updateIntro(dt);
+        return;
+      }
+
+      if (gamePhase === 'playing') {
+        updatePlayer(dt);
+        updateBoss(dt);
+        updateFireballs(dt);
+        checkKeyPickup();
+        updateEffects(dt);
+      } else if (gamePhase === 'winning') {
+        updateBoss(dt);
+        updateEffects(dt);
+      } else if (gamePhase === 'losing') {
+        player.deadTime += dt;
+        player.deadSpin += dt * 11;
+        updateFireballs(dt);
+        updateEffects(dt);
+      }
+    }
+
+    // =========================================
+    // 繪圖函式
+    // =========================================
+    function drawRoundedRect(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.lineTo(x + w - rr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+      ctx.lineTo(x + w, y + h - rr);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+      ctx.lineTo(x + rr, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+      ctx.lineTo(x, y + rr);
+      ctx.quadraticCurveTo(x, y, x + rr, y);
+      ctx.closePath();
+    }
+
+    // 魔王血量條 (固定在畫面最上方)
+    function drawBossHpBar() {
+      const barW = 390;
+      const barH = 30;
+      const barX = (CANVAS_W - barW) / 2;
+      const barY = 26;
+
+      ctx.save();
+
+      // 外框底板
+      ctx.fillStyle = 'rgba(15, 10, 22, 0.85)';
+      ctx.strokeStyle = boss.hp <= KEY_TRIGGER_HP ? '#ffeb3b' : '#ff7043';
+      ctx.lineWidth = 4;
+      drawRoundedRect(barX - 46, barY - 12, barW + 64, barH + 24, 24);
+      ctx.fill();
+      ctx.stroke();
+
+      // 骷髏頭圖示
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('💀', barX - 20, barY + barH / 2 + 1);
+
+      // 20 格血量槽
+      const gap = 6;
+      const segW = (barW - gap * (BOSS_MAX_HP - 1)) / BOSS_MAX_HP;
+
+      for (let i = 0; i < BOSS_MAX_HP; i++) {
+        const sx = barX + i * (segW + gap);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+        drawRoundedRect(sx, barY, segW, barH, 6);
+        ctx.fill();
+
+        if (i < boss.hp) {
+          const segGrad = ctx.createLinearGradient(sx, barY, sx, barY + barH);
+          if (boss.hp <= KEY_TRIGGER_HP) {
+            segGrad.addColorStop(0, '#ffca28');
+            segGrad.addColorStop(1, '#ff3d00');
+          } else {
+            segGrad.addColorStop(0, '#ff5252');
+            segGrad.addColorStop(1, '#b71c1c');
+          }
+          ctx.fillStyle = segGrad;
+          drawRoundedRect(sx, barY, segW, barH, 6);
+          ctx.fill();
+
+          // 血格高光
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+          drawRoundedRect(sx + 3, barY + 3, segW - 6, barH * 0.35, 3);
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // 噴火蓄力地面預警區 (讓小朋友看清楚火焰方向，方便躲避)
+    function drawFireWarning() {
+      if (boss.state !== 'charge' && boss.state !== 'fire') return;
+      const mouth = getBossMouthPos();
+      const pulse = 0.5 + 0.5 * Math.sin(gameTime * 22);
+      const len = 560;
+      const halfSpread = (boss.hp <= KEY_TRIGGER_HP) ? 0.28 : 0.14;
+
+      ctx.save();
+      ctx.translate(mouth.x, mouth.y);
+      ctx.rotate(boss.aimAngle);
+
+      const warnGrad = ctx.createLinearGradient(0, 0, len, 0);
+      const baseAlpha = boss.state === 'charge' ? (0.18 + 0.22 * pulse) : 0.14;
+      warnGrad.addColorStop(0, `rgba(255, 80, 0, ${baseAlpha * 1.4})`);
+      warnGrad.addColorStop(0.7, `rgba(255, 40, 0, ${baseAlpha})`);
+      warnGrad.addColorStop(1, 'rgba(255, 40, 0, 0)');
+
+      ctx.fillStyle = warnGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(len, -Math.tan(halfSpread) * len);
+      ctx.lineTo(len, Math.tan(halfSpread) * len);
+      ctx.closePath();
+      ctx.fill();
+
+      // 預警邊線
+      if (boss.state === 'charge') {
+        ctx.strokeStyle = `rgba(255, 200, 60, ${0.4 + 0.45 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(len * 0.9, 0);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawKey() {
+      if (!keyItem) return;
+      const pulse = 0.5 + 0.5 * Math.sin(gameTime * 5.5);
+      const floatY = Math.sin(gameTime * 3.8) * 7;
+
+      ctx.save();
+      ctx.translate(keyItem.x, keyItem.y + floatY);
+
+      // 金色光暈
+      const halo = ctx.createRadialGradient(0, 0, 8, 0, 0, 68 + 10 * pulse);
+      halo.addColorStop(0, 'rgba(255, 235, 59, 0.72)');
+      halo.addColorStop(0.55, 'rgba(255, 193, 7, 0.25)');
+      halo.addColorStop(1, 'rgba(255, 193, 7, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, 68 + 10 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 旋轉虛線光環
+      ctx.save();
+      ctx.rotate(gameTime * 1.8);
+      ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(0, 0, 48, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      if (assets.key.complete && assets.key.naturalWidth > 0) {
+        const ks = 84;
+        ctx.rotate(Math.sin(gameTime * 3) * 0.12);
+        ctx.drawImage(assets.key, -ks / 2, -ks / 2, ks, ks);
+      } else if (keyEmojiCache) {
+        const s = 0.95 + 0.08 * pulse;
+        ctx.scale(s, s);
+        ctx.drawImage(keyEmojiCache, -55, -55);
+      }
+      ctx.restore();
+    }
+
+    function drawBoss() {
+      const drawX = boss.x + boss.recoilX;
+      const drawY = boss.y + boss.recoilY;
+      const s = boss.size;
+
+      // 若玩家鎖定攻擊怪物，顯示底部目標光圈
+      if (player.attackQueued && boss.hp > 0 && gamePhase === 'playing') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 235, 59, 0.85)';
+        ctx.lineWidth = 5;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath();
+        ctx.ellipse(drawX, drawY - 4, s * 0.42, s * 0.16, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 腳底陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(drawX, drawY, s * 0.42, s * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 受擊閃光光暈
+      if (boss.hitFlash > 0) {
+        const hg = ctx.createRadialGradient(drawX, drawY - s * 0.45, 10, drawX, drawY - s * 0.45, s * 0.6);
+        hg.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+        hg.addColorStop(0.5, 'rgba(255, 235, 59, 0.45)');
+        hg.addColorStop(1, 'rgba(255, 235, 59, 0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY - s * 0.45, s * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 被打敗：使用 bad18-3.webp 上下顛倒、四腳朝天！
+      if (boss.state === 'defeated') {
+        const img = assets.b3;
+        if (img && img.complete && img.naturalWidth > 0) {
+          const p = boss.defeatFlipProgress;
+          const jumpY = Math.sin(p * Math.PI) * 55; // 翻倒瞬間彈起一下
+          ctx.save();
+          ctx.translate(drawX, drawY - s * 0.44 - jumpY);
+          const dirX = boss.facingLeft ? -1 : 1;
+          // 從正立平滑翻成上下顛倒 (scaleY: 1 -> -1)
+          const scaleY = 1 - 2 * Math.min(1, p * 1.4);
+          ctx.scale(dirX, scaleY);
+          ctx.drawImage(img, -s / 2, -s / 2, s, s);
+          ctx.restore();
+        }
+
+        // 頭上暈眩小星星
+        ctx.save();
+        for (let i = 0; i < 3; i++) {
+          const a = gameTime * 4 + (i * Math.PI * 2) / 3;
+          const sx = drawX + Math.cos(a) * 58;
+          const sy = drawY - s * 0.72 + Math.sin(a) * 18;
+          ctx.font = '26px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('⭐', sx, sy);
+        }
+        ctx.restore();
+        return;
+      }
+
+      // 依動作狀態選擇骷髏狗圖片：
+      // 走路：bad18-1 與 bad18-2 交錯
+      // 定住／喘氣：bad18-3
+      // 準備噴火：bad18-4
+      // 噴火：bad18-5
+      let img = assets.b3;
+      let offsetY = 0;
+      let rot = 0;
+
+      if (boss.state === 'walk') {
+        img = (Math.floor(boss.walkAnimTime * 6.5) % 2 === 0) ? assets.b1 : assets.b2;
+        offsetY = -Math.abs(Math.sin(boss.walkAnimTime * 13)) * 8;
+      } else if (boss.state === 'charge') {
+        img = assets.b4;
+        offsetY = Math.sin(gameTime * 35) * 3; // 蓄力微震
+      } else if (boss.state === 'fire') {
+        img = assets.b5;
+        offsetY = Math.sin(gameTime * 28) * 3;
+      } else {
+        img = assets.b3;
+        offsetY = Math.sin(gameTime * 5) * 2.5; // 待機／喘氣呼吸感
+      }
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.translate(drawX, drawY + offsetY);
+        ctx.rotate(rot);
+        if (boss.facingLeft) ctx.scale(-1, 1);
+        ctx.drawImage(img, -s / 2, -s * 0.92, s, s);
+        ctx.restore();
+      }
+
+      // 噴火狀態下在嘴巴處繪製耀眼火舌核心
+      if (boss.state === 'fire') {
+        const mouth = getBossMouthPos();
+        ctx.save();
+        ctx.translate(mouth.x, mouth.y);
+        ctx.rotate(boss.aimAngle);
+        const flicker = 0.88 + Math.random() * 0.25;
+        const coneGrad = ctx.createRadialGradient(20, 0, 5, 45, 0, 72 * flicker);
+        coneGrad.addColorStop(0, '#fff9c4');
+        coneGrad.addColorStop(0.45, '#ff9100');
+        coneGrad.addColorStop(1, 'rgba(255, 61, 0, 0)');
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath();
+        ctx.ellipse(38, 0, 68 * flicker, 32 * flicker, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawFireballs() {
+      for (let f of fireballs) {
+        const angle = Math.atan2(f.vy, f.vx);
+        const pulse = 1 + Math.sin(gameTime * 22 + f.phase) * 0.10;
+        const r = f.radius * pulse;
+
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(angle);
+
+        // 火焰外光暈
+        const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, r * 1.9);
+        glow.addColorStop(0, 'rgba(255, 160, 0, 0.72)');
+        glow.addColorStop(0.55, 'rgba(255, 61, 0, 0.32)');
+        glow.addColorStop(1, 'rgba(255, 40, 0, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 拖尾火舌
+        const tailGrad = ctx.createLinearGradient(r * 0.5, 0, -r * 2.4, 0);
+        tailGrad.addColorStop(0, '#ff6d00');
+        tailGrad.addColorStop(0.6, '#ff3d00');
+        tailGrad.addColorStop(1, 'rgba(255, 23, 68, 0)');
+        ctx.fillStyle = tailGrad;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.3, -r * 0.85);
+        ctx.quadraticCurveTo(-r * 1.4, -r * 0.5, -r * 2.4, 0);
+        ctx.quadraticCurveTo(-r * 1.4, r * 0.5, r * 0.3, r * 0.85);
+        ctx.closePath();
+        ctx.fill();
+
+        // 外層紅橘火球
+        ctx.fillStyle = '#ff5722';
+        ctx.strokeStyle = '#4a0e00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.92, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 內層亮黃火芯
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath();
+        ctx.arc(r * 0.14, 0, r * 0.56, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fffde7';
+        ctx.beginPath();
+        ctx.arc(r * 0.22, 0, r * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    function drawPlayer() {
+      // 受傷無敵閃爍
+      if (gamePhase === 'playing' && player.invincibleTimer > 0 && Math.floor(player.invincibleTimer * 16) % 2 === 0) {
+        return;
+      }
+      if (gamePhase === 'losing' && Math.floor(player.deadTime * 12) % 2 === 1) {
+        return;
+      }
+
+      // 腳底陰影
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+      ctx.beginPath();
+      ctx.ellipse(player.x, player.y, player.size * 0.28, player.size * 0.10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const pImages = [assets.p1, assets.p2, assets.p3];
+      let currentImg = pImages[player.frame] || assets.p1;
+      if (!(currentImg && currentImg.complete && currentImg.naturalWidth > 0)) {
+        currentImg = assets.p1;
+      }
+      if (!(currentImg && currentImg.complete && currentImg.naturalWidth > 0)) return;
+
+      const s = player.size;
+      ctx.save();
+      if (gamePhase === 'losing') {
+        ctx.translate(player.x, player.y - s * 0.5);
+        ctx.rotate(player.deadSpin);
+        ctx.translate(0, s * 0.5);
+      } else {
+        const offsetY = player.isMoving ? Math.sin(player.walkCycle * 2) * 5 : 0;
+        const rot = player.isMoving ? Math.sin(player.walkCycle) * 0.16 : 0;
+        ctx.translate(player.x, player.y + offsetY);
+        ctx.rotate(rot);
+      }
+      if (player.isFacingLeft) ctx.scale(-1, 1);
+      ctx.drawImage(currentImg, -s / 2, -s * 0.94, s, s);
+      ctx.restore();
+    }
+
+    function draw() {
+      if (gamePhase === 'exiting') return;
+
+      ctx.save();
+
+      if (shakeTime > 0) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        const m = shakeIntensity * (shakeTime / 0.32);
+        ctx.translate((Math.random() - 0.5) * m * 2, (Math.random() - 0.5) * m * 2);
+      }
+
+      // 世界座標攝影機變換 (開場特寫 Zoom In / Zoom Out)
+      ctx.save();
+      if (camera.zoom !== 1 || camera.x !== 0 || camera.y !== 0) {
+        ctx.scale(camera.zoom, camera.zoom);
+        ctx.translate(-camera.x, -camera.y);
+      }
+
+      // 1. 山洞底圖快取
+      if (bgCacheCanvas) {
+        ctx.drawImage(bgCacheCanvas, 0, 0);
+      }
+
+      // 2. 點擊移動的地面波紋提示
+      if (tapMarker) {
+        const p = tapMarker.t / 0.35;
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.75 * (1 - p)})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(tapMarker.x, tapMarker.y, 12 + p * 34, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. 噴火預警線
+      drawFireWarning();
+
+      // 4. 鑰匙
+      drawKey();
+
+      // 5. 依前後景 Y 座標排序繪製人偶與骷髏狗
+      if (player.y < boss.y) {
+        drawPlayer();
+        drawBoss();
+      } else {
+        drawBoss();
+        drawPlayer();
+      }
+
+      // 6. 火焰投射物
+      drawFireballs();
+
+      // 7. 角色專屬攻擊特效 (由 player.js 繪製)
+      const now = performance.now();
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const fx = activeEffects[i];
+        const progress = (now - fx.startTime) / fx.duration;
+        if (progress >= 1) {
+          activeEffects.splice(i, 1);
+        } else if (typeof charConfig.drawEffect === 'function') {
+          ctx.save();
+          charConfig.drawEffect(ctx, progress, fx.startX, fx.startY, fx.targetX, fx.targetY);
+          ctx.restore();
+        }
+      }
+
+      // 8. 粒子與慶祝彩帶
+      for (let p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (let c of confetti) {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rot);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+        ctx.restore();
+      }
+
+      // 9. 浮動文字
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let pop of popups) {
+        const p = pop.t / pop.duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - Math.pow(p, 3);
+        ctx.font = `bold ${pop.size}px sans-serif`;
+        ctx.fillStyle = pop.color;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 5;
+        ctx.strokeText(pop.text, pop.x, pop.y - p * 60);
+        ctx.fillText(pop.text, pop.x, pop.y - p * 60);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // 10. 受傷全螢幕紅光回饋
+      if (player.hurtFlash > 0) {
+        ctx.fillStyle = `rgba(255, 30, 30, ${player.hurtFlash * 0.9})`;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+
+      // 11. 頂部魔王血量條 (開場特寫動畫期間隱藏，恢復正常視角開始遊戲後顯示)
+      if (gamePhase !== 'intro') {
+        drawBossHpBar();
+      }
+
+      ctx.restore();
+    }
+
+    // =========================================
+    // 觸控／滑鼠操作：點怪物進攻，點空地走位躲火
+    // =========================================
+    canvas.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName.toLowerCase() === 'button') return;
+      if (gamePhase !== 'playing') return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      // 判斷是否點擊到骷髏狗身上 (寬鬆點擊半徑，方便小朋友觸控)
+      const bossCenterX = boss.x;
+      const bossCenterY = boss.y - boss.size * 0.45;
+      const distToBossTap = Math.hypot(clickX - bossCenterX, clickY - bossCenterY);
+
+      if (boss.hp > 0 && distToBossTap <= boss.size * 0.58) {
+        player.attackQueued = true;
+        const strike = getStrikePosForBoss();
+        player.targetX = strike.x;
+        player.targetY = strike.y;
+        player.isMoving = true;
+        return;
+      }
+
+      // 點到空地或鑰匙 -> 取消攻擊鎖定，直接快速走位躲避噴火
+      player.attackQueued = false;
+      const clampedX = Math.max(ARENA.minX, Math.min(ARENA.maxX, clickX));
+      const clampedY = Math.max(ARENA.minY, Math.min(ARENA.maxY, clickY));
+
+      player.targetX = clampedX;
+      player.targetY = clampedY;
+      if (Math.abs(clampedX - player.x) > 3) {
+        player.isFacingLeft = clampedX < player.x;
+      }
+      player.isMoving = true;
+      tapMarker = { x: clampedX, y: clampedY, t: 0 };
+    });
+  </script>
+</body>
+</html>

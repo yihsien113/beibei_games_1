@@ -906,6 +906,7 @@
     // 🌟 追蹤大廳動畫迴圈與狀態，用於安全釋放記憶體
     let lobbyAnimId = null;
     let isExitingLobby = false;
+    let skipSavePosOnExit = false;
 
     // ==========================================
     // 🌟 遊戲版本與更新公告設定 🌟
@@ -942,8 +943,8 @@
 <ruby>"<rt></rt></ruby>
 <ruby>開<rt>ㄎㄞ</rt></ruby>
 <ruby>放<rt>ㄈㄤˋ</rt></ruby>
-<ruby>囉<rt>ㄌㄨㄛˊ</rt></ruby>
-<span>!</span>
+<ruby>囉<rt>ㄌㄨㄛ</rt></ruby>
+<span>!</span></b></p>
         `;
 
     try {
@@ -971,6 +972,7 @@
       refreshGameVersion();
       // 上次是在魔法森林(第二大廳)離開的：開啟遊戲 / 換裝置登入後回到那裡
       if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen() && isForestPortalIntroDone()) {
+        skipSavePosOnExit = true;
         sessionStorage.setItem('returning_from_subpage', '1');
         window.location.replace('lobby1.html');
         return;
@@ -1020,7 +1022,7 @@
         equippedCharKey = newCharKey;
         if (playerImg) {
           playerImg.src = equippedCharKey === 'bad19'
-            ? 'assets/bad/bad19-2.webp'
+            ? 'assets/bad/bad19-1.webp'
             : `assets/player/${equippedCharKey}-1.webp`;
         }
       }
@@ -1030,9 +1032,11 @@
         if (!player.isMoving) {
           const sx = parseFloat(localStorage.getItem('lobbyPlayerX'));
           const sy = parseFloat(localStorage.getItem('lobbyPlayerY'));
-          if (!isNaN(sx) && !isNaN(sy) && (Math.abs(sx - player.x) > 1 || Math.abs(sy - player.y) > 1)) {
-            player.x = player.targetX = sx;
-            player.y = player.targetY = sy;
+          const targetX = !isNaN(sx) ? sx : DEFAULT_PLAYER_X;
+          const targetY = !isNaN(sy) ? sy : DEFAULT_PLAYER_Y;
+          if (Math.abs(targetX - player.x) > 1 || Math.abs(targetY - player.y) > 1) {
+            player.x = player.targetX = targetX;
+            player.y = player.targetY = targetY;
             if (!isTutorialMode && !isForestIntroMode) {
               cameraX = player.x - (canvas.width / scale) / 2;
               cameraY = player.y - (canvas.height / scale) / 2;
@@ -1180,6 +1184,7 @@
       } else if (isForestPortalOpen() && !isForestPortalIntroDone()) {
         checkForestPortalIntro(false);
       } else if (localStorage.getItem('last_lobby') === 'lobby1' && isForestPortalOpen() && isForestPortalIntroDone()) {
+        skipSavePosOnExit = true;
         sessionStorage.setItem('returning_from_subpage', '1');
         cleanupLobbyAndGo('lobby1.html');
       }
@@ -1314,7 +1319,7 @@
         window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>衣<rt>ㄧ</rt></ruby><ruby>櫥<rt>ㄔㄨˊ</rt></ruby>，<ruby>裡<rt>ㄌㄧˇ</rt></ruby><ruby>面<rt>ㄇㄧㄢˋ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>更<rt>ㄍㄥ</rt></ruby><ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>偶<rt>ㄡˇ</rt></ruby>`, 'assets/mp3/lobby-6.mp3');
       } else if (lobbyTutorialStep === 9) {
         highlightDOM('btn-sticker');
-        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby>，<ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>解<rt>ㄐㄧㄝˇ</rt></ruby><ruby>挑<rt>ㄊㄧㄠ</rt></ruby><ruby>戰<rt>ㄓㄢˋ</rt></ruby><ruby>或<rt>ㄏㄨㄛˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>利<rt>ㄌㄧˋ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>，<ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>`, 'assets/mp3/lobby-7.mp3');
+        window.RPGDialog.show(`<ruby>這<rt>ㄓㄜˋ</rt></ruby><ruby>邊<rt>ㄅㄧㄢ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><ruby>本<rt>ㄅㄣˇ</rt></ruby>，<ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>解<rt>ㄐㄧㄝˇ</rt></ruby><ruby>挑<rt>ㄊㄧㄠˇ</rt></ruby><ruby>戰<rt>ㄓㄢˋ</rt></ruby><ruby>或<rt>ㄏㄨㄛˋ</rt></ruby><ruby>是<rt>ㄕˋ</rt></ruby><ruby>利<rt>ㄌㄧˋ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>，<ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>可<rt>ㄎㄜˇ</rt></ruby><ruby>以<rt>ㄧˇ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby>`, 'assets/mp3/lobby-7.mp3');
       } else if (lobbyTutorialStep === 10) {
         endLobbyTutorial();
         window.RPGDialog.show(`<ruby>開<rt>ㄎㄞ</rt></ruby><ruby>始<rt>ㄕˇ</rt></ruby><ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>的<rt>˙ㄉㄜ</rt></ruby><ruby>探<rt>ㄊㄢˋ</rt></ruby><ruby>險<rt>ㄒㄧㄢˇ</rt></ruby><ruby>吧<rt>˙ㄅㄚ</rt></ruby><span>!</span>`, 'assets/mp3/lobby-8.mp3');
@@ -1502,7 +1507,7 @@
 
     const playerImg = new Image();
     playerImg.src = equippedCharKey === 'bad19'
-      ? 'assets/bad/bad19-2.webp'
+      ? 'assets/bad/bad19-1.webp'
       : `assets/player/${equippedCharKey}-1.webp`;
 
     const DEFAULT_PLAYER_X = 943;
@@ -1515,7 +1520,7 @@
     const initialY = (savedY !== null && !isNaN(parseFloat(savedY))) ? parseFloat(savedY) : DEFAULT_PLAYER_Y;
 
     function savePlayerPosition() {
-      if (isTutorialMode || isForestIntroMode) return; 
+      if (isTutorialMode || isForestIntroMode || skipSavePosOnExit) return; 
       localStorage.setItem('lobbyPlayerX', Math.round(player.x));
       localStorage.setItem('lobbyPlayerY', Math.round(player.y));
     }

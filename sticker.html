@@ -28,16 +28,17 @@
       padding: 0;
     }
 
-    /* ====== 頂部 HUD (EXIT 按鈕與星星) ====== */
+    /* ====== 頂部 HUD (EXIT 按鈕、分冊頁碼與星星) ====== */
     .top-bar {
-      position: absolute;
-      top: 15px;
-      left: 15px;
-      right: 15px;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      z-index: 100;
+      gap: 6px;
+      z-index: 200;
       pointer-events: none;
     }
     .top-bar > * {
@@ -46,22 +47,509 @@
     .btn-back {
       background: #333;
       color: white;
-      padding: 8px 18px;
+      padding: 6px 12px;
       border-radius: 20px;
       border: none;
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: transform 0.12s ease;
     }
+    .btn-back:active {
+      transform: scale(0.95);
+    }
+    .btn-back .char-block {
+      margin-right: 0.35em;
+      margin-bottom: 0;
+    }
+    .btn-back .zh-text {
+      flex-wrap: nowrap;
+    }
+
+    .book-header-pill {
+      position: absolute;
+      top: 16%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 60;
+      pointer-events: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #fef3c7;
+      border: 2px solid rgba(251, 191, 36, 0.7);
+      padding: 2px 11px;
+      border-radius: 999px;
+      font-size: clamp(11px, 3vw, 15px);
+      font-weight: 800;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      white-space: nowrap;
+      min-width: 0;
+      max-width: 82%;
+      overflow: hidden;
+    }
+    .book-header-pill.hidden {
+      display: none;
+    }
+    .book-header-pill .zh-text {
+      flex-wrap: nowrap;
+    }
+    .book-header-pill .char-block {
+      margin-right: 0.3em;
+      margin-bottom: 0;
+    }
+    .book-header-sep {
+      color: #fbbf24;
+      font-weight: 900;
+    }
+
     .coin-display {
-      font-size: 22px;
+      font-size: 15px;
       font-weight: bold;
       color: #ffeb3b;
       background: rgba(0,0,0,0.6);
-      padding: 6px 16px;
+      padding: 5px 11px;
       border-radius: 15px;
       backdrop-filter: blur(4px);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ====== 魔法貼紙書架系統（手機優先 + PWA 支援直向捲動） ====== */
+    .bookshelf-view {
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      overscroll-behavior-y: contain;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 54px 10px 18px;
+      background-size: cover;
+      background-position: center;
+      z-index: 20;
+    }
+    .bookshelf-view.hidden {
+      display: none;
+    }
+    .bookshelf-inner {
+      width: 100%;
+      max-width: 920px;
+      margin: auto 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .shelf-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+    .shelf-header-title {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: clamp(24px, 7vw, 34px);
+      font-weight: 900;
+      color: #fef3c7;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.75);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .shelf-header-title .zh-text {
+      flex-wrap: nowrap;
+    }
+    .shelf-header-title .char-block {
+      margin-right: 0.42em;
+      margin-bottom: 0;
+    }
+    .shelf-total-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 2px solid rgba(251, 191, 36, 0.6);
+      color: #fde68a;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: clamp(14px, 4vw, 18px);
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      white-space: nowrap;
+    }
+    .shelf-total-pill .zh-text {
+      flex-wrap: nowrap;
+    }
+    .shelf-total-pill .char-block {
+      margin-right: 0.32em;
+      margin-bottom: 0;
+    }
+
+    .bookshelf-cabinet {
+      width: 100%;
+      border: 5px solid #5c3a21;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(42, 24, 14, 0.94) 0%, rgba(22, 12, 8, 0.97) 100%);
+      box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.78),
+        inset 0 14px 30px rgba(0, 0, 0, 0.85),
+        inset 0 0 0 2px rgba(251, 191, 36, 0.22);
+      padding: 14px 10px 16px;
+      position: relative;
+    }
+    .bookshelf-cabinet::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 13px;
+      background-image:
+        radial-gradient(circle at 15% 22%, rgba(253, 224, 71, 0.16) 0 2px, transparent 3px),
+        radial-gradient(circle at 82% 18%, rgba(253, 224, 71, 0.14) 0 2px, transparent 3px),
+        radial-gradient(circle at 48% 55%, rgba(253, 224, 71, 0.12) 0 2.5px, transparent 4px),
+        radial-gradient(circle at 22% 84%, rgba(253, 224, 71, 0.14) 0 2px, transparent 3px),
+        radial-gradient(circle at 88% 76%, rgba(253, 224, 71, 0.16) 0 2px, transparent 3px);
+      pointer-events: none;
+    }
+    .bookshelf-grid {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 18px 10px;
+    }
+    .shelf-book-slot {
+      width: calc(33.333% - 7px);
+      max-width: 126px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .shelf-ledge {
+      width: 106%;
+      height: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      background: linear-gradient(180deg, #925e2e 0%, #5c3a21 55%, #38200f 100%);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.72), inset 0 1px 1px rgba(255, 224, 178, 0.38);
+      pointer-events: none;
+    }
+
+    @keyframes shelf-new-glow {
+      0%, 100% {
+        box-shadow: 0 0 0 3px #fbbf24, 0 0 18px rgba(251, 191, 36, 0.75);
+      }
+      50% {
+        box-shadow: 0 0 0 4px #fef08a, 0 0 28px rgba(253, 224, 71, 0.95);
+      }
+    }
+
+    .shelf-book-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      border: none;
+      padding: 0;
+      background: transparent;
+      border-radius: 5px 10px 10px 5px;
+      cursor: pointer;
+      transition: transform 0.18s ease-out;
+      box-shadow: 3px 4px 0 #e7dcc4, 5px 8px 14px rgba(0, 0, 0, 0.7);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .shelf-book-card:hover {
+      transform: translateY(-6px) scale(1.02);
+    }
+    .shelf-book-card:active {
+      transform: scale(0.96);
+    }
+
+    .shelf-book-cover {
+      position: absolute;
+      inset: 0;
+      border-radius: 5px 10px 10px 5px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10% 6% 8% 14%;
+    }
+    .shelf-book-card.has-new .shelf-book-cover {
+      animation: shelf-new-glow 1.6s infinite ease-in-out;
+    }
+    .shelf-book-custom-cover {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+    .shelf-book-spine {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 11%;
+      box-shadow: inset -2px 0 6px rgba(0, 0, 0, 0.5);
+      z-index: 2;
+    }
+    .shelf-book-spine::before,
+    .shelf-book-spine::after {
+      content: '';
+      position: absolute;
+      left: 14%;
+      right: 14%;
+      height: 3px;
+      background: rgba(253, 230, 138, 0.65);
+      border-radius: 2px;
+    }
+    .shelf-book-spine::before { top: 14%; }
+    .shelf-book-spine::after { bottom: 14%; }
+
+    .shelf-book-frame {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      bottom: 4px;
+      left: calc(11% + 3px);
+      border: 1.5px solid;
+      border-radius: 3px 7px 7px 3px;
+      opacity: 0.72;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .shelf-book-medallion {
+      position: relative;
+      z-index: 3;
+      width: 56%;
+      aspect-ratio: 1 / 1;
+      border-radius: 999px;
+      border: 2px solid;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9%;
+      box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .shelf-book-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+    }
+
+    .shelf-book-title {
+      position: relative;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: clamp(12px, 3.4vw, 16px);
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+      line-height: 1.1;
+    }
+    .shelf-book-title .zh-text {
+      flex-wrap: nowrap;
+    }
+    .shelf-book-title .char-block {
+      margin-right: 0.28em;
+      margin-bottom: 0;
+    }
+    .shelf-book-icon {
+      font-size: 0.92em;
+      flex-shrink: 0;
+    }
+
+    .shelf-book-progress-wrap {
+      position: relative;
+      z-index: 4;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .shelf-book-progress-wrap.on-custom-cover {
+      margin-top: auto;
+      background: rgba(15, 23, 42, 0.78);
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+    .shelf-book-progress-text {
+      color: #fef3c7;
+      font-size: clamp(10px, 2.7vw, 12px);
+      font-weight: 800;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    }
+    .shelf-book-progress-track {
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+    }
+    .shelf-book-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    .shelf-new-badge {
+      position: absolute;
+      top: -6px;
+      right: -5px;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      color: #fff;
+      font-weight: 900;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 2px solid #fef08a;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.75);
+      z-index: 15;
+      letter-spacing: 0.5px;
+      animation: badge-bounce 1s infinite ease-in-out;
+      pointer-events: none;
+    }
+
+    @media (min-width: 640px) {
+      .top-bar {
+        top: 14px;
+        left: 14px;
+        right: 14px;
+        gap: 8px;
+      }
+      .btn-back {
+        padding: 8px 16px;
+        font-size: 18px;
+        gap: 6px;
+      }
+      .book-header-pill {
+        padding: 3px 15px;
+        font-size: clamp(13px, 2.1vh, 18px);
+        max-width: 78%;
+        gap: 6px;
+      }
+      .coin-display {
+        padding: 6px 14px;
+        font-size: 22px;
+      }
+      .bookshelf-view {
+        padding: 62px 20px 18px;
+      }
+      .bookshelf-inner {
+        gap: 10px;
+      }
+      .shelf-header {
+        gap: 8px;
+      }
+      .shelf-header-title {
+        font-size: clamp(46px, 6vw, 72px);
+        gap: 14px;
+      }
+      .shelf-total-pill {
+        font-size: clamp(24px, 3.2vw, 36px);
+        padding: 7px 24px;
+        border-width: 3px;
+        gap: 12px;
+      }
+      .bookshelf-cabinet {
+        max-width: 660px;
+        border-width: 8px;
+        border-radius: 26px;
+        padding: 18px 24px 20px;
+      }
+      .bookshelf-cabinet::before {
+        border-radius: 18px;
+      }
+      .bookshelf-grid {
+        gap: 20px 24px;
+      }
+      .shelf-book-slot {
+        width: calc(33.333% - 16px);
+        max-width: clamp(135px, 18vh, 180px);
+      }
+      .shelf-ledge {
+        width: 108%;
+        height: 14px;
+        margin-top: 8px;
+        border-radius: 6px;
+        box-shadow: 0 7px 14px rgba(0, 0, 0, 0.72), inset 0 1px 1px rgba(255, 224, 178, 0.38);
+      }
+      .shelf-book-card {
+        border-radius: 6px 14px 14px 6px;
+        box-shadow: 5px 5px 0 #e7dcc4, 8px 12px 22px rgba(0, 0, 0, 0.72);
+      }
+      .shelf-book-cover {
+        border-radius: 6px 14px 14px 6px;
+        padding: 12% 8% 10% 15%;
+      }
+      .shelf-book-frame {
+        top: 7px;
+        right: 7px;
+        bottom: 7px;
+        left: calc(11% + 5px);
+        border-width: 2px;
+        border-radius: 4px 10px 10px 4px;
+      }
+      .shelf-book-medallion {
+        width: 58%;
+        border-width: 3px;
+        padding: 10%;
+      }
+      .shelf-book-title {
+        font-size: clamp(18px, 2.2vw, 24px);
+        gap: 4px;
+      }
+      .shelf-book-title .char-block {
+        margin-right: 0.36em;
+      }
+      .shelf-book-progress-wrap {
+        gap: 4px;
+      }
+      .shelf-book-progress-wrap.on-custom-cover {
+        padding: 6px 8px;
+        border-radius: 10px;
+      }
+      .shelf-book-progress-text {
+        font-size: clamp(13px, 1.5vw, 15px);
+      }
+      .shelf-book-progress-track {
+        height: 8px;
+      }
+      .shelf-new-badge {
+        top: -8px;
+        right: -8px;
+        font-size: 14px;
+        padding: 2px 9px;
+        border-width: 3px;
+      }
     }
 
     /* 擴大貼紙格的視覺與對位範圍 */
@@ -170,43 +658,74 @@
 </head>
 <body class="flex items-center justify-center min-h-screen m-0 p-2 md:p-6 overflow-hidden">
 
-  <!-- 頂部列：離開按鈕與星星 -->
+  <!-- 頂部列：離開 / 返回按鈕與星星 -->
   <div class="top-bar">
-    <button class="btn-back" onclick="window.location.replace('index.html')">🔙 EXIT</button>
+    <button id="btn-top-back" class="btn-back" onclick="handleTopBack()">🔙 EXIT</button>
     <div class="coin-display"><span id="myCoins">0</span> ⭐</div>
   </div>
 
-  <!-- 主畫面書本容器 -->
-  <div id="book-container" class="w-full max-w-[900px] aspect-[3/4] max-h-[95vh] relative mx-auto flex flex-col justify-center touch-none">
-    
-    <!-- 新手引導：手勢滑動示意圖 -->
-    <div id="swipe-tutorial" class="tutorial-hand hidden">
-      <div class="relative flex items-center justify-center">
-        <div class="absolute w-12 h-12 bg-white/50 rounded-full animate-ping"></div>
-        <div class="text-6xl drop-shadow-2xl origin-bottom -rotate-12 select-none">👆</div>
+  <!-- 魔法貼紙書架視圖 -->
+  <div id="bookshelf-view" class="bookshelf-view">
+    <div class="bookshelf-inner">
+      <div class="shelf-header">
+        <div class="shelf-header-title">
+          <span>📖</span>
+          <span class="zh-text"><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><ruby>書<rt>ㄕㄨ</rt></ruby><ruby>架<rt>ㄐㄧㄚˋ</rt></ruby></span>
+        </div>
+        <div class="shelf-total-pill">
+          <span>✨</span>
+          <span class="zh-text"><ruby>總<rt>ㄗㄨㄥˇ</rt></ruby><ruby>收<rt>ㄕㄡ</rt></ruby><ruby>集<rt>ㄐㄧˊ</rt></ruby></span>
+          <span id="shelf-total-count"></span>
+        </div>
+      </div>
+
+      <div id="bookshelf-cabinet" class="bookshelf-cabinet">
+        <div id="bookshelf-grid" class="bookshelf-grid"></div>
       </div>
     </div>
+  </div>
 
-    <!-- 多頁 3D 魔法書結構 -->
-    <div id="book-wrapper" class="w-full h-full relative select-none" style="perspective: 2000px;">
+  <!-- 主畫面書本視圖 -->
+  <div id="book-view" class="fixed inset-0 flex items-center justify-center p-2 md:p-6 overflow-hidden hidden">
+    <div id="book-container" class="w-full max-w-[900px] aspect-[3/4] max-h-[95vh] relative mx-auto flex flex-col justify-center touch-none">
       
-      <!-- 靜態最底層 -->
-      <div class="absolute inset-0 z-0 pointer-events-none" style="transform: translateZ(-5px); -webkit-transform: translateZ(-5px);">
-        <div class="absolute w-1/2 h-full left-0 overflow-hidden rounded-l-[12px] shadow-[-10px_20px_40px_rgba(0,0,0,0.6)]">
-          <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
-          <div id="canvas-base-left" class="absolute w-[200%] h-full left-0"></div>
-        </div>
-        <div class="absolute w-1/2 h-full right-0 overflow-hidden rounded-r-[12px] shadow-[10px_20px_40px_rgba(0,0,0,0.6)]">
-          <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
-          <div id="canvas-base-right" class="absolute w-[200%] h-full right-0"></div>
+      <!-- 分冊名稱與頁碼（對齊底圖 y=192 / 1200 = 16% 位置） -->
+      <div id="book-header-pill" class="book-header-pill hidden">
+        <span id="book-header-icon"></span>
+        <span id="book-header-title" class="zh-text"></span>
+        <span class="book-header-sep">·</span>
+        <span id="book-page-indicator">1 / 1</span>
+      </div>
+
+      <!-- 新手引導：手勢滑動示意圖 -->
+      <div id="swipe-tutorial" class="tutorial-hand hidden">
+        <div class="relative flex items-center justify-center">
+          <div class="absolute w-12 h-12 bg-white/50 rounded-full animate-ping"></div>
+          <div class="text-6xl drop-shadow-2xl origin-bottom -rotate-12 select-none">👆</div>
         </div>
       </div>
-      
-      <!-- 動態 3D 翻頁層的容器 (移除 preserve-3d，完全交由 z-index 嚴格排序防閃爍) -->
-      <div id="book-pages" class="absolute inset-0 z-10 pointer-events-none"></div>
-      
-      <!-- 書脊中央凹痕陰影 -->
-      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-full bg-gradient-to-r from-transparent via-black/40 to-transparent pointer-events-none z-50"></div>
+
+      <!-- 多頁 3D 魔法書結構 -->
+      <div id="book-wrapper" class="w-full h-full relative select-none" style="perspective: 2000px;">
+        
+        <!-- 靜態最底層 -->
+        <div class="absolute inset-0 z-0 pointer-events-none" style="transform: translateZ(-5px); -webkit-transform: translateZ(-5px);">
+          <div class="absolute w-1/2 h-full left-0 overflow-hidden rounded-l-[12px] shadow-[-10px_20px_40px_rgba(0,0,0,0.6)]">
+            <div id="base-bg-left" class="absolute w-[200%] h-full left-0 bg-[length:100%_100%]"></div>
+            <div id="canvas-base-left" class="absolute w-[200%] h-full left-0"></div>
+          </div>
+          <div class="absolute w-1/2 h-full right-0 overflow-hidden rounded-r-[12px] shadow-[10px_20px_40px_rgba(0,0,0,0.6)]">
+            <div id="base-bg-right" class="absolute w-[200%] h-full right-0 bg-[length:100%_100%]"></div>
+            <div id="canvas-base-right" class="absolute w-[200%] h-full right-0"></div>
+          </div>
+        </div>
+        
+        <!-- 動態 3D 翻頁層的容器 (移除 preserve-3d，完全交由 z-index 嚴格排序防閃爍) -->
+        <div id="book-pages" class="absolute inset-0 z-10 pointer-events-none"></div>
+        
+        <!-- 書脊中央凹痕陰影 -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-full bg-gradient-to-r from-transparent via-black/40 to-transparent pointer-events-none z-50"></div>
+      </div>
     </div>
   </div>
 
@@ -316,310 +835,407 @@
       window.Bopomofo = { render: renderAll, convert: convertRuby };
     })();
 
-    // ====== 1. 貼紙資料庫設定 ======
+    // ====== 1. 書架、分冊與貼紙資料庫設定 ======
+    const SHELF_CONFIG = {
+      shelfBg: '', // 預留書架底圖路徑（例：'assets/system/shelf.webp'），留空顯示純 CSS 魔法書架
+      defaultPageBg: 'assets/system/sticker.webp' // 預設翻頁內頁底圖
+    };
+
+    const BOOK_CATEGORIES = [
+      {
+        id: 'stages',
+        titleHtml: '<ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby>',
+        icon: '🏰',
+        previewSrc: 'assets/sticker/map5.webp',
+        coverImg: '', // 預留專屬封面圖路徑，留空使用 CSS 精裝書封面
+        pageBg: '',   // 預留專屬內頁底圖路徑，留空共用 SHELF_CONFIG.defaultPageBg
+        theme: {
+          bg: 'linear-gradient(145deg, #1e3a8a 0%, #312e81 58%, #1e1b4b 100%)',
+          spine: '#172554',
+          border: '#fbbf24',
+          glow: 'rgba(251, 191, 36, 0.35)',
+          bar: 'linear-gradient(90deg, #f59e0b, #fde047)'
+        }
+      },
+      {
+        id: 'dolls',
+        titleHtml: '<ruby>人<rt>ㄖㄣˊ</rt></ruby><ruby>偶<rt>ㄡˇ</rt></ruby>',
+        icon: '👗',
+        previewSrc: 'assets/player/han1-1.webp',
+        coverImg: '',
+        pageBg: '',
+        theme: {
+          bg: 'linear-gradient(145deg, #9d174d 0%, #701a75 58%, #4a044e 100%)',
+          spine: '#500724',
+          border: '#f9a8d4',
+          glow: 'rgba(244, 114, 182, 0.35)',
+          bar: 'linear-gradient(90deg, #ec4899, #f9a8d4)'
+        }
+      },
+      {
+        id: 'explore',
+        titleHtml: '<ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby>',
+        icon: '🗺️',
+        previewSrc: 'assets/sticker/lobby2.webp',
+        coverImg: '',
+        pageBg: '',
+        theme: {
+          bg: 'linear-gradient(145deg, #065f46 0%, #0f766e 58%, #064e3b 100%)',
+          spine: '#022c22',
+          border: '#6ee7b7',
+          glow: 'rgba(52, 211, 153, 0.35)',
+          bar: 'linear-gradient(90deg, #10b981, #6ee7b7)'
+        }
+      },
+      {
+        id: 'shop',
+        titleHtml: '<ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>',
+        icon: '🛍️',
+        previewSrc: 'assets/sticker/5.webp',
+        coverImg: '',
+        pageBg: '',
+        theme: {
+          bg: 'linear-gradient(145deg, #9a3412 0%, #991b1b 58%, #7c2d12 100%)',
+          spine: '#450a0a',
+          border: '#fdba74',
+          glow: 'rgba(251, 146, 60, 0.35)',
+          bar: 'linear-gradient(90deg, #f97316, #fde047)'
+        }
+      },
+      {
+        id: 'mystery',
+        titleHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby>',
+        icon: '🗝️',
+        previewSrc: 'assets/sticker/key1.webp',
+        coverImg: '',
+        pageBg: '',
+        theme: {
+          bg: 'linear-gradient(145deg, #4c1d95 0%, #3b0764 58%, #1e1b4b 100%)',
+          spine: '#2e1065',
+          border: '#c4b5fd',
+          glow: 'rgba(167, 139, 250, 0.4)',
+          bar: 'linear-gradient(90deg, #8b5cf6, #ddd6fe)'
+        }
+      }
+    ];
+
     const stickersConfig = [
-  { id: 'smap1', src: 'assets/bad/bad1-3.webp', 
+  { id: 'smap1', category: 'stages', src: 'assets/bad/bad1-3.webp', 
     name: '<ruby>宇<rt>ㄩˇ</rt></ruby><ruby>宙<rt>ㄓㄡˋ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>獸<rt>ㄕㄡˋ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap2', src: 'assets/bad/bad2.webp', 
+  { id: 'smap2', category: 'stages', src: 'assets/bad/bad2.webp', 
     name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>強<rt>ㄑㄧㄤˊ</rt></ruby><ruby>先<rt>ㄒㄧㄢ</rt></ruby><ruby>生<rt>ㄕㄥ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>二<rt>ㄦˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap3', src: 'assets/sticker/map3.webp', 
+  { id: 'smap3', category: 'stages', src: 'assets/sticker/map3.webp', 
     name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>石<rt>ㄕˊ</rt></ruby><ruby>碑<rt>ㄅㄟ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>三<rt>ㄙㄢ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap4', src: 'assets/sticker/map4.webp', 
+  { id: 'smap4', category: 'stages', src: 'assets/sticker/map4.webp', 
     name: '<ruby>動<rt>ㄉㄨㄥˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>使<rt>ㄕˇ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>四<rt>ㄙˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap5', src: 'assets/sticker/map5.webp', 
+  { id: 'smap5', category: 'stages', src: 'assets/sticker/map5.webp', 
     name: '<ruby>城<rt>ㄔㄥˊ</rt></ruby><ruby>堡<rt>ㄅㄠˇ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>五<rt>ㄨˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap6', src: 'assets/sticker/map6.webp', 
+  { id: 'smap6', category: 'stages', src: 'assets/sticker/map6.webp', 
     name: '<ruby>高<rt>ㄍㄠ</rt></ruby><ruby>塔<rt>ㄊㄚˇ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>六<rt>ㄌㄧㄡˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap7', src: 'assets/sticker/map7.webp', 
+  { id: 'smap7', category: 'stages', src: 'assets/sticker/map7.webp', 
     name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>陣<rt>ㄓㄣˋ</rt></ruby>', 
-    condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>七<rt>ㄑ一</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
+    condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>七<rt>ㄑㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap8', src: 'assets/sticker/map8.webp', 
+  { id: 'smap8', category: 'stages', src: 'assets/sticker/map8.webp', 
     name: '<ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>底<rt>ㄉㄧˇ</rt></ruby><ruby>數<rt>ㄕㄨˋ</rt></ruby><ruby>獨<rt>ㄉㄨˊ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>八<rt>ㄅㄚ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap9', src: 'assets/sticker/map9.webp', 
+  { id: 'smap9', category: 'stages', src: 'assets/sticker/map9.webp', 
     name: '<ruby>船<rt>ㄔㄨㄢˊ</rt></ruby><ruby>上<rt>ㄕㄤˋ</rt></ruby><ruby>派<rt>ㄆㄞˋ</rt></ruby><ruby>對<rt>ㄉㄨㄟˋ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>九<rt>ㄐㄧㄡˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap10', src: 'assets/sticker/map10.webp', 
+  { id: 'smap10', category: 'stages', src: 'assets/sticker/map10.webp', 
     name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>方<rt>ㄈㄤ</rt></ruby><ruby>陣<rt>ㄓㄣˋ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap11', src: 'assets/sticker/map11.webp', 
+  { id: 'smap11', category: 'stages', src: 'assets/sticker/map11.webp', 
     name: '<ruby>保<rt>ㄅㄠˇ</rt></ruby><ruby>持<rt>ㄔˊ</rt></ruby><ruby>平<rt>ㄆㄧㄥˊ</rt></ruby><ruby>衡<rt>ㄏㄥˊ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>一<rt>ㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap12', src: 'assets/sticker/map12.webp', 
+  { id: 'smap12', category: 'stages', src: 'assets/sticker/map12.webp', 
     name: '<ruby>深<rt>ㄕㄣ</rt></ruby><ruby>海<rt>ㄏㄞˇ</rt></ruby><ruby>巨<rt>ㄐㄩˋ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>二<rt>ㄦˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap13', src: 'assets/sticker/map13.webp', 
+  { id: 'smap13', category: 'stages', src: 'assets/sticker/map13.webp', 
     name: '<ruby>你<rt>ㄋㄧˇ</rt></ruby><ruby>畫<rt>ㄏㄨㄚˋ</rt></ruby><ruby>我<rt>ㄨㄛˇ</rt></ruby><ruby>猜<rt>ㄘㄞ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>三<rt>ㄙㄢ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap14', src: 'assets/sticker/map14.webp', 
+  { id: 'smap14', category: 'stages', src: 'assets/sticker/map14.webp', 
     name: '<ruby>開<rt>ㄎㄞ</rt></ruby><ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby><ruby>高<rt>ㄍㄠ</rt></ruby><ruby>手<rt>ㄕㄡˇ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>四<rt>ㄙˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap15', src: 'assets/sticker/map15.webp', 
+  { id: 'smap15', category: 'stages', src: 'assets/sticker/map15.webp', 
     name: '<ruby>好<rt>ㄏㄠˇ</rt></ruby><ruby>好<rt>ㄏㄠˇ</rt></ruby><ruby>吃<rt>ㄔ</rt></ruby><ruby>飯<rt>ㄈㄢˋ</rt></ruby>', 
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>五<rt>ㄨˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap16', src: 'assets/sticker/map16.webp', 
+  { id: 'smap16', category: 'stages', src: 'assets/sticker/map16.webp', 
     name: '<ruby>閃<rt>ㄕㄢˇ</rt></ruby><ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>高<rt>ㄍㄠ</rt></ruby><ruby>手<rt>ㄕㄡˇ</rt></ruby>', 
-    condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>六<rt>ㄌㄧㄡ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
+    condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>六<rt>ㄌㄧㄡˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'smap17', src: 'assets/bad/bad17-3.webp',
+  { id: 'smap17', category: 'stages', src: 'assets/sticker/map17.webp',
     name: '<ruby>熔<rt>ㄖㄨㄥˊ</rt></ruby><ruby>岩<rt>ㄧㄢˊ</rt></ruby><ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>鬼<rt>ㄍㄨㄟˇ</rt></ruby>',
     condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>七<rt>ㄑㄧ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
     cost: 0,
     onGetEffect: '',
     effect: ''
   },
-  { id: 'smap19', src: 'assets/bad/bad19-2.webp', 
+  { id: 'smap18', category: 'stages', src: 'assets/sticker/map18.webp',
+    name: '<ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby>',
+    condition: '<ruby>第<rt>ㄉㄧˋ</rt></ruby><ruby>十<rt>ㄕˊ</rt></ruby><ruby>八<rt>ㄅㄚ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby>',
+    cost: 0,
+    onGetEffect: '',
+    effect: ''
+  },
+  { id: 'smap19', category: 'stages', src: 'assets/sticker/map19.webp', 
     name: '<ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby>', 
     condition: '<ruby>解<rt>ㄐㄧㄝˇ</rt></ruby><ruby>鎖<rt>ㄙㄨㄛˇ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>門<rt>ㄇㄣˊ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan1', src: 'assets/player/han1-1.webp', 
+  { id: 'shan1', category: 'dolls', src: 'assets/player/han1-1.webp', 
     name: '<ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan2', src: 'assets/player/han2-1.webp', 
+  { id: 'shan2', category: 'dolls', src: 'assets/player/han2-1.webp', 
     name: '<ruby>弓<rt>ㄍㄨㄥ</rt></ruby><ruby>箭<rt>ㄐㄧㄢˋ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan3', src: 'assets/player/han3-1.webp', 
+  { id: 'shan3', category: 'dolls', src: 'assets/player/han3-1.webp', 
     name: '<ruby>魔<rt>ㄇㄛˊ</rt></ruby><ruby>法<rt>ㄈㄚˇ</rt></ruby><ruby>仙<rt>ㄒㄧㄢ</rt></ruby><ruby>子<rt>ㄗ˙</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan4', src: 'assets/player/han4-1.webp', 
+  { id: 'shan4', category: 'dolls', src: 'assets/player/han4-1.webp', 
     name: '<ruby>漩<rt>ㄒㄩㄢˊ</rt></ruby><ruby>渦<rt>ㄨㄛ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan5', src: 'assets/player/han5-1.webp', 
+  { id: 'shan5', category: 'dolls', src: 'assets/player/han5-1.webp', 
     name: '<ruby>愛<rt>ㄞˋ</rt></ruby><ruby>心<rt>ㄒㄧㄣ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'shan6', src: 'assets/player/han6-1.webp', 
+  { id: 'shan6', category: 'dolls', src: 'assets/player/han6-1.webp', 
     name: '<ruby>冰<rt>ㄅㄧㄥ</rt></ruby><ruby>雪<rt>ㄒㄩㄝˇ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'schih1', src: 'assets/sticker/chih1.webp', 
+  { id: 'shan7', category: 'dolls', src: 'assets/player/han7-3.webp',
+    name: '<ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby><ruby>跳<rt>ㄊㄧㄠˋ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>',
+    condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby><ruby>主<rt>ㄓㄨˇ</rt></ruby>',
+    cost: 0,
+    onGetEffect: '',
+    effect: ''
+  },
+  { id: 'schih1', category: 'dolls', src: 'assets/sticker/chih1.webp', 
     name: '<ruby>揮<rt>ㄏㄨㄟ</rt></ruby><ruby>劍<rt>ㄐㄧㄢˋ</rt></ruby><ruby>里<rt>ㄌㄧˇ</rt></ruby><ruby>長<rt>ㄓㄤˇ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>里<rt>ㄌㄧˇ</rt></ruby><ruby>長<rt>ㄓㄤˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'schih2', src: 'assets/sticker/chih2.webp', 
+  { id: 'schih2', category: 'dolls', src: 'assets/sticker/chih2.webp', 
     name: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>車<rt>ㄔㄜ</rt></ruby><ruby>男<rt>ㄋㄢˊ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby>', 
     condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>男<rt>ㄋㄢˊ</rt></ruby><ruby>孩<rt>ㄏㄞˊ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'slobby1', src: 'assets/sticker/lobby1.webp', 
+  { id: 'slobby1', category: 'explore', src: 'assets/sticker/lobby1.webp', 
     name: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', 
     condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'slobby2', src: 'assets/sticker/lobby2.webp', 
+  { id: 'slobby2', category: 'explore', src: 'assets/sticker/lobby2.webp', 
     name: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
     condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'slobby3', src: 'assets/sticker/lobby3.webp', 
+  { id: 'slobby3', category: 'explore', src: 'assets/sticker/lobby3.webp', 
     name: '<ruby>飛<rt>ㄈㄟ</rt></ruby><ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>馬<rt>ㄇㄚˇ</rt></ruby>', 
     condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'skey1', src: 'assets/sticker/key1.webp', 
-    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>1<rt></rt></ruby>', 
+  { id: 'skey1', category: 'mystery', src: 'assets/sticker/key1.webp', 
+    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>1<rt></rt></ruby>', 
     condition: '<ruby>"<rt></rt></ruby><ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>彈<rt>ㄉㄢˋ</rt></ruby><ruby>挑<rt>ㄊㄧㄠˇ</rt></ruby><ruby>戰<rt>ㄓㄢˋ</rt></ruby><ruby>"<rt></rt></ruby><ruby>中<rt>ㄓㄨㄥ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'skey2', src: 'assets/sticker/key2.webp', 
-    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>2<rt></rt></ruby>', 
-    condition: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>中<rt>ㄓㄨㄥ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>', 
+  { id: 'skey2', category: 'mystery', src: 'assets/sticker/key2.webp', 
+    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>2<rt></rt></ruby>', 
+    condition: '<ruby>逃<rt>ㄊㄠˊ</rt></ruby><ruby>脫<rt>ㄊㄨㄛ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>下<rt>ㄒㄧㄚˋ</rt></ruby><ruby>城<rt>ㄔㄥˊ</rt></ruby><ruby>後<rt>ㄏㄡˋ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'skey3', src: 'assets/sticker/key3.webp', 
-    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>3<rt></rt></ruby>', 
-    condition: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>中<rt>ㄓㄨㄥ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>', 
+  { id: 'skey3', category: 'mystery', src: 'assets/sticker/key3.webp', 
+    name: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>3<rt></rt></ruby>', 
+    condition: '<ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>敗<rt>ㄅㄞˋ</rt></ruby><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby><ruby>後<rt>ㄏㄡˋ</rt></ruby><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby>', 
     cost: 0, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar1', src: 'assets/sticker/1.webp', 
+  { id: 'sstar1', category: 'shop', src: 'assets/sticker/1.webp', 
     name: '<ruby>天<rt>ㄊㄧㄢ</rt></ruby><ruby>蠍<rt>ㄒㄧㄝ</rt></ruby><ruby>座<rt>ㄗㄨㄛˋ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar2', src: 'assets/sticker/2.webp', 
+  { id: 'sstar2', category: 'shop', src: 'assets/sticker/2.webp', 
     name: 'Mira', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar3', src: 'assets/sticker/3.webp', 
+  { id: 'sstar3', category: 'shop', src: 'assets/sticker/3.webp', 
     name: '<ruby><rt>ㄌㄚˇ</rt></ruby><ruby><rt>ㄅㄨ</rt></ruby><ruby><rt>ㄅㄨ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar4', src: 'assets/sticker/4.webp', 
+  { id: 'sstar4', category: 'shop', src: 'assets/sticker/4.webp', 
     name: '<ruby>咖<rt>ㄎㄚ</rt></ruby><ruby>啡<rt>ㄈㄟ</rt></ruby><ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>夥<rt>ㄏㄨㄛˇ</rt></ruby><ruby>伴<rt>ㄅㄢˋ</rt></ruby>', 
     condition: '⭐ 10 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 10, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar5', src: 'assets/sticker/5.webp', 
+  { id: 'sstar5', category: 'shop', src: 'assets/sticker/5.webp', 
     name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>耳<rt>ㄦˇ</rt></ruby><ruby>狗<rt>ㄍㄡˇ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar6', src: 'assets/sticker/6.webp', 
+  { id: 'sstar6', category: 'shop', src: 'assets/sticker/6.webp', 
     name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>醜<rt>ㄔㄡˇ</rt></ruby><ruby>克<rt>ㄎㄜˋ</rt></ruby><ruby>敏<rt>ㄇㄧㄣˇ</rt></ruby>', 
     condition: '⭐ 5 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 5, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar7', src: 'assets/sticker/7.webp', 
+  { id: 'sstar7', category: 'shop', src: 'assets/sticker/7.webp', 
     name: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>醜<rt>ㄔㄡˇ</rt></ruby><ruby>克<rt>ㄎㄜˋ</rt></ruby><ruby>敏<rt>ㄇㄧㄣˇ</rt></ruby>', 
     condition: '⭐ 15 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 15, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar8', src: 'assets/sticker/8.webp', 
+  { id: 'sstar8', category: 'shop', src: 'assets/sticker/8.webp', 
     name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>菊<rt>ㄐㄩˊ</rt></ruby><ruby>路<rt>ㄌㄨˋ</rt></ruby><ruby>人<rt>ㄖㄣˊ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar9', src: 'assets/sticker/9.webp', 
+  { id: 'sstar9', category: 'shop', src: 'assets/sticker/9.webp', 
     name: '<ruby>小<rt>ㄒㄧㄠˇ</rt></ruby><ruby>綠<rt>ㄌㄩˋ</rt></ruby><ruby>龍<rt>ㄌㄨㄥˊ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar10', src: 'assets/sticker/10.webp', 
+  { id: 'sstar10', category: 'shop', src: 'assets/sticker/10.webp', 
     name: '<ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>阿<rt>ㄚ</rt></ruby><ruby>姨<rt>ㄧˊ</rt></ruby><ruby>西<rt>ㄒㄧ</rt></ruby><ruby>瓜<rt>ㄍㄨㄚ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar11', src: 'assets/sticker/11.webp', 
+  { id: 'sstar11', category: 'shop', src: 'assets/sticker/11.webp', 
     name: '<ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>阿<rt>ㄚ</rt></ruby><ruby>姨<rt>ㄧˊ</rt></ruby><ruby>壽<rt>ㄕㄡˋ</rt></ruby><ruby>司<rt>ㄙ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
     onGetEffect: '', 
     effect: '' 
   },
-  { id: 'sstar12', src: 'assets/sticker/12.webp', 
+  { id: 'sstar12', category: 'shop', src: 'assets/sticker/12.webp', 
     name: '<ruby>閃<rt>ㄕㄢˇ</rt></ruby><ruby>亮<rt>ㄌㄧㄤˋ</rt></ruby><ruby>手<rt>ㄕㄡˇ</rt></ruby><ruby>機<rt>ㄐㄧ</rt></ruby>', 
     condition: '⭐ 20 <ruby>購<rt>ㄍㄡˋ</rt></ruby><ruby>買<rt>ㄇㄞˇ</rt></ruby>', 
     cost: 20, 
@@ -628,14 +1244,7 @@
   },
 ];
 
-    // ====== 2. 自動計算所有貼紙的頁數與格位 ======
-    stickersConfig.forEach((item, index) => {
-      item.page = Math.floor(index / 4) + 1; 
-      item.slot = (index % 4) + 1;           
-    });
-
-    // ====== 3. 書本厚度與整格貼紙框座標設定 ======
-    const TOTAL_PAPERS = Math.ceil(stickersConfig.length / 4); 
+    // ====== 2. 書本厚度與整格貼紙框座標設定 ======
     const SLOT_BOUNDS = {
       1: { left: 14.5, top: 24.0, width: 29.5, height: 22.5 },
       2: { left: 56.0, top: 24.0, width: 29.5, height: 22.5 },
@@ -649,32 +1258,17 @@
     let currentPageIndex = 0; 
     let lastTouchTime = 0;
     let modalClosedTime = 0;
-    
-    function initBook() {
-      const bookPages = document.getElementById('book-pages');
-      
-      for(let i = 0; i < TOTAL_PAPERS; i++) {
-        const paper = document.createElement('div');
-        paper.className = "absolute right-0 w-1/2 h-full origin-left transition-transform duration-[400ms] ease-[cubic-bezier(0.645,0.045,0.355,1)] preserve-3d pointer-events-none";
-        paper.style.zIndex = TOTAL_PAPERS - i; 
-        paper._zTimer = null;
 
-        // 【關鍵修復】: translate3d(0, 0, 2px) 留著確保書頁有厚度不閃爍，遮罩換成 linear-gradient(white, white) 實心切邊防透圖
-        paper.innerHTML = `
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]" style="transform: translate3d(0, 0, 2px); -webkit-transform: translate3d(0, 0, 2px); -webkit-mask-image: -webkit-linear-gradient(white, white);">
-            <div class="absolute w-[200%] h-full right-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
-            <div id="canvas-front-${i}" class="absolute w-[200%] h-full right-0"></div>
-            <div class="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-20"></div>
-          </div>
-          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-mask-image: -webkit-linear-gradient(white, white);">
-            <div class="absolute w-[200%] h-full left-0 bg-[url('assets/system/sticker.webp')] bg-[length:100%_100%]"></div>
-            <div id="canvas-back-${i}" class="absolute w-[200%] h-full left-0"></div>
-            <div class="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black/40 to-transparent pointer-events-none z-20"></div>
-          </div>
-        `;
-        bookPages.appendChild(paper);
-        papersDOM.push(paper); 
-      }
+    let currentView = 'shelf';
+    let activeCategoryId = null;
+    let activeStickers = [];
+    let activeTotalPages = 1;
+    let activeTotalPapers = 0;
+    let popInTimer = null;
+
+    function loadObtainedState() {
+      coins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      document.getElementById('myCoins').innerText = coins;
 
       stickersConfig.forEach(item => {
         const savedVal = localStorage.getItem('sticker_' + item.id);
@@ -682,6 +1276,153 @@
         if (savedVal === 'true') state = 'true';
         else if (savedVal === 'new') state = 'new';
         obtainedState[item.id] = state;
+      });
+    }
+
+    function renderBookshelf() {
+      const shelfView = document.getElementById('bookshelf-view');
+      if (SHELF_CONFIG.shelfBg) {
+        shelfView.style.backgroundImage = `url('${SHELF_CONFIG.shelfBg}')`;
+      } else {
+        shelfView.style.backgroundImage = '';
+      }
+
+      const totalCollected = stickersConfig.filter(item => obtainedState[item.id] === 'true').length;
+      document.getElementById('shelf-total-count').innerText = `${totalCollected} / ${stickersConfig.length}`;
+
+      const grid = document.getElementById('bookshelf-grid');
+      grid.innerHTML = BOOK_CATEGORIES.map(cat => {
+        const list = stickersConfig.filter(s => s.category === cat.id);
+        const total = list.length;
+        const collected = list.filter(s => obtainedState[s.id] === 'true').length;
+        const newCount = list.filter(s => obtainedState[s.id] === 'new').length;
+        const pct = total > 0 ? Math.round((collected / total) * 100) : 0;
+        const isComplete = total > 0 && collected === total;
+        const hasNewClass = newCount > 0 ? 'has-new' : '';
+        const barBg = isComplete ? 'linear-gradient(90deg, #f59e0b, #fef08a)' : cat.theme.bar;
+
+        const coverBody = cat.coverImg
+          ? `
+            <img src="${cat.coverImg}" class="shelf-book-custom-cover" alt="">
+            <div class="shelf-book-progress-wrap on-custom-cover">
+              <div class="shelf-book-progress-text">${isComplete ? '👑 ' : ''}${collected} / ${total}</div>
+              <div class="shelf-book-progress-track">
+                <div class="shelf-book-progress-fill" style="width: ${pct}%; background: ${barBg};"></div>
+              </div>
+            </div>
+          `
+          : `
+            <div class="shelf-book-spine" style="background: ${cat.theme.spine}; border-right: 1px solid rgba(255,255,255,0.14);"></div>
+            <div class="shelf-book-frame" style="border-color: ${cat.theme.border};"></div>
+            <div class="shelf-book-medallion" style="background: radial-gradient(circle, ${cat.theme.glow} 0%, rgba(15,23,42,0.55) 72%); border-color: ${cat.theme.border};">
+              <img src="${cat.previewSrc}" class="shelf-book-preview" alt="">
+            </div>
+            <div class="shelf-book-title">
+              <span class="shelf-book-icon">${cat.icon}</span>
+              <span class="zh-text">${cat.titleHtml}</span>
+            </div>
+            <div class="shelf-book-progress-wrap">
+              <div class="shelf-book-progress-text">${isComplete ? '👑 ' : ''}${collected} / ${total}</div>
+              <div class="shelf-book-progress-track">
+                <div class="shelf-book-progress-fill" style="width: ${pct}%; background: ${barBg};"></div>
+              </div>
+            </div>
+          `;
+
+        const coverStyle = cat.coverImg ? '' : `background: ${cat.theme.bg};`;
+        const newBadge = newCount > 0 ? `<div class="shelf-new-badge">NEW!</div>` : '';
+
+        return `
+          <div class="shelf-book-slot">
+            <button type="button" class="shelf-book-card ${hasNewClass}" onclick="openCategoryBook('${cat.id}')">
+              <div class="shelf-book-cover" style="${coverStyle}">
+                ${coverBody}
+              </div>
+              ${newBadge}
+            </button>
+            <div class="shelf-ledge"></div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.Bopomofo) window.Bopomofo.render();
+    }
+
+    function cleanupActiveBookDOM() {
+      if (popInTimer) {
+        clearTimeout(popInTimer);
+        popInTimer = null;
+      }
+      papersDOM.forEach(paper => {
+        if (paper._zTimer) {
+          clearTimeout(paper._zTimer);
+          paper._zTimer = null;
+        }
+      });
+      papersDOM = [];
+      document.getElementById('book-pages').innerHTML = '';
+      document.getElementById('canvas-base-left').innerHTML = '';
+      document.getElementById('canvas-base-right').innerHTML = '';
+    }
+
+    function updatePageIndicator() {
+      document.getElementById('book-page-indicator').innerText = `${currentPageIndex + 1} / ${activeTotalPages}`;
+    }
+
+    function openCategoryBook(categoryId) {
+      const category = BOOK_CATEGORIES.find(c => c.id === categoryId);
+      if (!category) return;
+
+      cleanupActiveBookDOM();
+
+      activeStickers = stickersConfig.filter(item => item.category === categoryId);
+      activeStickers.forEach((item, index) => {
+        item.page = Math.floor(index / 4) + 1;
+        item.slot = (index % 4) + 1;
+      });
+
+      activeTotalPages = Math.max(1, Math.ceil(activeStickers.length / 4));
+      activeTotalPapers = Math.max(0, activeTotalPages - 1);
+      currentPageIndex = 0;
+      unlockingIds = {};
+      isValidTouch = false;
+      touchedStickerOnStart = null;
+
+      const bookBg = category.pageBg || SHELF_CONFIG.defaultPageBg;
+      document.getElementById('base-bg-left').style.backgroundImage = `url('${bookBg}')`;
+      document.getElementById('base-bg-right').style.backgroundImage = `url('${bookBg}')`;
+
+      const bookPages = document.getElementById('book-pages');
+      for (let i = 0; i < activeTotalPapers; i++) {
+        const paper = document.createElement('div');
+        paper.className = "absolute right-0 w-1/2 h-full origin-left transition-transform duration-[400ms] ease-[cubic-bezier(0.645,0.045,0.355,1)] preserve-3d pointer-events-none";
+        paper.style.zIndex = activeTotalPapers - i;
+        paper._zTimer = null;
+
+        // 【關鍵修復】: translate3d(0, 0, 2px) 留著確保書頁有厚度不閃爍，遮罩換成 linear-gradient(white, white) 實心切邊防透圖
+        paper.innerHTML = `
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-r-[12px]" style="transform: translate3d(0, 0, 2px); -webkit-transform: translate3d(0, 0, 2px); -webkit-mask-image: -webkit-linear-gradient(white, white);">
+            <div class="absolute w-[200%] h-full right-0 bg-[length:100%_100%]" style="background-image: url('${bookBg}');"></div>
+            <div id="canvas-front-${i}" class="absolute w-[200%] h-full right-0"></div>
+            <div class="absolute left-0 top-0 w-10 h-full bg-gradient-to-r from-black/40 to-transparent pointer-events-none z-20"></div>
+          </div>
+          <div class="absolute inset-0 backface-hidden overflow-hidden rounded-l-[12px]" style="transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-transform: rotateY(180deg) translate3d(0, 0, 2px); -webkit-mask-image: -webkit-linear-gradient(white, white);">
+            <div class="absolute w-[200%] h-full left-0 bg-[length:100%_100%]" style="background-image: url('${bookBg}');"></div>
+            <div id="canvas-back-${i}" class="absolute w-[200%] h-full left-0"></div>
+            <div class="absolute right-0 top-0 w-10 h-full bg-gradient-to-l from-black/40 to-transparent pointer-events-none z-20"></div>
+          </div>
+        `;
+        bookPages.appendChild(paper);
+        papersDOM.push(paper);
+      }
+
+      let baseLeftHtml = '';
+      let baseRightHtml = '';
+      const frontHtmls = new Array(activeTotalPapers).fill('');
+      const backHtmls = new Array(activeTotalPapers).fill('');
+
+      activeStickers.forEach(item => {
+        const state = obtainedState[item.id] || 'locked';
 
         let imgClass = 'silhouette anim-pop-in';
         if (state === 'true') {
@@ -702,23 +1443,73 @@
           </div>
         `;
 
-        const spreadIndex = item.page - 1; 
-        
+        const spreadIndex = item.page - 1;
+
         if (item.slot === 1 || item.slot === 3) {
-          if (spreadIndex === 0) document.getElementById('canvas-base-left').innerHTML += html;
-          else document.getElementById(`canvas-back-${spreadIndex-1}`).innerHTML += html;
+          if (spreadIndex === 0) baseLeftHtml += html;
+          else backHtmls[spreadIndex - 1] += html;
         } else {
-          if (spreadIndex === TOTAL_PAPERS) document.getElementById('canvas-base-right').innerHTML += html;
-          else document.getElementById(`canvas-front-${spreadIndex}`).innerHTML += html;
+          if (spreadIndex === activeTotalPapers) baseRightHtml += html;
+          else frontHtmls[spreadIndex] += html;
         }
       });
 
-      setTimeout(() => {
+      document.getElementById('canvas-base-left').innerHTML = baseLeftHtml;
+      document.getElementById('canvas-base-right').innerHTML = baseRightHtml;
+      for (let i = 0; i < activeTotalPapers; i++) {
+        document.getElementById(`canvas-front-${i}`).innerHTML = frontHtmls[i];
+        document.getElementById(`canvas-back-${i}`).innerHTML = backHtmls[i];
+      }
+
+      document.getElementById('btn-top-back').innerHTML = '🔙 EXIT';
+      document.getElementById('book-header-icon').innerText = category.icon;
+      document.getElementById('book-header-title').innerHTML = category.titleHtml;
+      document.getElementById('book-header-pill').classList.remove('hidden');
+      updatePageIndicator();
+
+      document.getElementById('bookshelf-view').classList.add('hidden');
+      document.getElementById('book-view').classList.remove('hidden');
+      currentView = 'book';
+      activeCategoryId = categoryId;
+
+      if (activeTotalPages > 1) {
+        checkTutorial();
+      } else {
+        tutorialEl.classList.add('hidden');
+      }
+
+      popInTimer = setTimeout(() => {
         document.querySelectorAll('.anim-pop-in').forEach(el => el.classList.remove('anim-pop-in'));
+        popInTimer = null;
       }, 450);
 
-      checkTutorial();
       if (window.Bopomofo) window.Bopomofo.render();
+    }
+
+    function showBookshelf() {
+      if (!modal.classList.contains('pointer-events-none')) {
+        closeModal();
+      }
+      cleanupActiveBookDOM();
+      tutorialEl.classList.add('hidden');
+
+      document.getElementById('book-view').classList.add('hidden');
+      document.getElementById('bookshelf-view').classList.remove('hidden');
+      document.getElementById('btn-top-back').innerHTML = '🔙 EXIT';
+      document.getElementById('book-header-pill').classList.add('hidden');
+
+      currentView = 'shelf';
+      activeCategoryId = null;
+      renderBookshelf();
+    }
+
+    function handleTopBack() {
+      if (currentView === 'book') {
+        showBookshelf();
+      } else {
+        sessionStorage.setItem('returning_from_subpage', '1');
+        window.location.replace('index.html');
+      }
     }
 
     function claimSticker(id) {
@@ -733,6 +1524,9 @@
 
       obtainedState[id] = 'true';
       localStorage.setItem('sticker_' + id, 'true');
+      if (window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
+      }
 
       if (badge) badge.classList.add('hidden');
 
@@ -798,7 +1592,7 @@
 
       const activePage = currentPageIndex + 1;
 
-      for (const item of stickersConfig) {
+      for (const item of activeStickers) {
         if (item.page !== activePage) continue;
         const b = SLOT_BOUNDS[item.slot];
         if (!b) continue;
@@ -816,7 +1610,7 @@
 
     // ====== 翻頁核心功能 ======
     function goToNextPage() {
-      if (currentPageIndex >= TOTAL_PAPERS) return; 
+      if (currentPageIndex >= activeTotalPapers) return; 
       const idx = currentPageIndex;
       const paper = papersDOM[idx];
       
@@ -825,6 +1619,7 @@
       paper.style.zIndex = 50 + idx; 
       
       currentPageIndex++;
+      updatePageIndicator();
       document.activeElement?.blur();
       hideTutorial(); 
     }
@@ -840,10 +1635,11 @@
       paper.style.transform = 'rotateY(0deg)'; 
       
       paper._zTimer = setTimeout(() => {
-        if (idx >= currentPageIndex) paper.style.zIndex = TOTAL_PAPERS - idx;
+        if (idx >= currentPageIndex) paper.style.zIndex = activeTotalPapers - idx;
         paper._zTimer = null;
       }, 400);
 
+      updatePageIndicator();
       document.activeElement?.blur();
     }
 
@@ -851,7 +1647,7 @@
     let startX = 0; let startY = 0; let isValidTouch = false; let touchedStickerOnStart = null;
 
     bookContainer.addEventListener('touchstart', (e) => {
-      if (Date.now() - modalClosedTime < 200 || e.target.closest('.top-bar')) {
+      if (currentView !== 'book' || Date.now() - modalClosedTime < 200 || e.target.closest('.top-bar')) {
         isValidTouch = false; return;
       }
       isValidTouch = true;
@@ -894,15 +1690,43 @@
     }, {passive: true});
 
     bookWrapper.addEventListener('click', (e) => {
-      if (Date.now() - lastTouchTime < 500 || Date.now() - modalClosedTime < 250) return;
+      if (currentView !== 'book' || Date.now() - lastTouchTime < 500 || Date.now() - modalClosedTime < 250) return;
       const hitSticker = getStickerAtPoint(e.clientX, e.clientY);
       if (hitSticker) handleStickerTap(hitSticker.id);
     });
 
-    const TUTORIAL_KEY = 'stickerBookVisited_v1';
+    document.addEventListener('keydown', (e) => {
+      if (currentView !== 'book') return;
+      const isModalOpen = !modal.classList.contains('pointer-events-none');
+      if (isModalOpen) {
+        if (e.key === 'Escape') closeModal();
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        goToNextPage();
+      } else if (e.key === 'ArrowLeft') {
+        goToPrevPage();
+      } else if (e.key === 'Escape') {
+        showBookshelf();
+      }
+    });
+
+    const TUTORIAL_KEY = 'sticker_tutorial_done';
     const tutorialEl = document.getElementById('swipe-tutorial');
 
-    function checkTutorial() { if (!localStorage.getItem(TUTORIAL_KEY)) tutorialEl.classList.remove('hidden'); }
+    function migrateStickerTutorialKey() {
+      if (localStorage.getItem('stickerBookVisited_v1') === 'true') {
+        if (localStorage.getItem(TUTORIAL_KEY) !== 'true') {
+          localStorage.setItem(TUTORIAL_KEY, 'true');
+        }
+        localStorage.removeItem('stickerBookVisited_v1');
+      }
+    }
+
+    function checkTutorial() {
+      migrateStickerTutorialKey();
+      if (localStorage.getItem(TUTORIAL_KEY) !== 'true') tutorialEl.classList.remove('hidden');
+    }
     function hideTutorial() {
       if (!tutorialEl.classList.contains('hidden')) {
         tutorialEl.classList.add('hidden');
@@ -929,6 +1753,8 @@
     btnCloseModal.addEventListener('click', (e) => { e.stopPropagation(); closeModal(); });
 
     function confirmPurchase(id, cost) {
+      coins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      document.getElementById('myCoins').innerText = coins;
       if (coins < cost) {
         alert("⭐ 星星不夠喔！快去尋寶吧！");
         return;
@@ -961,6 +1787,13 @@
     }
 
     function processBuySticker(id, cost) {
+      coins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
+      if (coins < cost) {
+        document.getElementById('myCoins').innerText = coins;
+        alert("⭐ 星星不夠喔！快去尋寶吧！");
+        closeModal();
+        return;
+      }
       coins -= cost;
       localStorage.setItem('playerCoins', coins);
       document.getElementById('myCoins').innerText = coins;
@@ -970,8 +1803,15 @@
       
       const img = document.getElementById(`img-${id}`);
       const badge = document.getElementById(`badge-${id}`);
-      if (img) img.classList.add('claimable-glow');
+      if (img) {
+        img.classList.remove('silhouette', 'obtained');
+        img.classList.add('silhouette', 'claimable-glow');
+      }
       if (badge) badge.classList.remove('hidden');
+
+      if (window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
+      }
       
       closeModal();
     }
@@ -1018,7 +1858,44 @@
       modalContent.classList.add('scale-95');
     }
 
-    window.onload = initBook;
+    function syncStickerPageFromStorage() {
+      loadObtainedState();
+      if (currentView === 'shelf') {
+        renderBookshelf();
+      } else if (currentView === 'book') {
+        activeStickers.forEach(item => {
+          if (unlockingIds[item.id]) return;
+          const state = obtainedState[item.id] || 'locked';
+          const img = document.getElementById(`img-${item.id}`);
+          const badge = document.getElementById(`badge-${item.id}`);
+          const permFx = document.getElementById(`perm-fx-${item.id}`);
+          if (img) {
+            if (state === 'true') {
+              img.className = 'sticker-img obtained';
+            } else if (state === 'new') {
+              img.className = 'sticker-img silhouette claimable-glow';
+            } else {
+              img.className = 'sticker-img silhouette';
+            }
+          }
+          if (badge) {
+            badge.classList.toggle('hidden', state !== 'new');
+          }
+          if (permFx && item.effect) {
+            permFx.classList.toggle(item.effect, state === 'true');
+          }
+        });
+      }
+    }
+    window.addEventListener('cloudsync:updated', syncStickerPageFromStorage);
+
+    function initStickerPage() {
+      migrateStickerTutorialKey();
+      loadObtainedState();
+      renderBookshelf();
+      if (window.Bopomofo) window.Bopomofo.render();
+    }
+    initStickerPage();
   </script>
 </body>
 </html>

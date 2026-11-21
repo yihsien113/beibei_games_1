@@ -249,7 +249,8 @@
     <div id="timer-board">
       <h2>
         <span id="wave-display">💣</span>
-        <span class="star-count">⭐ <span id="star-display">0</span></span>
+        <span id="star-count-wrap" class="star-count">⭐ <span id="star-display">0</span></span>
+        <span id="key-badge" style="margin-left: 12px; display: none;">🔑</span>
       </h2>
     </div>
     
@@ -262,7 +263,7 @@
           <ruby>躲<rt>ㄉㄨㄛˇ</rt></ruby>
           <ruby>炸<rt>ㄓㄚˋ</rt></ruby>
           <ruby>彈<rt>ㄉㄢˋ</rt></ruby>
-          <ruby>挑<rt>ㄊㄧㄠ</rt></ruby>
+          <ruby>挑<rt>ㄊㄧㄠˇ</rt></ruby>
           <ruby>戰<rt>ㄓㄢˋ</rt></ruby>
         </h1>
         <p class="zh-text" style="display: block; font-size: 40px; margin: 0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); max-width: 100%; line-height: 1.5;">
@@ -473,7 +474,7 @@
       bCtx.strokeRect(BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE);
     }
 
-    let totalAssets = 2; 
+    let totalAssets = 3; 
     let loadedAssets = 0;
 
     function checkLoadProgress() {
@@ -509,6 +510,11 @@
     charImg.onload = () => checkLoadProgress();
     charImg.onerror = () => checkLoadProgress(); 
 
+    const keyImg = new Image();
+    keyImg.onload = () => checkLoadProgress();
+    keyImg.onerror = () => checkLoadProgress();
+    keyImg.src = 'assets/sticker/key1.webp';
+
     // 🌟 安全清理記憶體並返回大廳 (防止手機/平板顯存累積造成閃退)
     function cleanupMemory() {
       gamePhase = 'exiting';
@@ -529,6 +535,7 @@
       // 釋放圖片資源紋理
       if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
       if (charImg) { charImg.onload = null; charImg.onerror = null; charImg.src = ''; }
+      if (keyImg) { keyImg.onload = null; keyImg.onerror = null; keyImg.src = ''; }
 
       // 釋放離屏快取畫布
       [boardCacheCanvas, bombCacheCanvas, boomCacheCanvas, keyCacheCanvas].forEach(c => {
@@ -619,6 +626,12 @@
       gamePhase = 'playing';
     }
 
+    // 破關 map19 且回大廳領取大禮包後，森林關卡才會重複給予星星
+    function isForestStarRewardUnlocked() {
+      return localStorage.getItem('map19_cleared') === 'true'
+        && localStorage.getItem('blindbox_map19_gift') === 'claimed';
+    }
+
     // 只在波數或星星改變時才更新 DOM (不是每幀)
     function updateHUD() {
       let label;
@@ -628,7 +641,15 @@
         label = `💣 <ruby>第<rt>ㄉㄧˋ</rt></ruby> ${wave}/${TOTAL_WAVES} <ruby>波<rt>ㄅㄛ</rt></ruby>`;
       }
       waveDisplayEl.innerHTML = label;
-      starDisplayEl.textContent = stars + (keyPickedThisRun ? ' 🔑' : '');
+      const starCountWrapEl = document.getElementById('star-count-wrap');
+      if (starCountWrapEl) {
+        starCountWrapEl.style.display = isForestStarRewardUnlocked() ? '' : 'none';
+      }
+      starDisplayEl.textContent = stars;
+      const keyBadgeEl = document.getElementById('key-badge');
+      if (keyBadgeEl) {
+        keyBadgeEl.style.display = keyPickedThisRun ? 'inline' : 'none';
+      }
 
       // 強制呼叫 bopomofo.js 重新渲染動態替換的文字
       if (window.Bopomofo && window.Bopomofo.render) {
@@ -643,6 +664,7 @@
       document.getElementById('back-btn').style.display = 'none';
       
       let currentCoins = parseInt(localStorage.getItem('playerCoins') || '0');
+      const starsUnlocked = isForestStarRewardUnlocked();
       
       let gotNewKeySticker = false;
 
@@ -670,9 +692,14 @@
           document.getElementById('result-title').innerHTML = `<ruby>被<rt>ㄅㄟˋ</rt></ruby><ruby>炸<rt>ㄓㄚˋ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>了<rt>˙ㄌㄜ</rt></ruby><span>...</span>`;
       }
 
-      const earnedStars = isWin ? stars : 0;
+      const earnedStars = (isWin && starsUnlocked) ? stars : 0;
       let newTotalCoins = currentCoins + earnedStars;
-      localStorage.setItem('playerCoins', newTotalCoins); 
+      if (earnedStars > 0) {
+        localStorage.setItem('playerCoins', newTotalCoins);
+      }
+      if (isWin && window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
+      }
       
       document.getElementById('newCoins').innerText = "+" + earnedStars;
       document.getElementById('totalCoins').innerText = newTotalCoins;
@@ -682,9 +709,15 @@
         starsHtml += '⭐';
         if (i % 5 === 0) starsHtml += '<br>'; 
       }
-      if (earnedStars === 0 && !gotNewKeySticker) starsHtml = '💨 再加油喔！';
+      if (earnedStars === 0) {
+        if (isWin && !starsUnlocked) {
+          starsHtml = `<div class="zh-text" style="color: #b2fef7;">🔒 <ruby>破<rt>ㄆㄛˋ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>門<rt>ㄇㄣˊ</rt></ruby><ruby>後<rt>ㄏㄡˋ</rt></ruby><ruby>再<rt>ㄗㄞˋ</rt></ruby><ruby>玩<rt>ㄨㄢˊ</rt></ruby><ruby>就<rt>ㄐㄧㄡˋ</rt></ruby><ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby><span>！</span></div>`;
+        } else if (!gotNewKeySticker) {
+          starsHtml = '💨 再加油喔！';
+        }
+      }
       if (gotNewKeySticker) {
-        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
+        starsHtml += `<div style="margin-top: 8px; color: #ffeb3b;">🔑 <span class="zh-text"><ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><ruby>貼<rt>ㄊㄧㄝ</rt></ruby><ruby>紙<rt>ㄓˇ</rt></ruby><span>！</span></span></div>`;
       }
       
       document.getElementById('star-container').innerHTML = starsHtml;
@@ -790,8 +823,12 @@
       }
 
       // 成功躲過這一波
-      stars += STARS_PER_WAVE;
-      addPopup(`+${STARS_PER_WAVE} ⭐`, player.x, player.y - player.size, '#FFD700', 46);
+      if (isForestStarRewardUnlocked()) {
+        stars += STARS_PER_WAVE;
+        addPopup(`+${STARS_PER_WAVE} ⭐`, player.x, player.y - player.size, '#FFD700', 46);
+      } else {
+        addPopup('✨', player.x, player.y - player.size, '#FFD700', 46, false);
+      }
       updateHUD();
 
       if (wave >= TOTAL_WAVES) {
@@ -923,7 +960,7 @@
     }
 
     function drawKey() {
-      if (!keyCell || !keyCacheCanvas) return;
+      if (!keyCell) return;
       const cx = cellCenterX(keyCell.col);
       const cy = cellCenterY(keyCell.row);
       const pulse = 0.5 + 0.5 * Math.sin(keyAnimTime * 5);
@@ -940,7 +977,13 @@
       const scale = 0.95 + 0.08 * pulse;
       ctx.translate(cx, cy + floatY);
       ctx.scale(scale, scale);
-      ctx.drawImage(keyCacheCanvas, -55, -55);
+      if (keyImg.complete && keyImg.naturalWidth > 0) {
+        const ks = 84;
+        ctx.rotate(Math.sin(keyAnimTime * 3) * 0.12);
+        ctx.drawImage(keyImg, -ks / 2, -ks / 2, ks, ks);
+      } else if (keyCacheCanvas) {
+        ctx.drawImage(keyCacheCanvas, -55, -55);
+      }
       ctx.restore();
     }
 

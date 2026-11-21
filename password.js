@@ -16,6 +16,16 @@
 
   let isApplyingCloudData = false;
   let uploadDebounceTimer = null;
+  let activeSyncPromise = null;
+  let pendingSyncAfterActive = false;
+  let hasDirtyUnsyncedChanges = false;
+
+  function bumpLocalTimestamp() {
+    const prev = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+    const next = Math.max(Date.now(), prev + 1);
+    rawSetItem.call(localStorage, UPDATED_AT_KEY, String(next));
+    return next;
+  }
 
   function isProgressKey(key) {
     if (!key || typeof key !== 'string') return false;
@@ -62,6 +72,21 @@
       }
     }
     return data;
+  }
+
+  function areProgressObjectsEqual(a, b) {
+    const objA = a || {};
+    const objB = b || {};
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (let i = 0; i < keysA.length; i++) {
+      const k = keysA[i];
+      if (!Object.prototype.hasOwnProperty.call(objB, k) || String(objA[k]) !== String(objB[k])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function mergeProgressData(localObj, cloudObj, preferCloudScalars) {
@@ -130,6 +155,7 @@
       rawRemoveItem.call(localStorage, 'lobby1PlayerX');
       rawRemoveItem.call(localStorage, 'lobby1PlayerY');
       rawRemoveItem.call(localStorage, 'last_lobby');
+      rawRemoveItem.call(localStorage, 'stickerBookVisited_v1');
     } finally {
       isApplyingCloudData = false;
     }
@@ -146,7 +172,7 @@
           rawSetItem.call(localStorage, k, String(mergedObj[k]));
         }
       });
-      if (timestamp) {
+      if (typeof timestamp === 'number' && !isNaN(timestamp)) {
         rawSetItem.call(localStorage, UPDATED_AT_KEY, String(timestamp));
       }
     } finally {
@@ -320,15 +346,28 @@
         mergedData = cloud.saveData || {};
       }
 
-      const now = Math.max(Date.now(), (cloud.updatedAt || 0) + 1);
+      const shouldUpload = !areProgressObjectsEqual(mergedData, cloud.saveData);
+      const appliedTimestamp = shouldUpload
+        ? Math.max(Date.now(), (cloud.updatedAt || 0) + 1)
+        : (cloud.updatedAt || 0);
 
-      applyProgressToLocal(mergedData, now, true);
+      applyProgressToLocal(mergedData, appliedTimestamp, true);
       rawSetItem.call(localStorage, ACCOUNT_KEY, cleanAcc);
       rawSetItem.call(localStorage, PASSWORD_KEY, cleanPwd);
       rawSetItem.call(localStorage, OWNER_KEY, cleanAcc.toLowerCase());
       rawRemoveItem.call(localStorage, SKIP_PROMPT_KEY);
+      hasDirtyUnsyncedChanges = false;
 
-      await saveCloudAccount(cleanAcc, cleanPwd, mergedData, now, false).catch(() => {});
+      if (shouldUpload) {
+        hasDirtyUnsyncedChanges = true;
+        try {
+          await saveCloudAccount(cleanAcc, cleanPwd, mergedData, appliedTimestamp, false);
+          const currentUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+          if (currentUpdatedAt <= appliedTimestamp) {
+            hasDirtyUnsyncedChanges = false;
+          }
+        } catch (e) {}
+      }
       return { ok: true, msg: '登入成功！已同步雲端遊戲進度。' };
     } catch (err) {
       return { ok: false, msg: formatCloudError(err) };
@@ -336,43 +375,90 @@
   }
 
   async function syncNow(useKeepalive) {
+    if (uploadDebounceTimer) {
+      clearTimeout(uploadDebounceTimer);
+      uploadDebounceTimer = null;
+    }
+
     const acc = rawGetItem.call(localStorage, ACCOUNT_KEY);
     const pwd = rawGetItem.call(localStorage, PASSWORD_KEY);
     if (!acc || !pwd || !navigator.onLine) return { ok: false, reason: 'offline_or_unauthed' };
 
-    try {
-      const cloud = await fetchCloudAccount(acc);
-      const localData = exportLocalProgress();
-      const localUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
-
-      if (!cloud.exists) {
-        const now = localUpdatedAt || Date.now();
-        await saveCloudAccount(acc, pwd, localData, now, useKeepalive);
-        return { ok: true };
-      }
-
-      if (cloud.password !== pwd) {
-        return { ok: false, reason: 'password_mismatch' };
-      }
-
-      const cloudUpdatedAt = cloud.updatedAt || 0;
-      const preferCloudScalars = cloudUpdatedAt > localUpdatedAt;
-      const mergedData = mergeProgressData(localData, cloud.saveData, preferCloudScalars);
-      const latestTimestamp = Math.max(localUpdatedAt, cloudUpdatedAt, Date.now());
-
-      applyProgressToLocal(mergedData, latestTimestamp);
-
-      if (
-        localUpdatedAt >= cloudUpdatedAt ||
-        JSON.stringify(mergedData) !== JSON.stringify(cloud.saveData)
-      ) {
-        await saveCloudAccount(acc, pwd, mergedData, latestTimestamp, useKeepalive);
-      }
-
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err };
+    if (activeSyncPromise) {
+      pendingSyncAfterActive = true;
+      return activeSyncPromise;
     }
+
+    const syncAcc = acc;
+    const syncPwd = pwd;
+
+    const runSync = async () => {
+      try {
+        const cloud = await fetchCloudAccount(syncAcc);
+
+        if (
+          rawGetItem.call(localStorage, ACCOUNT_KEY) !== syncAcc ||
+          rawGetItem.call(localStorage, PASSWORD_KEY) !== syncPwd
+        ) {
+          return { ok: false, reason: 'account_changed' };
+        }
+
+        const localData = exportLocalProgress();
+        const localUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+
+        if (!cloud.exists) {
+          const now = localUpdatedAt || Date.now();
+          await saveCloudAccount(syncAcc, syncPwd, localData, now, useKeepalive);
+          const currentUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+          if (currentUpdatedAt <= now) {
+            hasDirtyUnsyncedChanges = false;
+          }
+          return { ok: true };
+        }
+
+        if (cloud.password !== syncPwd) {
+          return { ok: false, reason: 'password_mismatch' };
+        }
+
+        const cloudUpdatedAt = cloud.updatedAt || 0;
+        const preferCloudScalars = cloudUpdatedAt > localUpdatedAt;
+        const mergedData = mergeProgressData(localData, cloud.saveData, preferCloudScalars);
+        const shouldUpload = !areProgressObjectsEqual(mergedData, cloud.saveData);
+
+        if (shouldUpload) {
+          const nextTimestamp = Math.max(localUpdatedAt, cloudUpdatedAt + 1, Date.now());
+          hasDirtyUnsyncedChanges = true;
+          applyProgressToLocal(mergedData, nextTimestamp);
+          await saveCloudAccount(syncAcc, syncPwd, mergedData, nextTimestamp, useKeepalive);
+
+          const currentUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+          if (currentUpdatedAt <= nextTimestamp) {
+            hasDirtyUnsyncedChanges = false;
+          }
+        } else {
+          const syncedTimestamp = cloudUpdatedAt > 0 ? cloudUpdatedAt : localUpdatedAt;
+          applyProgressToLocal(mergedData, syncedTimestamp);
+
+          const currentUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || '0', 10);
+          if (currentUpdatedAt <= syncedTimestamp) {
+            hasDirtyUnsyncedChanges = false;
+          }
+        }
+
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err };
+      } finally {
+        activeSyncPromise = null;
+        if (pendingSyncAfterActive) {
+          pendingSyncAfterActive = false;
+          syncNow(false);
+        }
+      }
+    };
+
+    activeSyncPromise = runSync();
+    return activeSyncPromise;
   }
 
   function scheduleUpload() {
@@ -387,25 +473,31 @@
     }, 350);
   }
 
-  // 攔截所有頁面的 localStorage.setItem，只要進度有變動就自動更新時間戳記並在背景備份到雲端
+  // 攔截所有頁面的 localStorage.setItem，只有進度值真的有變動時才更新時間戳記並在背景備份到雲端
   Storage.prototype.setItem = function (key, value) {
+    const isLocalProgress = this === localStorage && !isApplyingCloudData && isProgressKey(key) && key !== 'game_version';
+    const prevValue = isLocalProgress ? rawGetItem.call(this, key) : null;
     rawSetItem.call(this, key, value);
-    if (this === localStorage && !isApplyingCloudData && isProgressKey(key) && key !== 'game_version') {
-      rawSetItem.call(localStorage, UPDATED_AT_KEY, String(Date.now()));
+    if (isLocalProgress && prevValue !== String(value)) {
+      bumpLocalTimestamp();
+      hasDirtyUnsyncedChanges = true;
       scheduleUpload();
     }
   };
 
-  // 當頁面即將跳轉（例如從關卡、衣櫥、貼紙簿回到大廳）時，若還有排隊中的備份，立即以 keepalive 送出
+  // 當頁面即將跳轉（例如從關卡、衣櫥、貼紙簿回到大廳）或關閉時，若還有未上傳的變動，立即以 keepalive 送出
   window.addEventListener('pagehide', () => {
-    if (uploadDebounceTimer) {
-      clearTimeout(uploadDebounceTimer);
-      uploadDebounceTimer = null;
+    if (uploadDebounceTimer || hasDirtyUnsyncedChanges) {
+      if (uploadDebounceTimer) {
+        clearTimeout(uploadDebounceTimer);
+        uploadDebounceTimer = null;
+      }
       const acc = rawGetItem.call(localStorage, ACCOUNT_KEY);
       const pwd = rawGetItem.call(localStorage, PASSWORD_KEY);
       if (acc && pwd && navigator.onLine) {
         const localData = exportLocalProgress();
         const localUpdatedAt = parseInt(rawGetItem.call(localStorage, UPDATED_AT_KEY) || String(Date.now()), 10);
+        hasDirtyUnsyncedChanges = false;
         saveCloudAccount(acc, pwd, localData, localUpdatedAt, true).catch(() => {});
       }
     }
@@ -426,6 +518,12 @@
       rawSetItem.call(localStorage, SKIP_PROMPT_KEY, 'true');
     },
     logout: () => {
+      if (uploadDebounceTimer) {
+        clearTimeout(uploadDebounceTimer);
+        uploadDebounceTimer = null;
+      }
+      pendingSyncAfterActive = false;
+      hasDirtyUnsyncedChanges = false;
       clearLocalProgress();
       rawRemoveItem.call(localStorage, ACCOUNT_KEY);
       rawRemoveItem.call(localStorage, PASSWORD_KEY);

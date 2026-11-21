@@ -260,6 +260,72 @@ const PLAYER_CHARACTERS = {
       }
     }
   },
+  'han7': {
+    name: '跳跳公主', prefix: 'han7', size: 165, hitboxOffsetX: 115, hitboxOffsetY: 0, hitboxRadius: 55,
+    drawEffect: (ctx, p, startX, startY, targetX, targetY) => {
+      // 1. 前半段 (p < 0.55)：問號磚塊出現並被「往上頂」彈跳
+      if (p < 0.55) {
+        const hitP = p / 0.55;
+        // 模擬被拳頭頂起來再落下的弧線
+        const bounceY = -Math.sin(hitP * Math.PI) * 45;
+        const scale = hitP < 0.2 ? hitP / 0.2 : 1;
+
+        ctx.save();
+        ctx.translate(targetX, targetY + bounceY);
+        ctx.scale(scale, scale);
+
+        // 畫出瑪利歐風格金黃色問號磚塊
+        ctx.fillStyle = '#FFB800';
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 15;
+        ctx.fillRect(-32, -32, 64, 64);
+        ctx.strokeRect(-32, -32, 64, 64);
+
+        // 磚塊四角的鉚釘
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-26, -26, 6, 6);
+        ctx.fillRect(20, -26, 6, 6);
+        ctx.fillRect(-26, 20, 6, 6);
+        ctx.fillRect(20, 20, 6, 6);
+
+        // 中間的問號
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 42px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', 0, 3);
+        ctx.restore();
+      }
+
+      // 2. 後半段 (p >= 0.35)：頂出金幣、星星與蘑菇向四周噴發
+      if (p >= 0.35) {
+        const burstP = (p - 0.35) / 0.65;
+        const drops = ['🪙', '⭐', '🍄', '🪙', '✨'];
+
+        ctx.save();
+        ctx.translate(targetX, targetY);
+        drops.forEach((icon, i) => {
+          // 呈扇形往上噴出再微幅下墜（重力感）
+          const spreadAngle = -Math.PI * 0.85 + (i * Math.PI * 0.7) / (drops.length - 1);
+          const vx = Math.cos(spreadAngle) * 110 * burstP;
+          const vy = Math.sin(spreadAngle) * 120 * burstP + 60 * burstP * burstP;
+
+          ctx.save();
+          ctx.translate(vx, vy);
+          ctx.rotate(burstP * Math.PI * 2 * (i % 2 === 0 ? 1 : -1));
+          ctx.globalAlpha = Math.max(0, 1 - burstP);
+          ctx.font = `${38 * (1 - burstP * 0.25)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(icon, 0, 0);
+          ctx.restore();
+        });
+        ctx.restore();
+      }
+    }
+  },
   'chih1': {
     name: '揮劍里長', prefix: 'chih1', size: 160, hitboxOffsetX: 100, hitboxOffsetY: 0, hitboxRadius: 40,
     drawEffect: (ctx, p, startX, startY, targetX, targetY) => {

@@ -357,7 +357,7 @@
     const PLAYER_SPEED = 780;
     const PLAYER_MAX_HP = 6;
     const PLAYER_INVINCIBLE_TIME = 1.2;
-    const FIRST_CLEAR_REWARD = 12;
+    const CLEAR_REWARD_STARS = 12;
 
     const CANVAS_W = 900;
     const CANVAS_H = 1200;
@@ -382,7 +382,7 @@
       {
         index: 0,
         stickerId: 'skey1',
-        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 1</span>',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><span> 1</span>',
         cx: 177, cy: 943,
         hitRect: { x: 62, y: 822, w: 230, h: 241 },
         innerRect: { x: 90, y: 853, w: 174, h: 180 },
@@ -410,7 +410,7 @@
       {
         index: 1,
         stickerId: 'skey2',
-        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 2</span>',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><span> 2</span>',
         cx: 450, cy: 945,
         hitRect: { x: 330, y: 822, w: 240, h: 244 },
         innerRect: { x: 366, y: 858, w: 168, h: 174 },
@@ -432,7 +432,7 @@
       {
         index: 2,
         stickerId: 'skey3',
-        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>ㄔˊ</rt></ruby><span> 3</span>',
+        labelHtml: '<ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>鑰<rt>ㄧㄠˋ</rt></ruby><ruby>匙<rt>˙ㄕ</rt></ruby><span> 3</span>',
         cx: 723, cy: 945,
         hitRect: { x: 606, y: 822, w: 234, h: 244 },
         innerRect: { x: 636, y: 856, w: 174, h: 178 },
@@ -1018,8 +1018,7 @@
       document.getElementById('back-btn').style.display = 'none';
 
       const currentCoins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
-      const alreadyCleared = localStorage.getItem('map19_cleared') === 'true';
-      const alreadyOwnedBad19 = localStorage.getItem('owns_bad19') === 'true';
+      const giftClaimed = localStorage.getItem('blindbox_map19_gift') === 'claimed';
       const clearedAllWaves = isWin && battleWave >= TOTAL_WAVES;
 
       let rewardStars = 0;
@@ -1029,14 +1028,17 @@
         if (localStorage.getItem('sticker_smap19') !== 'true') {
           localStorage.setItem('sticker_smap19', 'new');
         }
-        if (!alreadyCleared) {
-          rewardStars = FIRST_CLEAR_REWARD;
+        if (giftClaimed) {
+          rewardStars = CLEAR_REWARD_STARS;
         }
       }
 
       const newTotalCoins = currentCoins + rewardStars;
       if (rewardStars > 0) {
         localStorage.setItem('playerCoins', newTotalCoins);
+      }
+      if (clearedAllWaves && window.CloudSync && window.CloudSync.getAccount && window.CloudSync.getAccount() && window.CloudSync.syncNow) {
+        window.CloudSync.syncNow(false);
       }
 
       if (clearedAllWaves) {
@@ -1056,14 +1058,10 @@
           starsHtml += '⭐';
           if (i % 6 === 0) starsHtml += '<br>';
         }
-      } else if (clearedAllWaves && alreadyCleared) {
-        starsHtml = `<div class="zh-text" style="color: #b2fef7;">🏆 <ruby>本<rt>ㄅㄣˇ</rt></ruby><ruby>關<rt>ㄍㄨㄢ</rt></ruby><ruby>卡<rt>ㄎㄚˇ</rt></ruby><ruby>已<rt>ㄧˇ</rt></ruby><ruby>經<rt>ㄐㄧㄥ</rt></ruby><ruby>領<rt>ㄌㄧㄥˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>獎<rt>ㄐㄧㄤˇ</rt></ruby><ruby>勵<rt>ㄌㄧˋ</rt></ruby><ruby>囉<rt>˙ㄌㄨㄛ</rt></ruby><span>！</span></div>`;
+      } else if (clearedAllWaves && !giftClaimed) {
+        starsHtml = `<div class="zh-text" style="color: #fde68a;">🎁 <ruby>回<rt>ㄏㄨㄟˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>領<rt>ㄌㄧㄥˇ</rt></ruby><ruby>取<rt>ㄑㄩˇ</rt></ruby><ruby>神<rt>ㄕㄣˊ</rt></ruby><ruby>秘<rt>ㄇㄧˋ</rt></ruby><ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>禮<rt>ㄌㄧˇ</rt></ruby><ruby>包<rt>ㄅㄠ</rt></ruby><span>！</span></div>`;
       } else {
         starsHtml = `<div class="zh-text" style="color: #ff8a80;">💀 <ruby>撐<rt>ㄔㄥ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>六<rt>ㄌㄧㄡˋ</rt></ruby><ruby>波<rt>ㄅㄛ</rt></ruby><ruby>才<rt>ㄘㄞˊ</rt></ruby><ruby>能<rt>ㄋㄥˊ</rt></ruby><ruby>拿<rt>ㄋㄚˊ</rt></ruby><ruby>到<rt>ㄉㄠˋ</rt></ruby><ruby>獎<rt>ㄐㄧㄤˇ</rt></ruby><ruby>勵<rt>ㄌㄧˋ</rt></ruby><ruby>喔<rt>ㄛ</rt></ruby><span>！</span></div>`;
-      }
-
-      if (clearedAllWaves && !alreadyOwnedBad19) {
-        starsHtml += `<div class="zh-text" style="margin-top: 8px; color: #69f0ae; width: 100%;">💀 <ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby><ruby>角<rt>ㄐㄧㄠˇ</rt></ruby><ruby>色<rt>ㄙㄜˋ</rt></ruby><span>！</span></div>`;
       }
 
       document.getElementById('star-container').innerHTML = starsHtml;
@@ -1575,8 +1573,8 @@
         ctx.fill();
 
         const frameIdx = en.isAttackPose
-          ? 1
-          : (Math.floor(en.walkCycle / 3) % 2 === 0 ? 2 : 0);
+          ? 2
+          : (Math.floor(en.walkCycle / 3) % 2 === 0 ? 0 : 1);
         const img = enemyImages[frameIdx];
 
         if (img && img.complete && img.naturalWidth > 0) {
