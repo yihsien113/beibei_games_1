@@ -1,4 +1,4 @@
-const SW_VERSION = '3.1.0';
+const SW_VERSION = '3.1.1';
 
 //需要更新時修改版本數字↑↑↑↑
 // 引用素材清單（加上版本參數破除 iOS / iPadOS Safari 的 HTTP 快取）

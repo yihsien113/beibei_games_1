@@ -268,6 +268,8 @@
       #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
       #result-screen div[style*="flex-direction: column"] .btn { font-size: 24px !important; padding: 10px 0 !important; }
       #result-screen div[style*="flex-direction: column"] .btn.btn-change-diff { font-size: 18px !important; padding: 8px 18px !important; }
+      #rpg-dialog-text { font-size: 24px !important; }
+      #rpg-dialog-hint { font-size: 16px !important; }
     }
   </style>
 </head>
@@ -385,6 +387,9 @@
     <canvas id="gameCanvas"></canvas>
   </div>
 
+  <!-- 置於 body 尾部確保 document.body 已生成再載入對話框模組 -->
+  <script src="rpg-dialog-ui.js"></script>
+
   <script>
     // =========================================
     // 角色讀取設定 (依衣櫃裝備的角色決定外觀、大小與攻擊特效)
@@ -490,10 +495,7 @@
       monsterVisible: false,
       alertAlpha: 0,
       alertTime: 0,
-      alertActive: false,
-      audioDone: false,
-      postAudioTimer: 0,
-      runId: 0
+      alertActive: false
     };
 
     // 遊戲進行變數
@@ -657,16 +659,8 @@
     }
 
     // =========================================
-    // 開場動畫語音與緩動輔助函式
+    // 開場動畫 RPG 對話框語音與緩動輔助函式
     // =========================================
-    const introAudios = {
-      alert: new Audio('assets/mp3/map17-1.mp3'),
-      guide: new Audio('assets/mp3/map17-2.mp3')
-    };
-    introAudios.alert.preload = 'auto';
-    introAudios.guide.preload = 'auto';
-    let introAudioTimerId = null;
-
     function lerp(a, b, t) {
       return a + (b - a) * t;
     }
@@ -676,110 +670,70 @@
       return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
     }
 
-    function primeIntroAudio(audio) {
-      if (!audio) return;
-      try {
-        audio._priming = true;
-        audio.muted = true;
-        const p = audio.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            if (!audio._priming) return;
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = false;
-            audio._priming = false;
-          }).catch(() => {
-            if (!audio._priming) return;
-            audio.muted = false;
-            audio._priming = false;
-          });
-        } else {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.muted = false;
-          audio._priming = false;
-        }
-      } catch (e) {
-        audio.muted = false;
-        audio._priming = false;
+    function hideIntroDialog() {
+      if (window.RPGDialog) window.RPGDialog.hide();
+    }
+
+    function startMonsterEnterPhase() {
+      intro.phase = 'monster_enter';
+      intro.timer = 0;
+      intro.monsterVisible = true;
+      monster.x = INTRO_MONSTER_START_X;
+      monster.targetX = INTRO_MONSTER_START_X;
+      monster.stopped = false;
+      monster.walkTimer = 0;
+    }
+
+    function startIntroZoomOutPhase() {
+      intro.phase = 'zoom_out';
+      intro.timer = 0;
+      player.facingLeft = false;
+      player.stopped = false;
+      player.walkCycle = 0;
+      monster.stopped = false;
+      monster.walkTimer = 0;
+    }
+
+    function showIntroDialog1() {
+      if (window.RPGDialog) {
+        window.RPGDialog.show(
+          `<ruby>有<rt>ㄧㄡˇ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby><span>！</span>`,
+          'assets/mp3/map17-1.mp3'
+        );
+      } else {
+        startMonsterEnterPhase();
       }
     }
 
-    function stopIntroAudio() {
-      intro.runId++;
-      if (introAudioTimerId) {
-        clearTimeout(introAudioTimerId);
-        introAudioTimerId = null;
+    function showIntroDialog2() {
+      if (window.RPGDialog) {
+        window.RPGDialog.show(
+          `<ruby>閃<rt>ㄕㄢˇ</rt></ruby><ruby>過<rt>ㄍㄨㄛˋ</rt></ruby><ruby>火<rt>ㄏㄨㄛˇ</rt></ruby><ruby>焰<rt>ㄧㄢˋ</rt></ruby><span>，</span><ruby>利<rt>ㄌㄧˋ</rt></ruby><ruby>用<rt>ㄩㄥˋ</rt></ruby><ruby>寶<rt>ㄅㄠˇ</rt></ruby><ruby>石<rt>ㄕˊ</rt></ruby><ruby>攻<rt>ㄍㄨㄥ</rt></ruby><ruby>擊<rt>ㄐㄧˊ</rt></ruby><ruby>怪<rt>ㄍㄨㄞˋ</rt></ruby><ruby>物<rt>ㄨˋ</rt></ruby>`,
+          'assets/mp3/map17-2.mp3'
+        );
+      } else {
+        startIntroZoomOutPhase();
       }
-      [introAudios.alert, introAudios.guide].forEach(a => {
-        if (!a) return;
-        a._priming = false;
-        a.onended = null;
-        a.onerror = null;
-        try {
-          a.pause();
-          a.currentTime = 0;
-          a.muted = false;
-        } catch (e) {}
-      });
     }
 
-    function playIntroAudio(audio, fallbackMs, maxMs, onDone) {
-      const runId = intro.runId;
-      let done = false;
-      let fallbackTimerId = null;
-
-      if (introAudioTimerId) {
-        clearTimeout(introAudioTimerId);
-        introAudioTimerId = null;
+    function handleIntroDialogDismissed() {
+      if (gameState !== 'intro_anim') return;
+      if (intro.phase === 'turn_and_alert') {
+        startMonsterEnterPhase();
+      } else if (intro.phase === 'voice_explain') {
+        startIntroZoomOutPhase();
       }
+    }
 
-      function finish() {
-        if (done) return;
-        done = true;
-        if (fallbackTimerId) {
-          clearTimeout(fallbackTimerId);
-          fallbackTimerId = null;
+    function dismissDialogIfOpen() {
+      if (window.RPGDialog && window.RPGDialog.boxElement.style.display === 'block') {
+        if (!window.RPGDialog.isLocked()) {
+          window.RPGDialog.hide();
+          handleIntroDialogDismissed();
         }
-        if (introAudioTimerId) {
-          clearTimeout(introAudioTimerId);
-          introAudioTimerId = null;
-        }
-        if (audio) {
-          audio.onended = null;
-          audio.onerror = null;
-        }
-        if (runId !== intro.runId || gameState !== 'intro_anim') return;
-        if (typeof onDone === 'function') onDone();
+        return true;
       }
-
-      function scheduleFallback() {
-        if (!done && !fallbackTimerId && runId === intro.runId) {
-          fallbackTimerId = setTimeout(finish, fallbackMs);
-        }
-      }
-
-      if (!audio) {
-        scheduleFallback();
-        return;
-      }
-
-      introAudioTimerId = setTimeout(finish, maxMs);
-
-      try {
-        audio._priming = false;
-        audio.muted = false;
-        audio.currentTime = 0;
-        audio.onended = finish;
-        audio.onerror = scheduleFallback;
-        const p = audio.play();
-        if (p && typeof p.catch === 'function') {
-          p.catch(scheduleFallback);
-        }
-      } catch (e) {
-        scheduleFallback();
-      }
+      return false;
     }
 
     // =========================================
@@ -1067,7 +1021,7 @@
     // =========================================
     function cleanupMemory() {
       gameState = 'exiting';
-      stopIntroAudio();
+      hideIntroDialog();
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -1120,6 +1074,7 @@
     }
 
     function openDifficultyMenu() {
+      hideIntroDialog();
       gameState = 'ready';
       document.getElementById('result-screen').style.display = 'none';
       document.getElementById('start-screen').style.display = 'flex';
@@ -1132,7 +1087,7 @@
         clearTimeout(endTimeoutId);
         endTimeoutId = null;
       }
-      stopIntroAudio();
+      hideIntroDialog();
       getAudioCtx();
 
       camera.zoom = 1;
@@ -1196,8 +1151,6 @@
       monster.isKnockedOut = false;
 
       if (playIntro) {
-        primeIntroAudio(introAudios.alert);
-        primeIntroAudio(introAudios.guide);
         gameState = 'intro_anim';
         intro.phase = 'zoom_in';
         intro.timer = 0;
@@ -1206,8 +1159,6 @@
         intro.alertAlpha = 0;
         intro.alertTime = 0;
         intro.alertActive = false;
-        intro.audioDone = false;
-        intro.postAudioTimer = 0;
 
         player.x = INTRO_PLAYER_START_X;
         player.stopped = true;
@@ -1315,6 +1266,7 @@
 
     function endGame(isWin, reason) {
       if (gameState === 'exiting' || gameState === 'result') return;
+      hideIntroDialog();
       gameState = 'result';
       endTimeoutId = null;
 
@@ -1660,25 +1612,10 @@
           intro.alertActive = true;
           intro.alertTime = 0;
           intro.alertAlpha = 0;
-          intro.audioDone = false;
-          intro.postAudioTimer = 0;
-          playIntroAudio(introAudios.alert, 1200, 3500, () => {
-            intro.audioDone = true;
-          });
+          showIntroDialog1();
         }
       } else if (intro.phase === 'turn_and_alert') {
-        if (intro.audioDone) {
-          intro.postAudioTimer += dt;
-        }
-        if (intro.timer >= 0.85 && intro.audioDone && intro.postAudioTimer >= 0.15) {
-          intro.phase = 'monster_enter';
-          intro.timer = 0;
-          intro.monsterVisible = true;
-          monster.x = INTRO_MONSTER_START_X;
-          monster.targetX = INTRO_MONSTER_START_X;
-          monster.stopped = false;
-          monster.walkTimer = 0;
-        }
+        // 等待玩家聽完語音並點擊對話框繼續，由 handleIntroDialogDismissed() 進入 monster_enter
       } else if (intro.phase === 'monster_enter') {
         const totalDist = INTRO_MONSTER_STOP_X - INTRO_MONSTER_START_X;
         monster.x = Math.min(INTRO_MONSTER_STOP_X, monster.x + INTRO_MONSTER_SPEED * dt);
@@ -1700,25 +1637,10 @@
           intro.phase = 'voice_explain';
           intro.timer = 0;
           intro.alertActive = false;
-          intro.audioDone = false;
-          intro.postAudioTimer = 0;
-          playIntroAudio(introAudios.guide, 3300, 7500, () => {
-            intro.audioDone = true;
-          });
+          showIntroDialog2();
         }
       } else if (intro.phase === 'voice_explain') {
-        if (intro.audioDone) {
-          intro.postAudioTimer += dt;
-        }
-        if (intro.audioDone && intro.postAudioTimer >= 0.2) {
-          intro.phase = 'zoom_out';
-          intro.timer = 0;
-          player.facingLeft = false;
-          player.stopped = false;
-          player.walkCycle = 0;
-          monster.stopped = false;
-          monster.walkTimer = 0;
-        }
+        // 等待玩家聽完語音並點擊對話框繼續，由 handleIntroDialogDismissed() 進入 zoom_out
       } else if (intro.phase === 'zoom_out') {
         const p = Math.min(1, intro.timer / INTRO_ZOOM_OUT_DUR);
         const e = easeInOutCubic(p);
@@ -3068,13 +2990,25 @@
       }
     }
 
+    if (window.RPGDialog && window.RPGDialog.boxElement) {
+      window.RPGDialog.boxElement.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        dismissDialogIfOpen();
+      });
+    }
+
     canvas.addEventListener('pointerdown', (e) => {
+      if (dismissDialogIfOpen()) return;
       if (gameState !== 'playing') return;
       if (e.cancelable) e.preventDefault();
       triggerJump();
     });
 
     window.addEventListener('keydown', (e) => {
+      if ((e.code === 'Space' || e.code === 'Enter') && dismissDialogIfOpen()) {
+        e.preventDefault();
+        return;
+      }
       if (gameState !== 'playing') return;
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
