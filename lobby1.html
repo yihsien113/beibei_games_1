@@ -1276,10 +1276,10 @@
       items: [
         {
           type: 'coin',
-          amount: 20,
+          amount: 40,
           badge: '<ruby>星<rt>ㄒㄧㄥ</rt></ruby><ruby>星<rt>ㄒㄧㄥ</rt></ruby>',
           icon: '⭐',
-          title: '<span>⭐ + 20</span>',
+          title: '<span>⭐ + 40</span>',
           desc: ''
         },
         {
@@ -1309,7 +1309,12 @@
         if (item.type === 'coin') {
           coinGain += parseInt(item.amount || 0, 10);
         } else if ((item.type === 'player' || item.type === 'character') && (item.playerId || item.charId)) {
-          localStorage.setItem('owns_' + (item.playerId || item.charId), 'true');
+          const charId = item.playerId || item.charId;
+          localStorage.setItem('owns_' + charId, 'true');
+          const charStickerId = item.stickerId || ('s' + charId);
+          if (localStorage.getItem('sticker_' + charStickerId) !== 'true') {
+            localStorage.setItem('sticker_' + charStickerId, 'new');
+          }
         } else if (item.type === 'sticker' && item.stickerId) {
           if (localStorage.getItem('sticker_' + item.stickerId) !== 'true') {
             localStorage.setItem('sticker_' + item.stickerId, 'new');

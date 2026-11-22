@@ -114,6 +114,102 @@
     }
     .btn:active { transform: scale(0.95); }
 
+    /* 難度選擇房間 UI（對應 map19-2.webp） */
+    #diff-room-ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 95;
+      display: none;
+    }
+    #diff-title-banner {
+      position: absolute;
+      top: 8.5%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(16, 12, 26, 0.88);
+      border: 3px solid #ffd32a;
+      border-radius: 20px;
+      padding: 10px 30px;
+      font-size: 38px;
+      font-weight: bold;
+      color: #ffeb3b;
+      white-space: nowrap;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 211, 42, 0.45);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    @keyframes diffSignFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .diff-exit-sign {
+      position: absolute;
+      top: 37.5%;
+      pointer-events: auto;
+      cursor: pointer;
+      border: 3px solid rgba(255, 255, 255, 0.88);
+      border-radius: 18px;
+      padding: 10px 18px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      animation: diffSignFloat 2.2s ease-in-out infinite;
+      transition: transform 0.15s, opacity 0.25s;
+    }
+    .diff-exit-sign:active {
+      transform: scale(0.95);
+    }
+    #diff-exit-left {
+      left: 2.5%;
+    }
+    #diff-exit-right {
+      right: 2.5%;
+    }
+    .diff-exit-easy {
+      background: linear-gradient(180deg, #00b894, #00997a);
+      box-shadow: 0 5px 0 #00755e, 0 8px 18px rgba(0, 184, 148, 0.45);
+    }
+    .diff-exit-normal {
+      background: linear-gradient(180deg, #0984e3, #076ebc);
+      box-shadow: 0 5px 0 #055594, 0 8px 18px rgba(9, 132, 227, 0.45);
+    }
+    .diff-exit-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 30px;
+      font-weight: bold;
+      line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.55);
+      white-space: nowrap;
+    }
+    .diff-exit-sub {
+      font-size: 15px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.95);
+      background: rgba(0, 0, 0, 0.28);
+      padding: 3px 10px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .diff-exit-sign.is-chosen {
+      animation: none;
+      transform: scale(1.08);
+      box-shadow: 0 0 22px rgba(255, 235, 59, 0.85), 0 6px 16px rgba(0, 0, 0, 0.55);
+    }
+    .diff-exit-sign.is-dimmed {
+      animation: none;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
     #back-btn {
       position: absolute;
       top: 15px;
@@ -192,6 +288,18 @@
       width: 100%;
       max-width: 340px;
     }
+    .result-sub-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .btn-change-diff {
+      background-color: #475569;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    }
 
     /* ========================================= */
     /* 手機螢幕響應式設定 */
@@ -230,6 +338,10 @@
         font-size: 16px !important;
         letter-spacing: 0px !important;
       }
+      #diff-title-banner { top: 9.5% !important; font-size: 22px !important; padding: 6px 18px !important; border-width: 2.5px !important; border-radius: 14px !important; }
+      .diff-exit-sign { top: 37% !important; padding: 6px 10px !important; border-radius: 14px !important; border-width: 2px !important; gap: 2px !important; }
+      .diff-exit-main { font-size: 20px !important; gap: 4px !important; }
+      .diff-exit-sub { font-size: 11px !important; padding: 2px 7px !important; }
       #result-title {
         font-size: 32px !important;
         margin-bottom: 6px !important;
@@ -285,6 +397,31 @@
       </h2>
     </div>
 
+    <!-- 難度選擇房間介面（對應 assets/map/map19-2.webp） -->
+    <div id="diff-room-ui">
+      <div id="diff-title-banner">
+        <div class="zh-text">
+          <ruby>請<rt>ㄑㄧㄥˇ</rt></ruby><ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>擇<rt>ㄗㄜˊ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby>
+        </div>
+      </div>
+
+      <button id="diff-exit-left" class="diff-exit-sign diff-exit-easy" onclick="chooseDifficultyExit('easy')">
+        <div class="diff-exit-main zh-text">
+          <span>⬅️</span>
+          <ruby>簡<rt>ㄐㄧㄢˇ</rt></ruby><ruby>單<rt>ㄉㄢ</rt></ruby>
+        </div>
+        <span class="diff-exit-sub">❤️ 無限生命</span>
+      </button>
+
+      <button id="diff-exit-right" class="diff-exit-sign diff-exit-normal" onclick="chooseDifficultyExit('normal')">
+        <div class="diff-exit-main zh-text">
+          <ruby>正<rt>ㄓㄥˋ</rt></ruby><ruby>常<rt>ㄔㄤˊ</rt></ruby>
+          <span>➡️</span>
+        </div>
+        <span class="diff-exit-sub">❤️ 6顆愛心</span>
+      </button>
+    </div>
+
     <!-- 結算畫面 -->
     <div id="result-screen" class="overlay" style="display: none;">
       <h1 id="result-title" class="zh-text" style="font-size: 48px; color: #ffeb3b; margin: 0 0 10px 0;"></h1>
@@ -323,17 +460,24 @@
           <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
         </button>
 
-        <button class="btn btn-sub" style="margin-top: 6px; font-size: 20px; padding: 10px 22px; background-color: #475569; box-shadow: 0 4px 10px rgba(0,0,0,0.45);" onclick="replayGateAnimation()">
-          <span>🔑</span>
-          <span class="zh-text">
-            <ruby>再<rt>ㄗㄞˋ</rt></ruby>
-            <ruby>看<rt>ㄎㄢˋ</rt></ruby>
-            <ruby>一<rt>ㄧ</rt></ruby>
-            <ruby>次<rt>ㄘˋ</rt></ruby>
-            <ruby>開<rt>ㄎㄞ</rt></ruby>
-            <ruby>門<rt>ㄇㄣˊ</rt></ruby>
-          </span>
-        </button>
+        <div class="result-sub-row">
+          <button class="btn btn-sub btn-change-diff" style="margin: 0; font-size: 20px; padding: 10px 20px;" onclick="openDifficultyMenu()">
+            <span>⚙️</span>
+            <span class="zh-text"><ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby></span>
+          </button>
+
+          <button class="btn btn-sub" style="margin: 0; font-size: 20px; padding: 10px 20px; background-color: #475569; box-shadow: 0 4px 10px rgba(0,0,0,0.45);" onclick="replayGateAnimation()">
+            <span>🔑</span>
+            <span class="zh-text">
+              <ruby>再<rt>ㄗㄞˋ</rt></ruby>
+              <ruby>看<rt>ㄎㄢˋ</rt></ruby>
+              <ruby>一<rt>ㄧ</rt></ruby>
+              <ruby>次<rt>ㄘˋ</rt></ruby>
+              <ruby>開<rt>ㄎㄞ</rt></ruby>
+              <ruby>門<rt>ㄇㄣˊ</rt></ruby>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -362,10 +506,13 @@
     const CANVAS_W = 900;
     const CANVAS_H = 1200;
     const GEAR_CENTER = { x: 450, y: 548 };
+    const DIFF_START_POS = { x: 450, y: 1175 };
+    const DIFF_STAND_POS = { x: 450, y: 720 };
+    const DIFF_EXIT_Y = 610;
     const ARENA_CENTER = { x: 450, y: 560 };
     const ARENA_START_POS = { x: 450, y: 1060 };
 
-    // 對應 map19-2.webp 四周八個開口
+    // 對應 map19-3.webp 四周八個開口
     const ARENA_DOORS = [
       { x: 450, y: 135 }, // 上
       { x: 155, y: 225 }, // 左上
@@ -468,9 +615,16 @@
 
     // 狀態變數
     // loading / gate / gate_opening /
+    // diff_intro_walk / diff_select / diff_exit_walk /
     // battle_intro_walk / battle_intro_dialog1 / battle_intro_flash / battle_intro_dialog2 /
     // battle_playing / battle_dead / battle_winning / battle_result / exiting
     let gamePhase = 'loading';
+    let difficulty = 'normal';        // 'easy' | 'normal'
+    let hasWatchedBattleIntro = false;
+    let diffExitWaypoints = [];
+    let diffFadingIn = false;
+    let diffExitFading = false;
+    let diffWalkRipple = null;
     let animTime = 0;
     let lastTime = 0;
     let animationFrameId = null;
@@ -491,7 +645,7 @@
     let waveGapTimer = 0;
     let lastDoorIdx = -1;
     let lastRenderedWave = -1;
-    let lastRenderedHp = -1;
+    let lastRenderedHp = null;
 
     let enemies = [];
     let activeEffects = [];
@@ -531,19 +685,21 @@
 
     // 離屏快取畫布（避免 iPad Safari 每幀濾鏡掉幀）
     let bgCacheCanvas = null;
+    let diffBgCacheCanvas = null;
     let arenaBgCacheCanvas = null;
     let keyColorCaches = [null, null, null];
     let keySilhouetteCaches = [null, null, null];
     let lockCacheCanvas = null;
     let fingerCacheCanvas = null;
 
-    // 資源圖片（1 張大門圖 + 3 張鑰匙 + 1 張戰鬥底圖 + 3 張主角 + 3 張骷髏 = 11 張）
+    // 資源圖片（1 張大門圖 + 1 張難度通道房 + 3 張鑰匙 + 1 張戰鬥底圖 + 3 張主角 + 3 張骷髏 = 12 張）
     const bgImg = new Image();
+    const diffBgImg = new Image();
     const arenaBgImg = new Image();
     const keyImgs = [new Image(), new Image(), new Image()];
     const playerImages = [new Image(), new Image(), new Image()];
     const enemyImages = [new Image(), new Image(), new Image()];
-    const totalAssets = 11;
+    const totalAssets = 12;
     let loadedAssets = 0;
 
     function makeEmojiCache(emoji, fontSize, canvasSize) {
@@ -608,6 +764,7 @@
 
     function initRenderCaches() {
       bgCacheCanvas = makeBgCache(bgImg, '#182038', '#0b0e18');
+      diffBgCacheCanvas = makeBgCache(diffBgImg, '#2a2622', '#121010');
       arenaBgCacheCanvas = makeBgCache(arenaBgImg, '#2b2433', '#120e18');
 
       for (let i = 0; i < 3; i++) {
@@ -632,8 +789,8 @@
 
         initRenderCaches();
 
-        if (localStorage.getItem('map19_gate_cleared') === 'true') {
-          enterBattleStage();
+        if (localStorage.getItem('map19_gate_cleared') === 'true' || localStorage.getItem('map19_cleared') === 'true') {
+          enterDifficultyRoom(false);
         } else {
           enterGateStage();
         }
@@ -648,9 +805,13 @@
     bgImg.onerror = checkLoadProgress;
     bgImg.src = 'assets/map/map19-1.webp';
 
+    diffBgImg.onload = checkLoadProgress;
+    diffBgImg.onerror = checkLoadProgress;
+    diffBgImg.src = 'assets/map/map19-2.webp';
+
     arenaBgImg.onload = checkLoadProgress;
     arenaBgImg.onerror = checkLoadProgress;
-    arenaBgImg.src = 'assets/map/map19-2.webp';
+    arenaBgImg.src = 'assets/map/map19-3.webp';
 
     ['key1', 'key2', 'key3'].forEach((name, idx) => {
       keyImgs[idx].onload = checkLoadProgress;
@@ -688,6 +849,7 @@
       popups.length = 0;
 
       if (bgImg) { bgImg.onload = null; bgImg.onerror = null; bgImg.src = ''; }
+      if (diffBgImg) { diffBgImg.onload = null; diffBgImg.onerror = null; diffBgImg.src = ''; }
       if (arenaBgImg) { arenaBgImg.onload = null; arenaBgImg.onerror = null; arenaBgImg.src = ''; }
       [...keyImgs, ...playerImages, ...enemyImages].forEach(img => {
         if (img) { img.onload = null; img.onerror = null; img.src = ''; }
@@ -695,6 +857,7 @@
 
       const caches = [
         bgCacheCanvas,
+        diffBgCacheCanvas,
         arenaBgCacheCanvas,
         lockCacheCanvas,
         fingerCacheCanvas,
@@ -705,6 +868,7 @@
         if (c) { c.width = 1; c.height = 1; }
       });
       bgCacheCanvas = null;
+      diffBgCacheCanvas = null;
       arenaBgCacheCanvas = null;
       lockCacheCanvas = null;
       fingerCacheCanvas = null;
@@ -764,10 +928,12 @@
       gateOpenTimer = 0;
       gearAngle = 0;
 
+      document.getElementById('diff-room-ui').style.display = 'none';
       document.getElementById('result-screen').style.display = 'none';
       document.getElementById('battle-hud').style.display = 'none';
       document.getElementById('back-btn').style.display = 'block';
 
+      hasWatchedBattleIntro = false;
       gamePhase = 'gate';
     }
 
@@ -807,14 +973,99 @@
         }
       }
 
-      if (lastRenderedHp !== playerHp) {
-        lastRenderedHp = playerHp;
-        let hearts = '';
-        for (let i = 0; i < PLAYER_MAX_HP; i++) {
-          hearts += i < playerHp ? '❤️' : '🖤';
+      const hpDisplayKey = difficulty === 'easy' ? 'infinite' : playerHp;
+      if (lastRenderedHp !== hpDisplayKey) {
+        lastRenderedHp = hpDisplayKey;
+        if (difficulty === 'easy') {
+          battleHpEl.textContent = '❤️ ∞';
+        } else {
+          let hearts = '';
+          for (let i = 0; i < PLAYER_MAX_HP; i++) {
+            hearts += i < playerHp ? '❤️' : '🖤';
+          }
+          battleHpEl.textContent = hearts;
         }
-        battleHpEl.textContent = hearts;
       }
+    }
+
+    function enterDifficultyRoom(fadeFromWhite = false) {
+      if (gamePhase === 'exiting') return;
+      if (window.RPGDialog) window.RPGDialog.hide();
+      if (endTimeoutId) {
+        clearTimeout(endTimeoutId);
+        endTimeoutId = null;
+      }
+
+      enemies = [];
+      activeEffects = [];
+      confetti = [];
+      particles = [];
+      popups = [];
+      diffExitWaypoints = [];
+      diffWalkRipple = null;
+      shakeTime = 0;
+      playerInvincible = 0;
+      if (fadeFromWhite) {
+        whiteFade = 1;
+        diffFadingIn = true;
+      } else {
+        whiteFade = 0;
+        diffFadingIn = false;
+      }
+      diffExitFading = false;
+
+      resetPlayerForBattle(DIFF_START_POS.x, DIFF_START_POS.y);
+      player.targetX = DIFF_STAND_POS.x;
+      player.targetY = DIFF_STAND_POS.y;
+      player.isMoving = true;
+      player.isFacingLeft = false;
+
+      const leftBtn = document.getElementById('diff-exit-left');
+      const rightBtn = document.getElementById('diff-exit-right');
+      leftBtn.classList.remove('is-chosen', 'is-dimmed');
+      rightBtn.classList.remove('is-chosen', 'is-dimmed');
+
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('battle-hud').style.display = 'none';
+      document.getElementById('diff-room-ui').style.display = 'block';
+      document.getElementById('back-btn').style.display = 'block';
+
+      gamePhase = 'diff_intro_walk';
+    }
+
+    function chooseDifficultyExit(mode) {
+      if (gamePhase !== 'diff_select' && gamePhase !== 'diff_intro_walk') return;
+      difficulty = mode === 'easy' ? 'easy' : 'normal';
+
+      const leftBtn = document.getElementById('diff-exit-left');
+      const rightBtn = document.getElementById('diff-exit-right');
+      if (difficulty === 'easy') {
+        leftBtn.classList.add('is-chosen');
+        rightBtn.classList.add('is-dimmed');
+        diffExitWaypoints = [
+          { x: 115, y: DIFF_EXIT_Y },
+          { x: -75, y: DIFF_EXIT_Y }
+        ];
+        spawnBurst(75, DIFF_EXIT_Y, '#69f0ae', 18, 210, 6);
+      } else {
+        rightBtn.classList.add('is-chosen');
+        leftBtn.classList.add('is-dimmed');
+        diffExitWaypoints = [
+          { x: 785, y: DIFF_EXIT_Y },
+          { x: 975, y: DIFF_EXIT_Y }
+        ];
+        spawnBurst(825, DIFF_EXIT_Y, '#40c4ff', 18, 210, 6);
+      }
+
+      diffWalkRipple = null;
+      diffFadingIn = false;
+      diffExitFading = false;
+      player.isMoving = true;
+      gamePhase = 'diff_exit_walk';
+    }
+
+    function openDifficultyMenu() {
+      enterDifficultyRoom(false);
     }
 
     function enterBattleStage() {
@@ -841,13 +1092,14 @@
       waveGapTimer = 0;
       lastDoorIdx = -1;
       lastRenderedWave = -1;
-      lastRenderedHp = -1;
+      lastRenderedHp = null;
 
       resetPlayerForBattle(ARENA_START_POS.x, ARENA_START_POS.y);
       player.targetX = ARENA_CENTER.x;
       player.targetY = ARENA_CENTER.y;
       player.isMoving = true;
 
+      document.getElementById('diff-room-ui').style.display = 'none';
       document.getElementById('result-screen').style.display = 'none';
       document.getElementById('battle-hud').style.display = 'none';
       document.getElementById('back-btn').style.display = 'block';
@@ -874,10 +1126,11 @@
       playerInvincible = 0;
       lastDoorIdx = -1;
       lastRenderedWave = -1;
-      lastRenderedHp = -1;
+      lastRenderedHp = null;
 
       resetPlayerForBattle(ARENA_CENTER.x, ARENA_CENTER.y);
 
+      document.getElementById('diff-room-ui').style.display = 'none';
       document.getElementById('result-screen').style.display = 'none';
       document.getElementById('back-btn').style.display = 'block';
       document.getElementById('battle-hud').style.display = 'block';
@@ -1014,6 +1267,7 @@
       if (window.RPGDialog) window.RPGDialog.hide();
       gamePhase = 'battle_result';
 
+      document.getElementById('diff-room-ui').style.display = 'none';
       document.getElementById('battle-hud').style.display = 'none';
       document.getElementById('back-btn').style.display = 'none';
 
@@ -1025,6 +1279,9 @@
       if (clearedAllWaves) {
         localStorage.setItem('map19_cleared', 'true');
         localStorage.setItem('owns_bad19', 'true');
+        if (localStorage.getItem('sticker_sbad19') !== 'true') {
+          localStorage.setItem('sticker_sbad19', 'new');
+        }
         if (localStorage.getItem('sticker_smap19') !== 'true') {
           localStorage.setItem('sticker_smap19', 'new');
         }
@@ -1264,12 +1521,105 @@
         if (gateOpenTimer >= 1.2) {
           whiteFade = Math.min(1, (gateOpenTimer - 1.2) / 0.9);
           if (whiteFade >= 1) {
-            enterBattleStage();
+            enterDifficultyRoom(true);
           }
         }
       }
 
-      // ----- 第二階段：入場演出與戰鬥 -----
+      // ----- 第二階段：難度選擇通道房 -----
+      else if (gamePhase === 'diff_intro_walk') {
+        if (diffFadingIn) {
+          whiteFade = Math.max(0, whiteFade - dt * 1.8);
+          if (whiteFade <= 0) diffFadingIn = false;
+        }
+        const dx = player.targetX - player.x;
+        const dy = player.targetY - player.y;
+        const dist = Math.hypot(dx, dy);
+        const step = 360 * dt;
+        if (dist > step) {
+          player.x += (dx / dist) * step;
+          player.y += (dy / dist) * step;
+          player.walkCycle += 18 * dt;
+        } else {
+          player.x = player.targetX;
+          player.y = player.targetY;
+          player.isMoving = false;
+          player.walkCycle = 0;
+          gamePhase = 'diff_select';
+        }
+      } else if (gamePhase === 'diff_select') {
+        if (diffFadingIn) {
+          whiteFade = Math.max(0, whiteFade - dt * 1.8);
+          if (whiteFade <= 0) diffFadingIn = false;
+        }
+        if (diffWalkRipple) {
+          diffWalkRipple.t += dt;
+          if (diffWalkRipple.t >= 0.4) diffWalkRipple = null;
+        }
+        if (player.isMoving) {
+          const dx = player.targetX - player.x;
+          const dy = player.targetY - player.y;
+          const dist = Math.hypot(dx, dy);
+          const step = 460 * dt;
+          if (Math.abs(dx) > 3) player.isFacingLeft = dx < 0;
+          if (dist > step) {
+            player.x += (dx / dist) * step;
+            player.y += (dy / dist) * step;
+            player.walkCycle += 22 * dt;
+          } else {
+            player.x = player.targetX;
+            player.y = player.targetY;
+            player.isMoving = false;
+            player.walkCycle = 0;
+          }
+
+          if (player.y >= 545 && player.y <= 675) {
+            if (player.x <= 135) {
+              chooseDifficultyExit('easy');
+              return;
+            } else if (player.x >= 765) {
+              chooseDifficultyExit('normal');
+              return;
+            }
+          }
+        }
+      } else if (gamePhase === 'diff_exit_walk') {
+        if (diffExitWaypoints.length > 0) {
+          const wp = diffExitWaypoints[0];
+          const dx = wp.x - player.x;
+          const dy = wp.y - player.y;
+          const dist = Math.hypot(dx, dy);
+          const step = 520 * dt;
+          if (Math.abs(dx) > 3) player.isFacingLeft = dx < 0;
+          if (dist > step) {
+            player.x += (dx / dist) * step;
+            player.y += (dy / dist) * step;
+            player.walkCycle += 22 * dt;
+          } else {
+            player.x = wp.x;
+            player.y = wp.y;
+            diffExitWaypoints.shift();
+          }
+        }
+
+        if ((diffExitWaypoints.length <= 1 && (player.x < 110 || player.x > 790)) || diffExitWaypoints.length === 0) {
+          diffExitFading = true;
+        }
+        if (diffExitFading) {
+          whiteFade = Math.min(1, whiteFade + dt * 2.4);
+        }
+        if (diffExitWaypoints.length === 0 && whiteFade >= 1) {
+          document.getElementById('diff-room-ui').style.display = 'none';
+          if (!hasWatchedBattleIntro) {
+            hasWatchedBattleIntro = true;
+            enterBattleStage();
+          } else {
+            retryBattle();
+          }
+        }
+      }
+
+      // ----- 第三階段：入場演出與戰鬥 -----
       else if (gamePhase === 'battle_intro_walk') {
         const dx = player.targetX - player.x;
         const dy = player.targetY - player.y;
@@ -1344,24 +1694,33 @@
           }
 
           if (dist < 48 && playerInvincible <= 0) {
-            playerHp--;
-            playerInvincible = PLAYER_INVINCIBLE_TIME;
-            shakeTime = 0.35;
-            shakeMax = 0.35;
-            updateBattleHUD();
-            addPopup('-1 ❤️', player.x, player.y - 80, '#ff5252', 44);
-            spawnBurst(en.x, en.y, '#ff5252', 14, 220, 6);
-            enemies.splice(i, 1);
+            if (difficulty === 'easy') {
+              playerInvincible = PLAYER_INVINCIBLE_TIME;
+              shakeTime = 0.25;
+              shakeMax = 0.25;
+              addPopup('🛡️', player.x, player.y - 80, '#69f0ae', 44, false);
+              spawnBurst(en.x, en.y, '#69f0ae', 14, 220, 6);
+              enemies.splice(i, 1);
+            } else {
+              playerHp--;
+              playerInvincible = PLAYER_INVINCIBLE_TIME;
+              shakeTime = 0.35;
+              shakeMax = 0.35;
+              updateBattleHUD();
+              addPopup('-1 ❤️', player.x, player.y - 80, '#ff5252', 44);
+              spawnBurst(en.x, en.y, '#ff5252', 14, 220, 6);
+              enemies.splice(i, 1);
 
-            if (playerHp <= 0) {
-              gamePhase = 'battle_dead';
-              player.isMoving = false;
-              player.isAttacking = false;
-              player.deadTime = 0;
-              player.deadSpin = 0;
-              addPopup('💫', player.x, player.y - 80, '#ffffff', 68, false);
-              endTimeoutId = setTimeout(() => endBattleGame(false), 1200);
-              return;
+              if (playerHp <= 0) {
+                gamePhase = 'battle_dead';
+                player.isMoving = false;
+                player.isAttacking = false;
+                player.deadTime = 0;
+                player.deadSpin = 0;
+                addPopup('💫', player.x, player.y - 80, '#ffffff', 68, false);
+                endTimeoutId = setTimeout(() => endBattleGame(false), 1200);
+                return;
+              }
             }
           }
         }
@@ -1671,10 +2030,56 @@
       }
     }
 
+    function drawDiffRoomExits() {
+      const pulse = 0.5 + 0.5 * Math.sin(animTime * 4.5);
+      const shift = Math.sin(animTime * 5) * 7;
+
+      // 左側出口光暈與脈動箭頭（簡單）
+      ctx.save();
+      const leftGlow = ctx.createRadialGradient(45, DIFF_EXIT_Y, 8, 55, DIFF_EXIT_Y, 95);
+      leftGlow.addColorStop(0, `rgba(105, 240, 174, ${0.42 + 0.22 * pulse})`);
+      leftGlow.addColorStop(1, 'rgba(105, 240, 174, 0)');
+      ctx.fillStyle = leftGlow;
+      ctx.beginPath();
+      ctx.ellipse(55, DIFF_EXIT_Y, 88, 62, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 46px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(0, 45, 30, 0.85)';
+      ctx.fillStyle = `rgba(167, 255, 215, ${0.75 + 0.25 * pulse})`;
+      ctx.strokeText('«', 62 - shift, DIFF_EXIT_Y);
+      ctx.fillText('«', 62 - shift, DIFF_EXIT_Y);
+      ctx.restore();
+
+      // 右側出口光暈與脈動箭頭（正常）
+      ctx.save();
+      const rightGlow = ctx.createRadialGradient(855, DIFF_EXIT_Y, 8, 845, DIFF_EXIT_Y, 95);
+      rightGlow.addColorStop(0, `rgba(64, 196, 255, ${0.42 + 0.22 * pulse})`);
+      rightGlow.addColorStop(1, 'rgba(64, 196, 255, 0)');
+      ctx.fillStyle = rightGlow;
+      ctx.beginPath();
+      ctx.ellipse(845, DIFF_EXIT_Y, 88, 62, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 46px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(0, 30, 60, 0.85)';
+      ctx.fillStyle = `rgba(179, 229, 252, ${0.75 + 0.25 * pulse})`;
+      ctx.strokeText('»', 838 + shift, DIFF_EXIT_Y);
+      ctx.fillText('»', 838 + shift, DIFF_EXIT_Y);
+      ctx.restore();
+    }
+
     function draw() {
       if (gamePhase === 'exiting') return;
 
       const isGatePhase = gamePhase === 'gate' || gamePhase === 'gate_opening';
+      const isDiffPhase = gamePhase === 'diff_intro_walk' || gamePhase === 'diff_select' || gamePhase === 'diff_exit_walk';
 
       ctx.save();
 
@@ -1689,6 +2094,22 @@
         if (bgCacheCanvas) ctx.drawImage(bgCacheCanvas, 0, 0);
         drawSlotVisuals();
         drawGateOpeningEffects();
+        drawParticles();
+        drawPopups();
+      } else if (isDiffPhase) {
+        if (diffBgCacheCanvas) ctx.drawImage(diffBgCacheCanvas, 0, 0);
+        drawDiffRoomExits();
+        if (diffWalkRipple) {
+          const rp = diffWalkRipple.t / 0.4;
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.75 * (1 - rp)})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(diffWalkRipple.x, diffWalkRipple.y, 12 + rp * 34, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        drawBattlePlayer();
         drawParticles();
         drawPopups();
       } else {
@@ -1817,7 +2238,31 @@
         return;
       }
 
-      // ----- 第二階段：移動與揮擊骷髏人（map1 移動邏輯 + 可打斷攻擊） -----
+      // ----- 第二階段：難度選擇房間移動與出口點擊 -----
+      if (gamePhase === 'diff_select') {
+        if (clickX <= 185 && clickY >= 450 && clickY <= 700) {
+          chooseDifficultyExit('easy');
+          return;
+        }
+        if (clickX >= 715 && clickY >= 450 && clickY <= 700) {
+          chooseDifficultyExit('normal');
+          return;
+        }
+
+        const clampedX = Math.max(115, Math.min(785, clickX));
+        const clampedY = Math.max(250, Math.min(935, clickY));
+        player.slashOnArrive = false;
+        if (Math.abs(clampedX - player.x) > 3) {
+          player.isFacingLeft = clampedX < player.x;
+        }
+        player.targetX = clampedX;
+        player.targetY = clampedY;
+        player.isMoving = true;
+        diffWalkRipple = { x: clampedX, y: clampedY, t: 0 };
+        return;
+      }
+
+      // ----- 第三階段：移動與揮擊骷髏人（map1 移動邏輯 + 可打斷攻擊） -----
       if (gamePhase !== 'battle_playing') return;
 
       // 若正在攻擊中，點擊可立即打斷收招動畫並進行下一次移動或揮擊

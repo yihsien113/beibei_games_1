@@ -194,6 +194,60 @@
       margin-left: 18px;
     }
 
+    #difficulty-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 540px;
+      margin-top: 22px;
+    }
+    .difficulty-prompt {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffd32a;
+      margin: 0 0 18px 0;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+    }
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      width: 100%;
+    }
+    .btn-difficulty {
+      margin-top: 0;
+      width: 100%;
+      padding: 18px 12px;
+      border-radius: 22px;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 38px;
+      line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+    }
+    .btn-easy {
+      background-color: #00b894;
+      box-shadow: 0 7px 0 #008f73, 0 10px 20px rgba(0, 184, 148, 0.35);
+    }
+    .btn-normal {
+      background-color: #0984e3;
+      box-shadow: 0 7px 0 #076ebc, 0 10px 20px rgba(9, 132, 227, 0.35);
+    }
+    .difficulty-subtext {
+      font-size: 20px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.95);
+      background: rgba(0, 0, 0, 0.22);
+      padding: 4px 12px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+    .btn-change-diff {
+      background-color: #475569;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    }
+
     /* ========================================= */
     /* 手機螢幕響應式設定 */
     /* ========================================= */
@@ -209,7 +263,12 @@
       }
       #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
       #start-screen .intro-copy p { font-size: 24px !important; }
-      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      #start-btn { font-size: 24px !important; padding: 12px 35px !important; }
+      #difficulty-panel { margin-top: 14px !important; max-width: 100% !important; }
+      .difficulty-prompt { font-size: 22px !important; margin-bottom: 12px !important; }
+      .difficulty-grid { gap: 12px !important; }
+      .btn-difficulty { font-size: 26px !important; padding: 14px 8px !important; border-radius: 18px !important; gap: 6px !important; }
+      .difficulty-subtext { font-size: 14px !important; padding: 3px 8px !important; }
       
       #result-screen h1 { font-size: 28px !important; margin-bottom: 5px !important; }
       .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
@@ -218,6 +277,7 @@
       
       #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
       #result-screen div[style*="flex-direction: column"] .btn { font-size: 22px !important; padding: 10px 0 !important; }
+      #result-screen div[style*="flex-direction: column"] .btn.btn-change-diff { font-size: 18px !important; padding: 8px 18px !important; }
       
       /* 手機版：波數面板靠右，避免和左上角 EXIT 按鈕重疊 */
       #timer-board {
@@ -272,10 +332,26 @@
         </p>
       </div>
 
-      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+      <button id="start-btn" class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="showDifficultySelection()">
         <ruby>開<rt>ㄎㄞ</rt></ruby>
         <ruby>始<rt>ㄕˇ</rt></ruby>
       </button>
+
+      <div id="difficulty-panel">
+        <p class="difficulty-prompt zh-text">
+          <ruby>請<rt>ㄑㄧㄥˇ</rt></ruby><ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>擇<rt>ㄗㄜˊ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby><span>！</span>
+        </p>
+        <div class="difficulty-grid">
+          <button class="btn btn-difficulty btn-easy" onclick="selectDifficulty('easy')">
+            <div class="zh-text"><ruby>簡<rt>ㄐㄧㄢˇ</rt></ruby><ruby>單<rt>ㄉㄢ</rt></ruby></div>
+            <span class="difficulty-subtext">💣 2.8秒爆炸</span>
+          </button>
+          <button class="btn btn-difficulty btn-normal" onclick="selectDifficulty('normal')">
+            <div class="zh-text"><ruby>正<rt>ㄓㄥˋ</rt></ruby><ruby>常<rt>ㄔㄤˊ</rt></ruby></div>
+            <span class="difficulty-subtext">💣 標準速度</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 結算畫面 -->
@@ -321,6 +397,10 @@
           <ruby>大<rt>ㄉㄚˋ</rt></ruby>
           <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
         </button>
+
+        <button class="btn btn-change-diff" style="font-size: 22px; padding: 10px 26px; margin: 4px 0 0;" onclick="openDifficultyMenu()">
+          ⚙️ <span class="zh-text"><ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby></span>
+        </button>
       </div>
     </div>
 
@@ -353,7 +433,11 @@
     const BOARD_Y = 330;
 
     const TOTAL_WAVES = 6;        // 總共幾波 (第 N 波有 N 顆炸彈)
+    const EASY_WARNING_TIME = 2.8; // 簡單難度炸彈爆炸倒數時間 (秒)
+    let difficulty = 'normal';     // 'easy' | 'normal'
+
     function getWarningTime(waveNumber) {
+      if (difficulty === 'easy') return EASY_WARNING_TIME;
       if (waveNumber <= 3) return 1.0;
       if (waveNumber === 4) return 1.3;
       return 1.8;
@@ -593,6 +677,24 @@
       player.walkCycle = 0;
       player.deadSpin = 0;
       player.deadTime = 0;
+    }
+
+    function showDifficultySelection() {
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('difficulty-panel').style.display = 'flex';
+    }
+
+    function selectDifficulty(mode) {
+      difficulty = mode === 'easy' ? 'easy' : 'normal';
+      startGame();
+    }
+
+    function openDifficultyMenu() {
+      gamePhase = 'start';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('start-screen').style.display = 'flex';
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('difficulty-panel').style.display = 'flex';
     }
 
     function startGame() {

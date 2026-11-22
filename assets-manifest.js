@@ -79,6 +79,7 @@ const GAME_ASSETS = [
   'assets/map/map18.webp',
   'assets/map/map19-1.webp',
   'assets/map/map19-2.webp',
+  'assets/map/map19-3.webp',
   'assets/player/han1-1.webp',
   'assets/player/han1-2.webp',
   'assets/player/han1-3.webp',

@@ -171,6 +171,60 @@
       text-shadow: 0 0 10px rgba(255,215,0,0.8);
     }
 
+    #difficulty-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 540px;
+      margin-top: 22px;
+    }
+    .difficulty-prompt {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffd32a;
+      margin: 0 0 18px 0;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
+    }
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      width: 100%;
+    }
+    .btn-difficulty {
+      margin-top: 0;
+      width: 100%;
+      padding: 18px 12px;
+      border-radius: 22px;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 38px;
+      line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+    }
+    .btn-easy {
+      background-color: #00b894;
+      box-shadow: 0 7px 0 #008f73, 0 10px 20px rgba(0, 184, 148, 0.35);
+    }
+    .btn-normal {
+      background-color: #0984e3;
+      box-shadow: 0 7px 0 #076ebc, 0 10px 20px rgba(9, 132, 227, 0.35);
+    }
+    .difficulty-subtext {
+      font-size: 20px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.95);
+      background: rgba(0, 0, 0, 0.22);
+      padding: 4px 12px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+    .btn-change-diff {
+      background-color: #475569;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    }
+
     /* ========================================= */
     /* 手機螢幕響應式設定 (與 map16/map17 一致) */
     /* ========================================= */
@@ -199,7 +253,12 @@
       }
       #start-screen .intro-copy h1 { font-size: 38px !important; margin-bottom: 15px !important; }
       #start-screen .intro-copy p { font-size: 24px !important; }
-      #start-screen button[onclick="startGame()"] { font-size: 24px !important; padding: 12px 35px !important; }
+      #start-btn { font-size: 24px !important; padding: 12px 35px !important; }
+      #difficulty-panel { margin-top: 14px !important; max-width: 100% !important; }
+      .difficulty-prompt { font-size: 22px !important; margin-bottom: 12px !important; }
+      .difficulty-grid { gap: 12px !important; }
+      .btn-difficulty { font-size: 26px !important; padding: 14px 8px !important; border-radius: 18px !important; gap: 6px !important; }
+      .difficulty-subtext { font-size: 14px !important; padding: 3px 8px !important; }
 
       #result-screen h1 { font-size: 32px !important; margin-bottom: 6px !important; }
       .math-box { font-size: 20px !important; padding: 10px 15px !important; margin: 10px 0 !important; }
@@ -208,6 +267,7 @@
 
       #result-screen div[style*="flex-direction: column"] { gap: 10px !important; margin-top: 10px !important; }
       #result-screen div[style*="flex-direction: column"] .btn { font-size: 24px !important; padding: 10px 0 !important; }
+      #result-screen div[style*="flex-direction: column"] .btn.btn-change-diff { font-size: 18px !important; padding: 8px 18px !important; }
     }
   </style>
 </head>
@@ -240,10 +300,26 @@
         </p>
       </div>
 
-      <button class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="startGame()">
+      <button id="start-btn" class="btn" style="font-size: 32px; padding: 15px 55px;" onclick="showDifficultySelection()">
         <ruby>開<rt>ㄎㄞ</rt></ruby>
         <ruby>始<rt>ㄕˇ</rt></ruby>
       </button>
+
+      <div id="difficulty-panel">
+        <p class="difficulty-prompt zh-text">
+          <ruby>請<rt>ㄑㄧㄥˇ</rt></ruby><ruby>選<rt>ㄒㄩㄢˇ</rt></ruby><ruby>擇<rt>ㄗㄜˊ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby><span>！</span>
+        </p>
+        <div class="difficulty-grid">
+          <button class="btn btn-difficulty btn-easy" onclick="selectDifficulty('easy')">
+            <div class="zh-text"><ruby>簡<rt>ㄐㄧㄢˇ</rt></ruby><ruby>單<rt>ㄉㄢ</rt></ruby></div>
+            <span class="difficulty-subtext">💀 8格血</span>
+          </button>
+          <button class="btn btn-difficulty btn-normal" onclick="selectDifficulty('normal')">
+            <div class="zh-text"><ruby>正<rt>ㄓㄥˋ</rt></ruby><ruby>常<rt>ㄔㄤˊ</rt></ruby></div>
+            <span class="difficulty-subtext">💀 20格血</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 結算畫面 -->
@@ -287,6 +363,9 @@
           <ruby>大<rt>ㄉㄚˋ</rt></ruby>
           <ruby>廳<rt>ㄊㄧㄥ</rt></ruby>
         </button>
+        <button class="btn btn-change-diff" style="font-size: 22px; padding: 10px 26px; margin: 4px 0 0;" onclick="openDifficultyMenu()">
+          ⚙️ <span class="zh-text"><ruby>換<rt>ㄏㄨㄢˋ</rt></ruby><ruby>難<rt>ㄋㄢˊ</rt></ruby><ruby>度<rt>ㄉㄨˋ</rt></ruby></span>
+        </button>
       </div>
     </div>
 
@@ -318,8 +397,24 @@
       maxY: 1125
     };
 
-    const BOSS_MAX_HP = 20;            // 魔王血量 (打 20 下擊敗)
-    const KEY_TRIGGER_HP = 7;         // 魔王剩 7 格血時出現鑰匙
+    const BOSS_MAX_HP_NORMAL = 20;    // 正常難度魔王血量 (打 20 下擊敗)
+    const KEY_TRIGGER_HP_NORMAL = 7;  // 正常難度魔王剩 7 格血時出現鑰匙
+    const BOSS_MAX_HP_EASY = 8;       // 簡單難度魔王血量 (打 8 下擊敗)
+    const KEY_TRIGGER_HP_EASY = 4;    // 簡單難度魔王剩 4 格血時出現鑰匙
+    let difficulty = 'normal';        // 'easy' | 'normal'
+    let hasWatchedIntro = false;
+    let bossMaxHp = BOSS_MAX_HP_NORMAL;
+    let keyTriggerHp = KEY_TRIGGER_HP_NORMAL;
+
+    function applyDifficultySettings() {
+      if (difficulty === 'easy') {
+        bossMaxHp = BOSS_MAX_HP_EASY;
+        keyTriggerHp = KEY_TRIGGER_HP_EASY;
+      } else {
+        bossMaxHp = BOSS_MAX_HP_NORMAL;
+        keyTriggerHp = KEY_TRIGGER_HP_NORMAL;
+      }
+    }
     const PLAYER_MAX_HP = 3;          // 人偶 3 次被攻擊機會
     const WIN_REWARD_COINS = 10;      // 通關獎勵 10 顆星
     const KEY_STICKER_ID = 'sticker_skey3'; // 本關鑰匙貼紙 ID (如貼紙簿用別的編號可改此處)
@@ -411,7 +506,7 @@
       targetX: CANVAS_W / 2,
       targetY: 450,
       size: BOSS_SIZE,
-      hp: BOSS_MAX_HP,
+      hp: bossMaxHp,
       facingLeft: false,
       // state: 'idle' | 'walk' | 'pause' | 'charge' | 'fire' | 'recover' | 'defeated'
       state: 'idle',
@@ -934,12 +1029,33 @@
 
       boss.x = CANVAS_W / 2;
       boss.y = 460;
-      boss.hp = BOSS_MAX_HP;
+      boss.hp = bossMaxHp;
       boss.state = 'idle';
       boss.facingLeft = false;
     }
 
+    function showDifficultySelection() {
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('difficulty-panel').style.display = 'flex';
+    }
+
+    function selectDifficulty(mode) {
+      difficulty = mode === 'easy' ? 'easy' : 'normal';
+      const shouldPlayIntro = !hasWatchedIntro;
+      hasWatchedIntro = true;
+      startGame(shouldPlayIntro);
+    }
+
+    function openDifficultyMenu() {
+      gamePhase = 'start';
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('start-screen').style.display = 'flex';
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('difficulty-panel').style.display = 'flex';
+    }
+
     function startGame(playIntro = true) {
+      applyDifficultySettings();
       if (endTimeoutId) {
         clearTimeout(endTimeoutId);
         endTimeoutId = null;
@@ -982,7 +1098,7 @@
       boss.y = 440;
       boss.targetX = boss.x;
       boss.targetY = boss.y;
-      boss.hp = BOSS_MAX_HP;
+      boss.hp = bossMaxHp;
       boss.facingLeft = false;
       boss.state = 'idle';
       boss.stateTimer = 0;
@@ -1240,7 +1356,7 @@
       }
 
       boss.stateTimer += dt;
-      const isLowHp = boss.hp <= KEY_TRIGGER_HP;
+      const isLowHp = boss.hp <= keyTriggerHp;
 
       if (boss.state === 'walk') {
         // 走路交錯使用 bad18-1 與 bad18-2
@@ -1367,8 +1483,8 @@
       addPopup('💥 -1', boss.x, boss.y - boss.size * 0.9, '#ffeb3b', 42);
       playSfx('boss_hit');
 
-      // 剩 7 格血時出現鑰匙 (若尚未取得過)
-      if (boss.hp <= KEY_TRIGGER_HP && boss.hp > 0) {
+      // 剩 keyTriggerHp 格血時出現鑰匙 (若尚未取得過)
+      if (boss.hp <= keyTriggerHp && boss.hp > 0) {
         trySpawnKey();
       }
 
@@ -1799,7 +1915,7 @@
 
       // 外框底板
       ctx.fillStyle = 'rgba(15, 10, 22, 0.85)';
-      ctx.strokeStyle = boss.hp <= KEY_TRIGGER_HP ? '#ffeb3b' : '#ff7043';
+      ctx.strokeStyle = boss.hp <= keyTriggerHp ? '#ffeb3b' : '#ff7043';
       ctx.lineWidth = 4;
       drawRoundedRect(barX - 46, barY - 12, barW + 64, barH + 24, 24);
       ctx.fill();
@@ -1811,11 +1927,11 @@
       ctx.textBaseline = 'middle';
       ctx.fillText('💀', barX - 20, barY + barH / 2 + 1);
 
-      // 20 格血量槽
+      // 血量槽 (正常 20 格 / 簡單 8 格)
       const gap = 6;
-      const segW = (barW - gap * (BOSS_MAX_HP - 1)) / BOSS_MAX_HP;
+      const segW = (barW - gap * (bossMaxHp - 1)) / bossMaxHp;
 
-      for (let i = 0; i < BOSS_MAX_HP; i++) {
+      for (let i = 0; i < bossMaxHp; i++) {
         const sx = barX + i * (segW + gap);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
         drawRoundedRect(sx, barY, segW, barH, 6);
@@ -1823,7 +1939,7 @@
 
         if (i < boss.hp) {
           const segGrad = ctx.createLinearGradient(sx, barY, sx, barY + barH);
-          if (boss.hp <= KEY_TRIGGER_HP) {
+          if (boss.hp <= keyTriggerHp) {
             segGrad.addColorStop(0, '#ffca28');
             segGrad.addColorStop(1, '#ff3d00');
           } else {
@@ -1850,7 +1966,7 @@
       const mouth = getBossMouthPos();
       const pulse = 0.5 + 0.5 * Math.sin(gameTime * 22);
       const len = 560;
-      const halfSpread = (boss.hp <= KEY_TRIGGER_HP) ? 0.28 : 0.14;
+      const halfSpread = (boss.hp <= keyTriggerHp) ? 0.28 : 0.14;
 
       ctx.save();
       ctx.translate(mouth.x, mouth.y);

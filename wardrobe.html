@@ -514,9 +514,19 @@
     let ownsHan7 = localStorage.getItem('owns_han7') === 'true';
     let ownsChih1 = localStorage.getItem('owns_chih1') === 'true';
     let ownsChih2 = localStorage.getItem('owns_chih2') === 'true';
+    function ensureBad19Sticker() {
+      const val = localStorage.getItem('sticker_sbad19');
+      if (val !== 'true' && val !== 'new') {
+        localStorage.setItem('sticker_sbad19', 'new');
+      }
+    }
+
     let ownsBad19 = localStorage.getItem('owns_bad19') === 'true' || localStorage.getItem('map19_cleared') === 'true';
-    if (ownsBad19 && localStorage.getItem('owns_bad19') !== 'true') {
-      localStorage.setItem('owns_bad19', 'true');
+    if (ownsBad19) {
+      if (localStorage.getItem('owns_bad19') !== 'true') {
+        localStorage.setItem('owns_bad19', 'true');
+      }
+      ensureBad19Sticker();
     }
 
     if (!localStorage.getItem('sticker_shan1')) {
@@ -924,6 +934,7 @@
       ownsChih1 = localStorage.getItem('owns_chih1') === 'true';
       ownsChih2 = localStorage.getItem('owns_chih2') === 'true';
       ownsBad19 = localStorage.getItem('owns_bad19') === 'true' || localStorage.getItem('map19_cleared') === 'true';
+      if (ownsBad19) ensureBad19Sticker();
       document.getElementById('myCoins').innerText = coins;
       updateUI();
     }
@@ -947,6 +958,7 @@
           if (localStorage.getItem('owns_bad19') !== 'true') {
             localStorage.setItem('owns_bad19', 'true');
           }
+          ensureBad19Sticker();
           equipChar('bad19');
         } else {
           showBopoAlert(

@@ -1116,6 +1116,13 @@
     onGetEffect: '', 
     effect: '' 
   },
+  { id: 'sbad19', category: 'dolls', src: 'assets/bad/bad19-1.webp', 
+    name: '<ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby>', 
+    condition: '<ruby>獲<rt>ㄏㄨㄛˋ</rt></ruby><ruby>得<rt>ㄉㄜˊ</rt></ruby><ruby>骷<rt>ㄎㄨ</rt></ruby><ruby>髏<rt>ㄌㄡˊ</rt></ruby><ruby>士<rt>ㄕˋ</rt></ruby><ruby>兵<rt>ㄅㄧㄥ</rt></ruby>', 
+    cost: 0, 
+    onGetEffect: '', 
+    effect: '' 
+  },
   { id: 'slobby1', category: 'explore', src: 'assets/sticker/lobby1.webp', 
     name: '<ruby>阿<rt>ㄚ</rt></ruby><ruby>公<rt>ㄍㄨㄥ</rt></ruby>', 
     condition: '<ruby>大<rt>ㄉㄚˋ</rt></ruby><ruby>廳<rt>ㄊㄧㄥ</rt></ruby><ruby>地<rt>ㄉㄧˋ</rt></ruby><ruby>圖<rt>ㄊㄨˊ</rt></ruby><ruby>尋<rt>ㄒㄩㄣˊ</rt></ruby><ruby>找<rt>ㄓㄠˇ</rt></ruby>', 
@@ -1269,6 +1276,14 @@
     function loadObtainedState() {
       coins = parseInt(localStorage.getItem('playerCoins') || '0', 10);
       document.getElementById('myCoins').innerText = coins;
+
+      const bad19StickerVal = localStorage.getItem('sticker_sbad19');
+      if (
+        (localStorage.getItem('owns_bad19') === 'true' || localStorage.getItem('map19_cleared') === 'true') &&
+        bad19StickerVal !== 'true' && bad19StickerVal !== 'new'
+      ) {
+        localStorage.setItem('sticker_sbad19', 'new');
+      }
 
       stickersConfig.forEach(item => {
         const savedVal = localStorage.getItem('sticker_' + item.id);
